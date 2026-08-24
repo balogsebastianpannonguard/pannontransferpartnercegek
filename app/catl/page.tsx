@@ -23,9 +23,14 @@ import {
   Luggage,
   Clock,
   LogOut,
-  UserCircle
+  UserCircle,
+  Loader2,
+  XCircle,
+  CheckCircle2,
+  ListOrdered
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "../context/LanguageContext";
 import { CATL_PRICING, formatHuf } from "./catl-pricing";
 import CatlPremiumLogin from "./components/CatlPremiumLogin";
@@ -38,12 +43,31 @@ interface CatlPortalUser {
 
 export default function CatlLandingPage() {
   const { t, language, setLanguage } = useLanguage();
+  const pathname = usePathname();
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [authedUser, setAuthedUser] = useState<CatlPortalUser | null>(null);
   const [portalBooting, setPortalBooting] = useState(true);
 
-  // Form states matching the provided screenshots
+  const [formLoading, setFormLoading] = useState(false);
+  const [submitErrors, setSubmitErrors] = useState<string[]>([]);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [lastBookingCode, setLastBookingCode] = useState<string | null>(null);
+  const [showValidationInline, setShowValidationInline] = useState(false);
+  const [blurredFields, setBlurredFields] = useState<Record<string, boolean>>({});
+
+  const [travelerEmail, setTravelerEmail] = useState("");
+  const [travelerName, setTravelerName] = useState("");
+  const [travelerPhone, setTravelerPhone] = useState("");
+  const [secondTravelerEmail, setSecondTravelerEmail] = useState("");
+  const [secondTravelerPhone, setSecondTravelerPhone] = useState("");
+  const [fromAddress, setFromAddress] = useState("");
+  const [toAddress, setToAddress] = useState("");
+  const [pickupDate, setPickupDate] = useState("");
+  const [pickupTime, setPickupTime] = useState("");
+  const [commentText, setCommentText] = useState("");
+
   const [paymentMethod, setPaymentMethod] = useState<"card" | "bank">("card");
   const [fromType, setFromType] = useState<"airport" | "other">("airport");
   const [toType, setToType] = useState<"airport" | "other">("other");
@@ -92,6 +116,141 @@ export default function CatlLandingPage() {
       await fetch("/api/catl-auth/logout", { method: "POST" });
     } catch {}
     setAuthedUser(null);
+  };
+
+  const requiredFields: Record<string, { value: string; label: string }> = {
+    travelerEmail: { value: travelerEmail, label: "Email" },
+    travelerName: { value: travelerName, label: "Név" },
+    travelerPhone: { value: travelerPhone, label: "Telefonszám" },
+    fromAddress: { value: fromAddress, label: "Felvételi cím" },
+    toAddress: { value: toAddress, label: "Érkezési cím" },
+    pickupDate: { value: pickupDate, label: "Dátum" },
+    pickupTime: { value: pickupTime, label: "Időpont" },
+  };
+
+  const getFieldError = (fieldKey: string): string | null => {
+    if (!submitErrors.length && !showValidationInline) return null;
+    const field = requiredFields[fieldKey];
+    if (!field) return null;
+    if (showValidationInline || submitErrors.length > 0) {
+      if (!field.value.trim()) {
+        return `${field.label} megadása kötelező`;
+      }
+    }
+    for (const err of submitErrors) {
+      const lowerErr = err.toLowerCase();
+      const lowerLabel = field.label.toLowerCase();
+      if (
+        lowerErr.includes(lowerLabel) ||
+        (fieldKey === "travelerEmail" && (lowerErr.includes("email") || lowerErr.includes("e-mail"))) ||
+        (fieldKey === "travelerPhone" && (lowerErr.includes("phone") || lowerErr.includes("telefonszám"))) ||
+        (fieldKey === "fromAddress" && (lowerErr.includes("from") || lowerErr.includes("honnan") || lowerErr.includes("indulási"))) ||
+        (fieldKey === "toAddress" && (lowerErr.includes("to") || lowerErr.includes("hova") || lowerErr.includes("érkezési"))) ||
+        (fieldKey === "pickupDate" && (lowerErr.includes("date") || lowerErr.includes("dátum"))) ||
+        (fieldKey === "pickupTime" && (lowerErr.includes("time") || lowerErr.includes("idő") || lowerErr.includes("időpont")))
+      ) {
+        return err;
+      }
+    }
+    return null;
+  };
+
+  const isFieldInvalid = (fieldKey: string): boolean => {
+    const inlineCheck = showValidationInline && blurredFields[fieldKey] && requiredFields[fieldKey] && !requiredFields[fieldKey].value.trim();
+    const submitCheck = submitErrors.length > 0 && getFieldError(fieldKey) !== null;
+    return inlineCheck || submitCheck;
+  };
+
+  const handleBlur = (fieldKey: string) => {
+    setBlurredFields(prev => ({ ...prev, [fieldKey]: true }));
+    setShowValidationInline(true);
+  };
+
+  const resetForm = () => {
+    setTravelerEmail("");
+    setTravelerName("");
+    setTravelerPhone("");
+    setSecondTravelerEmail("");
+    setSecondTravelerPhone("");
+    setFromAddress("");
+    setToAddress("");
+    setPickupDate("");
+    setPickupTime("");
+    setCommentText("");
+    setPaymentMethod("card");
+    setFromType("airport");
+    setToType("other");
+    setTravelers(1);
+    setLuggage(1);
+    setTransferType("executive");
+    setSubmitErrors([]);
+    setSubmitSuccess(false);
+    setLastBookingCode(null);
+    setShowValidationInline(false);
+    setBlurredFields({});
+  };
+
+  const handleSubmit = async () => {
+    setSubmitErrors([]);
+    setShowValidationInline(true);
+    Object.keys(requiredFields).forEach(key => {
+      setBlurredFields(prev => ({ ...prev, [key]: true }));
+    });
+    const missing = Object.entries(requiredFields).filter(([, v]) => !v.value.trim());
+    if (missing.length > 0) {
+      const errs = missing.map(([, v]) => `${v.label} megadása kötelező`);
+      setSubmitErrors(errs);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    setFormLoading(true);
+    try {
+      const payload = {
+        travelerEmail,
+        travelerName,
+        travelerPhone,
+        secondTravelerEmail: secondTravelerEmail || undefined,
+        secondTravelerPhone: secondTravelerPhone || undefined,
+        companyName: "CATL Hungary Kft.",
+        paymentMethod,
+        transferType,
+        fromType,
+        fromAddress,
+        toType,
+        toAddress,
+        pickupDate,
+        pickupTime,
+        travelers,
+        luggage,
+        comment: commentText || undefined,
+      };
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 201 && data?.success && data?.booking) {
+        setSubmitSuccess(true);
+        setLastBookingCode(data.booking.bookingCode);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else if (res.status === 400) {
+        const errs: string[] = data?.errors && Array.isArray(data.errors) ? data.errors : ["Érvénytelen adatok, kérjük ellenőrizze az űrlapot"];
+        setSubmitErrors(errs);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else if (res.status === 401) {
+        router.push("/catl/auth");
+      } else if (res.status === 500) {
+        setSubmitErrors(["Szerver hiba történt, kérjük próbálja újra"]);
+      } else {
+        setSubmitErrors([data?.message || "Váratlan hiba történt, kérjük próbálja újra"]);
+      }
+    } catch {
+      setSubmitErrors(["Hálózati hiba történt, kérjük próbálja újra"]);
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   if (!authChecked) {
@@ -308,8 +467,11 @@ export default function CatlLandingPage() {
           
           <div className="hidden lg:flex items-center gap-8 h-full">
             <div className="flex items-center gap-8 h-full">
-              <Link href="#booking" className="text-slate-300 text-sm font-medium tracking-wide hover:text-white transition-colors h-full flex items-center border-b-2 border-[#0047BA]">
+              <Link href="#booking" className={`text-sm font-medium tracking-wide hover:text-white transition-colors h-full flex items-center border-b-2 ${pathname === "/catl/bookings" ? "text-slate-400 border-transparent" : "text-slate-300 border-[#0047BA]"}`}>
                 {t('nav', 'booking')}
+              </Link>
+              <Link href="/catl/bookings" className={`text-sm font-medium tracking-wide hover:text-white transition-colors h-full flex items-center border-b-2 ${pathname === "/catl/bookings" ? "text-white border-[#0047BA]" : "text-slate-300 border-transparent hover:border-white/20"}`}>
+                Foglalásaim
               </Link>
             </div>
             
@@ -338,6 +500,10 @@ export default function CatlLandingPage() {
                   <span className="text-[12px] font-semibold text-white leading-none truncate max-w-[180px]">
                     {authedUser.email}
                   </span>
+                  <Link href="/catl/bookings" className="text-[10px] font-medium text-[#00B4D8] hover:text-[#0047BA] transition-colors mt-1 flex items-center gap-1">
+                    <ListOrdered className="w-3 h-3" />
+                    Foglalásaim
+                  </Link>
                 </div>
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0047BA] to-[#00B4D8] flex items-center justify-center shadow-[0_0_20px_rgba(0,71,186,0.4)] shrink-0 ring-1 ring-white/10">
                 <UserCircle className="w-5 h-5 text-white" />
@@ -355,7 +521,7 @@ export default function CatlLandingPage() {
       </nav>
 
       {/* Main Content */}
-      <section className="relative pt-32 pb-24 px-6 min-h-screen flex items-start justify-center z-10">
+      <section id="booking" className="relative pt-32 pb-24 px-6 min-h-screen flex items-start justify-center z-10">
         <div className="max-w-[1200px] mx-auto w-full">
           
           {/* Header Title for the Form */}
@@ -374,17 +540,113 @@ export default function CatlLandingPage() {
             </motion.p>
           </div>
 
-          {/* Form Container */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="bg-[#0B1221] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-800 overflow-hidden relative max-w-4xl mx-auto"
-          >
-            {/* Top accent line */}
-            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#0047BA] to-transparent" />
+          {submitSuccess ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="bg-[#0B1221] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-800 overflow-hidden relative max-w-2xl mx-auto"
+            >
+              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-emerald-500 to-transparent" />
+              <div className="p-10 md:p-16 flex flex-col items-center text-center">
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+                  className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-400/10 flex items-center justify-center border-2 border-emerald-500/30 shadow-[0_0_40px_rgba(16,185,129,0.25)] mb-8"
+                >
+                  <motion.div
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={{ pathLength: 1, opacity: 1 }}
+                    transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+                  >
+                    <CheckCircle2 className="w-14 h-14 text-emerald-400" strokeWidth={2.5} />
+                  </motion.div>
+                </motion.div>
 
-            <div className="p-8 md:p-12 space-y-10">
+                <motion.h2
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-2xl md:text-3xl font-bold text-white mb-3 tracking-tight"
+                >
+                  Foglalása sikeresen elküldve!
+                </motion.h2>
+
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-slate-400 text-sm md:text-base mb-6"
+                >
+                  Visszaigazoló e-mail elküldve az Ön email címére
+                </motion.p>
+
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.45 }}
+                  className="mb-8"
+                >
+                  <span className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-2 block">
+                    Foglalási kód
+                  </span>
+                  <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[#0047BA]/20 to-[#00B4D8]/15 border border-[#0047BA]/30 shadow-[0_0_25px_rgba(0,71,186,0.2)]">
+                    <span className="text-3xl md:text-4xl font-black text-white tracking-wider font-mono">
+                      #{lastBookingCode}
+                    </span>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.55 }}
+                  className="flex items-start gap-2 max-w-md mb-10 p-4 rounded-lg bg-white/[0.03] border border-white/[0.06]"
+                >
+                  <ShieldCheck className="w-4 h-4 text-[#00B4D8] shrink-0 mt-0.5" />
+                  <p className="text-[13px] text-slate-400 text-left leading-relaxed">
+                    Amint a diszpécserünk jóváhagyja, email értesítést küldünk Önnek
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.65 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md"
+                >
+                  <button
+                    onClick={() => router.push("/catl/bookings")}
+                    className="py-4 px-5 rounded-lg bg-[#0047BA] hover:bg-[#00368C] text-white font-bold text-sm tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,71,186,0.3)] hover:shadow-[0_0_30px_rgba(0,71,186,0.5)]"
+                  >
+                    <ListOrdered className="w-4 h-4" />
+                    Foglalásaim
+                  </button>
+                  <button
+                    onClick={() => {
+                      resetForm();
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="py-4 px-5 rounded-lg bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:border-white/20 text-white font-bold text-sm tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Új foglalás
+                  </button>
+                </motion.div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="bg-[#0B1221] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-800 overflow-hidden relative max-w-4xl mx-auto"
+            >
+              {/* Top accent line */}
+              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#0047BA] to-transparent" />
+
+              <div className="p-8 md:p-12 space-y-10">
               
               {/* SECTION 1: Personal & Company Info */}
               <div className="space-y-6">
@@ -399,10 +661,23 @@ export default function CatlLandingPage() {
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
                       Email address of the Traveler <span className="text-[#00B4D8]">*</span>
                     </label>
-                    <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all">
-                      <Mail className="w-4 h-4 text-slate-500" />
-                      <input type="email" placeholder="Email" className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white" />
+                    <div className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("travelerEmail") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30"}`}>
+                      <Mail className={`w-4 h-4 ${isFieldInvalid("travelerEmail") ? "text-red-400" : "text-slate-500"}`} />
+                      <input
+                        type="email"
+                        value={travelerEmail}
+                        onChange={(e) => setTravelerEmail(e.target.value)}
+                        onBlur={() => handleBlur("travelerEmail")}
+                        placeholder="Email"
+                        className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                      />
                     </div>
+                    {getFieldError("travelerEmail") && (
+                      <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {getFieldError("travelerEmail")}
+                      </p>
+                    )}
                   </div>
 
                   {/* Name */}
@@ -410,10 +685,23 @@ export default function CatlLandingPage() {
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
                       Name of the Traveler <span className="text-[#00B4D8]">*</span>
                     </label>
-                    <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all">
-                      <Users className="w-4 h-4 text-slate-500" />
-                      <input type="text" placeholder="Full Name" className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white" />
+                    <div className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("travelerName") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30"}`}>
+                      <Users className={`w-4 h-4 ${isFieldInvalid("travelerName") ? "text-red-400" : "text-slate-500"}`} />
+                      <input
+                        type="text"
+                        value={travelerName}
+                        onChange={(e) => setTravelerName(e.target.value)}
+                        onBlur={() => handleBlur("travelerName")}
+                        placeholder="Full Name"
+                        className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                      />
                     </div>
+                    {getFieldError("travelerName") && (
+                      <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {getFieldError("travelerName")}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -434,10 +722,23 @@ export default function CatlLandingPage() {
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
                       Phone number (only digit / 0123456789) <span className="text-[#00B4D8]">*</span>
                     </label>
-                    <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all">
-                      <Phone className="w-4 h-4 text-slate-500" />
-                      <input type="tel" placeholder="+36..." className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white" />
+                    <div className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("travelerPhone") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30"}`}>
+                      <Phone className={`w-4 h-4 ${isFieldInvalid("travelerPhone") ? "text-red-400" : "text-slate-500"}`} />
+                      <input
+                        type="tel"
+                        value={travelerPhone}
+                        onChange={(e) => setTravelerPhone(e.target.value)}
+                        onBlur={() => handleBlur("travelerPhone")}
+                        placeholder="+36..."
+                        className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                      />
                     </div>
+                    {getFieldError("travelerPhone") && (
+                      <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {getFieldError("travelerPhone")}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -449,7 +750,13 @@ export default function CatlLandingPage() {
                     </label>
                     <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all">
                       <Mail className="w-4 h-4 text-slate-500" />
-                      <input type="email" placeholder="Optional" className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white" />
+                      <input
+                        type="email"
+                        value={secondTravelerEmail}
+                        onChange={(e) => setSecondTravelerEmail(e.target.value)}
+                        placeholder="Optional"
+                        className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -458,7 +765,13 @@ export default function CatlLandingPage() {
                     </label>
                     <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all">
                       <Phone className="w-4 h-4 text-slate-500" />
-                      <input type="tel" placeholder="Optional" className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white" />
+                      <input
+                        type="tel"
+                        value={secondTravelerPhone}
+                        onChange={(e) => setSecondTravelerPhone(e.target.value)}
+                        placeholder="Optional"
+                        className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                      />
                     </div>
                   </div>
                 </div>
@@ -574,10 +887,23 @@ export default function CatlLandingPage() {
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
                       From Address <span className="text-[#00B4D8]">*</span>
                     </label>
-                    <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all">
-                      <MapPin className="w-4 h-4 text-slate-500" />
-                      <input type="text" placeholder={fromType === "airport" ? "e.g. Budapest Airport (BUD)" : "e.g. CATL Debrecen Gyár..."} className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white" />
+                    <div className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("fromAddress") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30"}`}>
+                      <MapPin className={`w-4 h-4 ${isFieldInvalid("fromAddress") ? "text-red-400" : "text-slate-500"}`} />
+                      <input
+                        type="text"
+                        value={fromAddress}
+                        onChange={(e) => setFromAddress(e.target.value)}
+                        onBlur={() => handleBlur("fromAddress")}
+                        placeholder={fromType === "airport" ? "e.g. Budapest Airport (BUD)" : "e.g. CATL Debrecen Gyár..."}
+                        className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                      />
                     </div>
+                    {getFieldError("fromAddress") && (
+                      <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {getFieldError("fromAddress")}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -616,10 +942,23 @@ export default function CatlLandingPage() {
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
                       To Address <span className="text-[#00B4D8]">*</span>
                     </label>
-                    <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all">
-                      <MapPin className="w-4 h-4 text-slate-500" />
-                      <input type="text" placeholder={toType === "airport" ? "e.g. Budapest Airport (BUD)" : "e.g. 4031 Debrecen, ..."} className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white" />
+                    <div className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("toAddress") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30"}`}>
+                      <MapPin className={`w-4 h-4 ${isFieldInvalid("toAddress") ? "text-red-400" : "text-slate-500"}`} />
+                      <input
+                        type="text"
+                        value={toAddress}
+                        onChange={(e) => setToAddress(e.target.value)}
+                        onBlur={() => handleBlur("toAddress")}
+                        placeholder={toType === "airport" ? "e.g. Budapest Airport (BUD)" : "e.g. 4031 Debrecen, ..."}
+                        className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                      />
                     </div>
+                    {getFieldError("toAddress") && (
+                      <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {getFieldError("toAddress")}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -629,17 +968,41 @@ export default function CatlLandingPage() {
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
                       When (Date) <span className="text-[#00B4D8]">*</span>
                     </label>
-                    <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center justify-between text-slate-300 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all">
-                      <input type="date" className="bg-transparent border-none outline-none w-full text-sm font-medium text-white [color-scheme:dark]" />
+                    <div className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center justify-between text-slate-300 transition-all border ${isFieldInvalid("pickupDate") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30"}`}>
+                      <input
+                        type="date"
+                        value={pickupDate}
+                        onChange={(e) => setPickupDate(e.target.value)}
+                        onBlur={() => handleBlur("pickupDate")}
+                        className="bg-transparent border-none outline-none w-full text-sm font-medium text-white [color-scheme:dark]"
+                      />
                     </div>
+                    {getFieldError("pickupDate") && (
+                      <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {getFieldError("pickupDate")}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
                       Time <span className="text-[#00B4D8]">*</span>
                     </label>
-                    <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center justify-between text-slate-300 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all">
-                      <input type="time" className="bg-transparent border-none outline-none w-full text-sm font-medium text-white [color-scheme:dark]" />
+                    <div className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center justify-between text-slate-300 transition-all border ${isFieldInvalid("pickupTime") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30"}`}>
+                      <input
+                        type="time"
+                        value={pickupTime}
+                        onChange={(e) => setPickupTime(e.target.value)}
+                        onBlur={() => handleBlur("pickupTime")}
+                        className="bg-transparent border-none outline-none w-full text-sm font-medium text-white [color-scheme:dark]"
+                      />
                     </div>
+                    {getFieldError("pickupTime") && (
+                      <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {getFieldError("pickupTime")}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -694,22 +1057,80 @@ export default function CatlLandingPage() {
                     Comment
                   </label>
                   <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all">
-                    <textarea rows={3} placeholder="Any special requests or instructions..." className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white resize-none" />
+                    <textarea
+                      rows={3}
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Any special requests or instructions..."
+                      className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white resize-none"
+                    />
                   </div>
                 </div>
 
               </div>
 
+              {/* Submit Errors Alert */}
+              <AnimatePresence>
+                {submitErrors.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: "auto" }}
+                    exit={{ opacity: 0, y: -8, height: 0 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="rounded-xl bg-red-500/[0.08] border border-red-500/20 p-5 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
+                          <XCircle className="w-4 h-4 text-red-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-bold text-red-300 tracking-wide">
+                            Kérjük javítsa a következő hibákat:
+                          </p>
+                        </div>
+                      </div>
+                      <ul className="space-y-1.5 pl-11">
+                        {submitErrors.map((err, idx) => (
+                          <li key={idx} className="text-[12px] text-red-300/90 flex items-start gap-2 leading-relaxed">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-400/60 mt-1.5 shrink-0" />
+                            <span>{err}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Submit Button */}
               <div className="pt-6 border-t border-slate-800">
-                <button className="w-full bg-[#0047BA] hover:bg-[#00368C] text-white py-4.5 rounded-lg font-bold text-sm tracking-widest uppercase transition-all duration-300 flex justify-center items-center gap-3 shadow-[0_0_20px_rgba(0,71,186,0.3)] hover:shadow-[0_0_30px_rgba(0,71,186,0.5)]">
-                  Foglalás 
-                  <ArrowRight className="w-5 h-5" />
+                <button
+                  onClick={handleSubmit}
+                  disabled={formLoading}
+                  className={`w-full rounded-lg font-bold text-sm tracking-widest uppercase transition-all duration-300 flex justify-center items-center gap-3 py-4.5 ${
+                    formLoading
+                      ? "bg-[#0047BA]/60 text-white/80 cursor-not-allowed shadow-[0_0_15px_rgba(0,71,186,0.15)]"
+                      : "bg-[#0047BA] hover:bg-[#00368C] text-white shadow-[0_0_20px_rgba(0,71,186,0.3)] hover:shadow-[0_0_30px_rgba(0,71,186,0.5)]"
+                  }`}
+                >
+                  {formLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Foglalás küldése folyamatban...
+                    </>
+                  ) : (
+                    <>
+                      Foglalás
+                      <ArrowRight className="w-5 h-5" />
+                    </>
+                  )}
                 </button>
               </div>
 
             </div>
           </motion.div>
+          )}
         </div>
       </section>
 
