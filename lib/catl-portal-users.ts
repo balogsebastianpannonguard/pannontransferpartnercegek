@@ -38,17 +38,28 @@ export interface CatlPortalUser {
 
 const COLLECTION_NAME = "catl_portal_users";
 
+let cachedCatlCol: any = null;
+
 export async function getCatlCollection() {
+  if (cachedCatlCol) {
+    return cachedCatlCol;
+  }
   // Ugyanazon a MongoClienten át, de KÖZÖS CRM DB-t használunk
   const { client } = await connectToDatabase();
   const db = client.db(CATL_SHARED_DB_NAME);
   const col = db.collection<CatlPortalUser>(COLLECTION_NAME);
+  
+  // Indexek létrehozása csak az első alkalommal
   try {
     await col.createIndex({ normalizedEmail: 1 }, { unique: true });
     await col.createIndex({ inviteTokenHash: 1 });
     await col.createIndex({ inviteRawToken: 1 });
     await col.createIndex({ inviteExpiresAt: 1 }, { expireAfterSeconds: 0 });
-  } catch {}
+  } catch (err) {
+    console.error("Index creation error (ignored):", err);
+  }
+  
+  cachedCatlCol = col;
   return col;
 }
 
