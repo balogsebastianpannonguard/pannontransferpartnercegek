@@ -38,9 +38,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "../../context/LanguageContext";
-import CatlPremiumLogin from "../components/CatlPremiumLogin";
+import EcoproPremiumLogin from "../components/EcoproPremiumLogin";
 
-interface CatlPortalUser {
+interface EcoproPortalUser {
   email: string;
   company?: string;
   role?: string;
@@ -112,7 +112,7 @@ export default function BookingsClient() {
   const { t, language, setLanguage } = useLanguage();
   const [scrolled, setScrolled] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-  const [authedUser, setAuthedUser] = useState<CatlPortalUser | null>(null);
+  const [authedUser, setAuthedUser] = useState<EcoproPortalUser | null>(null);
   const [portalBooting, setPortalBooting] = useState(true);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -154,7 +154,7 @@ export default function BookingsClient() {
     let active = true;
     (async () => {
       try {
-        const res = await fetch("/api/catl-auth/session", { cache: "no-store" });
+        const res = await fetch("/api/ecopro-auth/session", { cache: "no-store" });
         if (!active) return;
         if (res.ok) {
           const json = await res.json();
@@ -180,7 +180,7 @@ export default function BookingsClient() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/catl-auth/logout", { method: "POST" });
+      await fetch("/api/ecopro-auth/logout", { method: "POST" });
     } catch {}
     setAuthedUser(null);
   };
@@ -190,7 +190,7 @@ export default function BookingsClient() {
     try {
       const res = await fetch("/api/bookings", {
         cache: "no-store",
-        headers: { "x-partner-portal": "catl" },
+        headers: { "x-partner-portal": "ecopro" },
       });
       if (res.ok) {
         const json = await res.json();
@@ -257,7 +257,7 @@ export default function BookingsClient() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "x-partner-portal": "catl",
+          "x-partner-portal": "ecopro",
         },
         body: JSON.stringify(editForm),
       });
@@ -292,7 +292,7 @@ export default function BookingsClient() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "x-partner-portal": "catl",
+          "x-partner-portal": "ecopro",
         },
         body: JSON.stringify({ status: "cancelled" }),
       });
@@ -332,11 +332,11 @@ export default function BookingsClient() {
         <div className="w-full border-b border-zinc-200/70 bg-white/60 backdrop-blur-md">
           <div className="max-w-6xl mx-auto px-6 h-16 flex items-center">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0047BA] to-[#0066E0] flex items-center justify-center shadow-sm">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0096D6] to-[#00B4D8] flex items-center justify-center shadow-sm">
                 <span className="text-white font-black text-sm tracking-tighter">C</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[15px] font-bold text-zinc-900 leading-none">CATL Portál</span>
+                <span className="text-[15px] font-bold text-zinc-900 leading-none">ECOPRO Portál</span>
                 <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">
                   Pannon Transfer · Hozzáférés ellenőrzése
                 </span>
@@ -352,14 +352,14 @@ export default function BookingsClient() {
               transition={{ duration: 0.25 }}
               className="flex flex-col items-center py-20 gap-5"
             >
-              <div className="w-14 h-14 rounded-2xl bg-[#0047BA]/[0.08] border border-[#0047BA]/10 flex items-center justify-center shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                <Building2 className="w-7 h-7 text-[#0047BA] animate-pulse" />
+              <div className="w-14 h-14 rounded-2xl bg-[#0096D6]/[0.08] border border-[#0096D6]/10 flex items-center justify-center shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                <Building2 className="w-7 h-7 text-[#0096D6] animate-pulse" />
               </div>
               <div className="flex items-center gap-2.5">
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
-                  className="w-5 h-5 rounded-full border-2 border-zinc-200 border-t-[#0047BA]"
+                  className="w-5 h-5 rounded-full border-2 border-zinc-200 border-t-[#0096D6]"
                 />
                 <p className="text-[14px] text-zinc-600 font-semibold tracking-wide">
                   Hozzáférés és munkamenet ellenőrzése...
@@ -371,7 +371,7 @@ export default function BookingsClient() {
         <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
           <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
             <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
-            <span className="tracking-wider">CATL Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
+            <span className="tracking-wider">ECOPRO Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
           </div>
         </div>
       </div>
@@ -379,7 +379,7 @@ export default function BookingsClient() {
   }
 
   if (!authedUser) {
-    return <CatlPremiumLogin _onSuccess={setAuthedUser} />;
+    return <EcoproPremiumLogin _onSuccess={setAuthedUser} />;
   }
 
   if (portalBooting) {
@@ -389,7 +389,7 @@ export default function BookingsClient() {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 0.4 }}
           transition={{ duration: 3, ease: "easeOut" }}
-          className="absolute w-[800px] h-[800px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#0047BA]/20 via-transparent to-transparent rounded-full blur-[100px] pointer-events-none"
+          className="absolute w-[800px] h-[800px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#0096D6]/20 via-transparent to-transparent rounded-full blur-[100px] pointer-events-none"
         />
         <motion.div
           animate={{ y: [0, -20, 0], opacity: [0.1, 0.4, 0.1] }}
@@ -399,26 +399,26 @@ export default function BookingsClient() {
         <motion.div
           animate={{ y: [0, 20, 0], opacity: [0.1, 0.3, 0.1] }}
           transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute bottom-1/3 right-1/4 w-1.5 h-1.5 bg-[#0047BA] rounded-full blur-[2px]"
+          className="absolute bottom-1/3 right-1/4 w-1.5 h-1.5 bg-[#0096D6] rounded-full blur-[2px]"
         />
         <div className="relative z-10 flex flex-col items-center">
           <div className="relative w-40 h-40 flex items-center justify-center mb-10">
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 12, ease: "linear", repeat: Infinity }}
-              className="absolute inset-0 rounded-full border-[1px] border-white/[0.03] border-t-[#00B4D8]/60 border-r-[#0047BA]/40"
+              className="absolute inset-0 rounded-full border-[1px] border-white/[0.03] border-t-[#00B4D8]/60 border-r-[#0096D6]/40"
             />
             <motion.div
               animate={{ rotate: -360 }}
               transition={{ duration: 16, ease: "linear", repeat: Infinity }}
-              className="absolute inset-[-16px] rounded-full border-[1px] border-white/[0.02] border-b-[#00B4D8]/30 border-l-[#0047BA]/50"
+              className="absolute inset-[-16px] rounded-full border-[1px] border-white/[0.02] border-b-[#00B4D8]/30 border-l-[#0096D6]/50"
             />
-            <div className="absolute inset-2 bg-[#020617] rounded-full shadow-[inset_0_0_20px_rgba(0,71,186,0.1)] flex items-center justify-center">
+            <div className="absolute inset-2 bg-[#020617] rounded-full shadow-[inset_0_0_20px_rgba(0,180,216,0.1)] flex items-center justify-center">
               <motion.div
                 initial={{ opacity: 0, scale: 0.5 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
-                className="w-14 h-14 bg-gradient-to-br from-[#0047BA] to-[#00B4D8] rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(0,180,216,0.4)] relative overflow-hidden"
+                className="w-14 h-14 bg-gradient-to-br from-[#0096D6] to-[#00B4D8] rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(0,180,216,0.4)] relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-white/20 mix-blend-overlay" />
                 <span className="text-white font-black text-2xl tracking-tighter relative z-10">C</span>
@@ -434,7 +434,7 @@ export default function BookingsClient() {
             <div className="flex items-center justify-center gap-5 mb-4">
               <span className="font-serif text-2xl tracking-[0.25em] text-white/90">PANNON</span>
               <span className="w-[1px] h-6 bg-white/20" />
-              <span className="font-sans font-black text-2xl tracking-[0.2em] text-[#00B4D8]">CATL</span>
+              <span className="font-sans font-black text-2xl tracking-[0.2em] text-[#00B4D8]">ECOPRO</span>
             </div>
             <p className="text-[10px] tracking-[0.4em] uppercase text-slate-500 font-medium">
               Premium Corporate Transfer
@@ -473,17 +473,17 @@ export default function BookingsClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#040914] text-slate-300 font-sans selection:bg-[#0047BA]/30 relative overflow-hidden">
+    <div className="min-h-screen bg-[#040914] text-slate-300 font-sans selection:bg-[#0096D6]/30 relative overflow-hidden">
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#0047BA]/15 via-[#0047BA]/5 to-transparent blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#00B4D8]/10 via-transparent to-transparent blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.015] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#12D6DF]/20 via-[#0A7EA4]/6 to-transparent blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#29D391]/12 via-transparent to-transparent blur-3xl" />
+        <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#7dd3fc_1px,transparent_1px),linear-gradient(to_bottom,#7dd3fc_1px,transparent_1px)] bg-[size:48px_48px]" />
       </div>
 
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-[#040914]/85 backdrop-blur-xl border-b border-white/10 shadow-sm"
+            ? "bg-[#031218]/85 backdrop-blur-xl border-b border-[#12D6DF]/10 shadow-sm"
             : "bg-transparent border-b border-white/5"
         }`}
       >
@@ -499,15 +499,15 @@ export default function BookingsClient() {
             </div>
             <div className="w-px h-8 bg-white/20 transform rotate-12"></div>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded bg-gradient-to-br from-[#0047BA] to-[#00B4D8] flex items-center justify-center shadow-sm">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#12D6DF] via-[#00B7C7] to-[#29D391] flex items-center justify-center shadow-[0_0_30px_rgba(18,214,223,0.24)] ring-1 ring-white/10">
                 <Building2 className="w-4 h-4 text-white" />
               </div>
               <div className="flex flex-col justify-center">
                 <span className="font-bold text-lg md:text-xl tracking-tight text-white leading-none flex items-center gap-2">
-                  CATL <span className="text-[#00B4D8] text-sm hidden sm:inline">宁德时代</span>
+                  ECOPRO <span className="text-[#12D6DF] text-sm hidden sm:inline">Mobility Desk</span>
                 </span>
-                <span className="text-[10px] font-medium tracking-widest text-slate-400 uppercase mt-1">
-                  Corporate Portal
+                <span className="text-[10px] font-medium tracking-[0.24em] text-slate-400 uppercase mt-1">
+                  Dedicated EcoPro Portal
                 </span>
               </div>
             </div>
@@ -516,14 +516,14 @@ export default function BookingsClient() {
           <div className="hidden lg:flex items-center gap-8 h-full">
             <div className="flex items-center gap-8 h-full">
               <Link
-                href="/catl#booking"
-                className="text-slate-300 text-sm font-medium tracking-wide hover:text-white transition-colors h-full flex items-center border-b-2 border-transparent hover:border-white/20"
+                href="/ecopro#booking"
+                className="text-slate-300 text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-transparent hover:border-[#12D6DF]/30"
               >
                 {t("nav", "booking")}
               </Link>
               <Link
-                href="/catl/bookings"
-                className="text-slate-300 text-sm font-medium tracking-wide hover:text-white transition-colors h-full flex items-center border-b-2 border-[#0047BA]"
+                href="/ecopro/bookings"
+                className="text-white text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-[#29D391]"
               >
                 Saját foglalásaim
               </Link>
@@ -538,7 +538,7 @@ export default function BookingsClient() {
                   onClick={() => setLanguage(lang)}
                   className={`w-8 h-8 rounded flex items-center justify-center text-[11px] font-bold tracking-wider transition-all duration-200 ${
                     language === lang
-                      ? "bg-[#0047BA] text-white shadow-sm"
+                      ? "bg-[#12D6DF] text-[#031218] shadow-sm"
                       : "text-slate-400 hover:text-white hover:bg-white/5"
                   }`}
                 >
@@ -555,7 +555,7 @@ export default function BookingsClient() {
                   {authedUser.email}
                 </span>
               </div>
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0047BA] to-[#00B4D8] flex items-center justify-center shadow-[0_0_20px_rgba(0,71,186,0.4)] shrink-0 ring-1 ring-white/10">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#12D6DF] to-[#29D391] flex items-center justify-center shadow-[0_0_20px_rgba(18,214,223,0.35)] shrink-0 ring-1 ring-white/10">
                 <UserCircle className="w-5 h-5 text-white" />
               </div>
               <button
@@ -576,7 +576,7 @@ export default function BookingsClient() {
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0047BA]/10 border border-[#0047BA]/20 mb-6"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0096D6]/10 border border-[#0096D6]/20 mb-6"
             >
               <CalendarDays className="w-3.5 h-3.5 text-[#00B4D8]" />
               <span className="text-[10px] font-bold text-[#00B4D8] tracking-widest uppercase">
@@ -614,8 +614,8 @@ export default function BookingsClient() {
                   Frissítés
                 </button>
                 <Link
-                  href="/catl"
-                  className="h-10 px-4 rounded-lg bg-[#0047BA] hover:bg-[#00368C] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,71,186,0.3)]"
+                  href="/ecopro"
+                  className="h-10 px-4 rounded-lg bg-[#0096D6] hover:bg-[#0B1F47] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,180,216,0.3)]"
                 >
                   <Plus className="w-4 h-4" />
                   Új foglalás
@@ -624,6 +624,7 @@ export default function BookingsClient() {
             </div>
           </div>
 
+          {bookings.length > 0 && (
           <motion.div
             initial="hidden"
             animate="visible"
@@ -637,7 +638,7 @@ export default function BookingsClient() {
               variants={fadeIn}
               className="bg-[#0B1221] rounded-2xl border border-slate-800 p-5 relative overflow-hidden group hover:border-slate-700/60 transition-colors"
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#0047BA]/15 via-transparent to-transparent blur-2xl pointer-events-none" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#0096D6]/15 via-transparent to-transparent blur-2xl pointer-events-none" />
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
@@ -714,6 +715,7 @@ export default function BookingsClient() {
               </div>
             </motion.div>
           </motion.div>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -745,7 +747,7 @@ export default function BookingsClient() {
 
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-5">
-              <div className="w-12 h-12 rounded-2xl bg-[#0047BA]/10 border border-[#0047BA]/20 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-[#0096D6]/10 border border-[#0096D6]/20 flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-[#00B4D8] animate-spin" />
               </div>
               <p className="text-sm text-slate-400 font-medium">Foglalások betöltése...</p>
@@ -756,7 +758,7 @@ export default function BookingsClient() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-[#0B1221] rounded-2xl border border-slate-800 p-16 text-center relative overflow-hidden"
             >
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#0047BA]/8 via-transparent to-transparent blur-3xl pointer-events-none" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#0096D6]/8 via-transparent to-transparent blur-3xl pointer-events-none" />
               <div className="relative flex flex-col items-center">
                 <div className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
                   <CalendarPlus className="w-10 h-10 text-slate-500" />
@@ -766,8 +768,8 @@ export default function BookingsClient() {
                   Nincs még foglalás a kiválasztott szűrésnél. Menjen a foglalási oldalra és hozzon létre egy új átutalást.
                 </p>
                 <Link
-                  href="/catl"
-                  className="h-11 px-6 rounded-xl bg-[#0047BA] hover:bg-[#00368C] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,71,186,0.3)]"
+                  href="/ecopro"
+                  className="h-11 px-6 rounded-xl bg-[#0096D6] hover:bg-[#0B1F47] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,180,216,0.3)]"
                 >
                   Menjen a foglalási oldalra
                   <ArrowRight className="w-4 h-4" />
@@ -797,7 +799,7 @@ export default function BookingsClient() {
                       <div className="flex flex-col lg:flex-row lg:items-stretch gap-6">
                         <div className="flex-1 lg:max-w-[320px] flex flex-col gap-4">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-[#0047BA]/20 to-[#00B4D8]/10 border border-[#0047BA]/30 text-[11px] font-black tracking-wider text-white tracking-wider">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-[#0096D6]/20 to-[#00B4D8]/10 border border-[#0096D6]/30 text-[11px] font-black tracking-wider text-white tracking-wider">
                               <span className="w-1.5 h-1.5 rounded-full bg-[#00B4D8]" />
                               #{booking.bookingCode}
                             </span>
@@ -956,7 +958,7 @@ export default function BookingsClient() {
                             <>
                               <button
                                 onClick={() => openEditModal(booking)}
-                                className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-[#0047BA]/15 border border-[#0047BA]/30 text-[#00B4D8] hover:bg-[#0047BA]/25 hover:border-[#0047BA]/50 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-bold"
+                                className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-[#0096D6]/15 border border-[#0096D6]/30 text-[#00B4D8] hover:bg-[#0096D6]/25 hover:border-[#0096D6]/50 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-bold"
                               >
                                 <Edit3 className="w-4 h-4" />
                                 Módosítás
@@ -1099,7 +1101,7 @@ export default function BookingsClient() {
             <div className="hidden md:block w-px h-6 bg-white/10"></div>
             <div className="flex flex-col text-center md:text-left">
               <span className="font-bold text-white tracking-wide text-sm leading-none flex items-center gap-2">
-                CATL <span className="text-xs font-normal text-slate-400">{t("footer", "portal")}</span>
+                ECOPRO <span className="text-xs font-normal text-slate-400">{t("footer", "portal")}</span>
               </span>
             </div>
           </div>
@@ -1128,7 +1130,7 @@ export default function BookingsClient() {
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
               className="relative w-full max-w-xl bg-[#0B1221] rounded-2xl border border-slate-800 shadow-[0_30px_80px_rgba(0,0,0,0.6)] overflow-hidden max-h-[90vh] overflow-y-auto"
             >
-              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#0047BA] to-transparent" />
+              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#0096D6] to-transparent" />
               <div className="sticky top-0 z-10 bg-[#0B1221] border-b border-slate-800 px-6 py-4 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-white">Foglalás módosítása</h3>
@@ -1148,7 +1150,7 @@ export default function BookingsClient() {
                       Dátum <span className="text-[#00B4D8]">*</span>
                     </label>
                     <div
-                      className={`w-full bg-[#151E32] border rounded-lg p-3.5 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all ${
+                      className={`w-full bg-[#151E32] border rounded-lg p-3.5 focus-within:border-[#0096D6] focus-within:ring-1 focus-within:ring-[#0096D6]/30 transition-all ${
                         editErrors.pickupDate
                           ? "border-rose-500/50 ring-1 ring-rose-500/20"
                           : "border-slate-700/50"
@@ -1174,7 +1176,7 @@ export default function BookingsClient() {
                       Időpont <span className="text-[#00B4D8]">*</span>
                     </label>
                     <div
-                      className={`w-full bg-[#151E32] border rounded-lg p-3.5 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all ${
+                      className={`w-full bg-[#151E32] border rounded-lg p-3.5 focus-within:border-[#0096D6] focus-within:ring-1 focus-within:ring-[#0096D6]/30 transition-all ${
                         editErrors.pickupTime
                           ? "border-rose-500/50 ring-1 ring-rose-500/20"
                           : "border-slate-700/50"
@@ -1202,7 +1204,7 @@ export default function BookingsClient() {
                     Indulási cím <span className="text-[#00B4D8]">*</span>
                   </label>
                   <div
-                    className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all ${
+                    className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#0096D6] focus-within:ring-1 focus-within:ring-[#0096D6]/30 transition-all ${
                       editErrors.fromAddress
                         ? "border-rose-500/50 ring-1 ring-rose-500/20"
                         : "border-slate-700/50"
@@ -1230,7 +1232,7 @@ export default function BookingsClient() {
                     Célcím <span className="text-[#00B4D8]">*</span>
                   </label>
                   <div
-                    className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all ${
+                    className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#0096D6] focus-within:ring-1 focus-within:ring-[#0096D6]/30 transition-all ${
                       editErrors.toAddress
                         ? "border-rose-500/50 ring-1 ring-rose-500/20"
                         : "border-slate-700/50"
@@ -1334,7 +1336,7 @@ export default function BookingsClient() {
                   <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
                     Megjegyzés
                   </label>
-                  <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all">
+                  <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 focus-within:border-[#0096D6] focus-within:ring-1 focus-within:ring-[#0096D6]/30 transition-all">
                     <textarea
                       rows={3}
                       value={editForm.comment}
@@ -1371,7 +1373,7 @@ export default function BookingsClient() {
                   <button
                     type="submit"
                     disabled={editLoading}
-                    className="flex-[2] h-11 rounded-lg bg-[#0047BA] hover:bg-[#00368C] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm tracking-wide transition-all inline-flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,71,186,0.3)]"
+                    className="flex-[2] h-11 rounded-lg bg-[#0096D6] hover:bg-[#0B1F47] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm tracking-wide transition-all inline-flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,180,216,0.3)]"
                   >
                     {editLoading ? (
                       <>

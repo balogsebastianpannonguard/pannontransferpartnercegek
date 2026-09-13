@@ -1,12 +1,24 @@
 import { NextResponse } from "next/server";
-import { getCurrentCatlSession } from "@/lib/catl-auth";
+import {
+  getCurrentPartnerSession,
+  getCurrentPartnerSessionForPortal,
+  type PartnerPortal,
+} from "@/lib/partner-session";
 import { listUserBookings } from "@/lib/bookings";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+function getRequestedPortal(request: Request): PartnerPortal | null {
+  const portal = request.headers.get("x-partner-portal");
+  return portal === "catl" || portal === "ecopro" ? portal : null;
+}
+
+export async function GET(request: Request) {
   try {
-    const session = await getCurrentCatlSession();
+    const requestedPortal = getRequestedPortal(request);
+    const session = requestedPortal
+      ? await getCurrentPartnerSessionForPortal(requestedPortal)
+      : await getCurrentPartnerSession();
     if (!session) {
       return NextResponse.json(
         { success: false, message: "Nincs aktív munkamenet." },
@@ -14,7 +26,7 @@ export async function GET() {
       );
     }
 
-    const bookings = await listUserBookings(session.email);
+    const bookings = await listUserBookings(session.email, session.portal);
     const pendingCount = bookings.filter(
       (b) => b.status !== "completed" && b.status !== "cancelled"
     ).length;

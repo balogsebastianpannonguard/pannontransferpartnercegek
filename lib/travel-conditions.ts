@@ -16,7 +16,7 @@ export const CATL_TRAVEL_CONDITIONS = {
   }
 };
 
-export function getTravelConditions() {
+export function getTravelConditions(_partnerKey?: string) {
   return CATL_TRAVEL_CONDITIONS;
 }
 

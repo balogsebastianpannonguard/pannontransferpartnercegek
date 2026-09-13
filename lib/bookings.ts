@@ -1,6 +1,9 @@
 import { getDb } from './mongodb';
-import { ObjectId, Collection } from 'mongodb';
+import { ObjectId, Collection, type Filter } from 'mongodb';
 import { getTravelConditions, isTimeInOperatingHours } from './travel-conditions';
+import { getPartnerPricing, type PartnerPricing, type PricingVehicle } from './partner-pricing';
+
+export type PartnerPortal = 'catl' | 'ecopro';
 
 export type BookingStatus =
   | 'pending'
@@ -30,6 +33,7 @@ export interface AuditTrailEntry {
 
 export interface Booking {
   _id?: string;
+  portal?: PartnerPortal;
   bookingCode: string;
   userEmail: string;
   travelerEmail: string;
@@ -98,7 +102,92 @@ export function deriveCategory(
   return 'city';
 }
 
-export function calculateBookingPrice(data: {
+const PARTNER_COMPANY_MATCHERS: Array<{ key: string; patterns: string[] }> = [
+  { key: 'ecopro', patterns: ['ecopro'] },
+  { key: 'eccoino', patterns: ['eccoino'] },
+  { key: 'vitesco', patterns: ['vitesco'] },
+  { key: 'schaeffler', patterns: ['schaeffler'] },
+  { key: 'krones', patterns: ['krones'] },
+  { key: 'enterair', patterns: ['enter air', 'enterair'] },
+  { key: 'tama', patterns: ['tama'] },
+  { key: 'ni', patterns: [' ni ', 'national instruments', 'ni '] },
+];
+
+function normalizeText(value?: string): string {
+  return ` ${(value || '').trim().toLowerCase()} `;
+}
+
+export function resolvePartnerKey(companyName?: string): string {
+  const normalized = normalizeText(companyName);
+
+  for (const matcher of PARTNER_COMPANY_MATCHERS) {
+    if (matcher.patterns.some((pattern) => normalized.includes(pattern))) {
+      return matcher.key;
+    }
+  }
+
+  return 'catl';
+}
+
+function getPreferredVehicleOrder(transferType: TransferType): string[] {
+  return transferType === 'executive'
+    ? ['s_class', 'v_class']
+    : ['skoda', 'opel_ford', 'man_bus'];
+}
+
+function getVehicleMaxPassengers(vehicle: PricingVehicle): number | null {
+  const match = vehicle.capacity.match(/(\d+)\s*-\s*(\d+)/);
+  if (match) {
+    return Number(match[2]);
+  }
+
+  if (/large group|nagy csoport/i.test(vehicle.capacity)) {
+    return null;
+  }
+
+  const singleNumber = vehicle.capacity.match(/(\d+)/);
+  return singleNumber ? Number(singleNumber[1]) : null;
+}
+
+function selectPricingVehicle(
+  pricing: PartnerPricing,
+  data: {
+    transferType: TransferType;
+    travelers: number;
+  }
+): PricingVehicle | null {
+  const preferredOrder = getPreferredVehicleOrder(data.transferType);
+  const candidates = preferredOrder
+    .map((vehicleId) => pricing.vehicles.find((vehicle) => vehicle.id === vehicleId))
+    .filter((vehicle): vehicle is PricingVehicle => Boolean(vehicle));
+
+  for (const vehicle of candidates) {
+    const maxPassengers = getVehicleMaxPassengers(vehicle);
+    if (maxPassengers === null || data.travelers <= maxPassengers) {
+      return vehicle;
+    }
+  }
+
+  return null;
+}
+
+function getVehicleBasePrice(
+  vehicle: PricingVehicle,
+  data: {
+    fromType: 'airport' | 'other';
+    toType: 'airport' | 'other';
+  }
+): number {
+  const involvesAirport = data.fromType === 'airport' || data.toType === 'airport';
+
+  if (involvesAirport && typeof vehicle.bpBudAirport === 'number' && vehicle.bpBudAirport > 0) {
+    return vehicle.bpBudAirport;
+  }
+
+  return vehicle.newPrice2026;
+}
+
+export async function calculateBookingPrice(data: {
   category?: BookingCategory;
   transferType: TransferType;
   travelers: number;
@@ -107,41 +196,24 @@ export function calculateBookingPrice(data: {
   toType: 'airport' | 'other';
   fromAddress?: string;
   toAddress?: string;
-}): number {
+  companyName?: string;
+}): Promise<number> {
   const category =
     data.category ||
-    deriveCategory(data.fromType, data.toType, data.transferType);
+    deriveCategory(data.fromType, data.toType, data.transferType, data.companyName);
 
-  const basePrices: Record<string, Record<TransferType, number>> = {
-    airport: { standard: 38000, executive: 68000 },
-    city: { standard: 22000, executive: 34000 },
-    'long-distance': { standard: 72000, executive: 108000 },
-    vip: { standard: 0, executive: 0 },
-    partner: { standard: 42000, executive: 72000 },
-  };
+  const partnerKey = resolvePartnerKey(data.companyName);
+  const pricing = await getPartnerPricing(partnerKey);
+  const selectedVehicle = selectPricingVehicle(pricing, data);
 
   let base =
-    basePrices[category]?.[data.transferType] ||
-    basePrices.airport[data.transferType];
-
-  if (category === 'vip') {
-    const anyAirport = data.fromType === 'airport' || data.toType === 'airport';
-    base = anyAirport ? 85000 : 55000;
-    if (data.transferType === 'executive') base = Math.round(base * 1.5);
-  }
-
-  const fromLower = (data.fromAddress || '').toLowerCase();
-  const toLower = (data.toAddress || '').toLowerCase();
-  const isLongDistance =
-    /miskolc|debrecen|szeged|pécs|győr|székesfehérvár|budapest airport|liszt ferenc/i.test(
-      fromLower + ' ' + toLower
-    ) ||
-    /(airport.*budapest|budapest.*airport)/i.test(fromLower + ' ' + toLower);
-
-  if (category === 'airport' && isLongDistance) {
-    if (data.transferType === 'standard') base = 62000;
-    else base = 105000;
-  }
+    selectedVehicle !== null
+      ? getVehicleBasePrice(selectedVehicle, data)
+      : category === 'vip'
+        ? data.fromType === 'airport' || data.toType === 'airport'
+          ? 85000
+          : 55000
+        : 42000;
 
   if (data.travelers >= 5) base = Math.round(base * 1.12);
   if (data.travelers >= 8) base = Math.round(base * 1.08);
@@ -156,7 +228,7 @@ export function calculateBookingPrice(data: {
   return rounded;
 }
 
-export function validateTravelConditions(
+export async function validateTravelConditions(
   bookingData: Partial<CreateBookingData> & {
     travelerEmail?: string;
     travelerName?: string;
@@ -172,10 +244,11 @@ export function validateTravelConditions(
     transferType?: TransferType;
     companyName?: string;
   }
-): ValidationResult {
+): Promise<ValidationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const conditions = getTravelConditions();
+  const partnerKey = resolvePartnerKey(bookingData.companyName);
+  const conditions = getTravelConditions(partnerKey);
 
   const {
     travelerEmail,
@@ -190,8 +263,9 @@ export function validateTravelConditions(
     fromType,
     toType,
     transferType,
-    companyName,
   } = bookingData;
+
+  const pricing = await getPartnerPricing(partnerKey);
 
   if (!travelerEmail || travelerEmail.trim() === '') {
     errors.push('Az utas e-mail címe kötelező');
@@ -282,11 +356,38 @@ export function validateTravelConditions(
         );
       }
     }
+
+    const selectedVehicle = selectPricingVehicle(pricing, {
+      transferType: tt,
+      travelers,
+    });
+
+    if (!selectedVehicle) {
+      errors.push(
+        tt === 'executive'
+          ? 'Az EcoPro executive foglalások maximum 7 utassal rögzíthetők.'
+          : 'Ehhez az utasszámhoz jelenleg nincs elérhető járműkategória.'
+      );
+    }
   }
 
   if (transferType === 'executive') {
-    warnings.push('Executive transzfer: VIP kategória lesz használva');
+    const selectedVehicle = travelers
+      ? selectPricingVehicle(pricing, {
+          transferType,
+          travelers,
+        })
+      : null;
+    warnings.push(
+      `Executive transzfer: ${
+        selectedVehicle ? `${selectedVehicle.name} kategória` : 'VIP kategória'
+      } lesz használva`
+    );
   }
+
+  warnings.push(
+    `${pricing.partnerName} módosítási feltételek: 12-24h ${pricing.terms.modification['12-24h'].description}, 0-12h ${pricing.terms.modification['0-12h'].description}.`
+  );
 
   return {
     valid: errors.length === 0,
@@ -303,7 +404,7 @@ export async function getBookingsCollection(): Promise<Collection<Booking>> {
 export async function initBookingIndexes(): Promise<void> {
   const col = await getBookingsCollection();
   await col.createIndex({ bookingCode: 1 }, { unique: true });
-  await col.createIndex({ userEmail: 1 });
+  await col.createIndex({ userEmail: 1, portal: 1 });
   await col.createIndex({ status: 1 });
   await col.createIndex({ pickupDate: 1 });
   await col.createIndex({ createdAt: -1 });
@@ -330,8 +431,26 @@ function convertDocId(doc: any): Booking {
   } as Booking;
 }
 
+function resolveBookingPortal(companyName?: string): PartnerPortal {
+  return resolvePartnerKey(companyName) === 'ecopro' ? 'ecopro' : 'catl';
+}
+
+function buildPortalScopeFilter(portal: PartnerPortal): Filter<Booking> {
+  if (portal === 'ecopro') {
+    return { portal: 'ecopro' };
+  }
+
+  return {
+    $or: [
+      { portal: 'catl' },
+      { portal: { $exists: false } },
+      { portal: null },
+    ],
+  } as Filter<Booking>;
+}
+
 export async function createBooking(data: CreateBookingData): Promise<Booking> {
-  const validation = validateTravelConditions(data);
+  const validation = await validateTravelConditions(data);
   if (!validation.valid) {
     throw new Error(
       `A foglalás érvénytelen: ${validation.errors.join(', ')}`
@@ -355,7 +474,7 @@ export async function createBooking(data: CreateBookingData): Promise<Booking> {
     data.companyName
   );
 
-  const computedPrice = calculateBookingPrice({
+  const computedPrice = await calculateBookingPrice({
     category,
     transferType: data.transferType,
     travelers: data.travelers,
@@ -364,9 +483,11 @@ export async function createBooking(data: CreateBookingData): Promise<Booking> {
     toType: data.toType,
     fromAddress: data.fromAddress,
     toAddress: data.toAddress,
+    companyName: data.companyName,
   });
 
   const companyName = data.companyName || 'CATL Hungary Kft.';
+  const portal = data.portal || resolveBookingPortal(companyName);
 
   const auditEntry: AuditTrailEntry = {
     timestamp: now,
@@ -377,6 +498,7 @@ export async function createBooking(data: CreateBookingData): Promise<Booking> {
 
   const booking: Booking = {
     ...data,
+    portal,
     companyName,
     bookingCode,
     category,
@@ -396,26 +518,35 @@ export async function createBooking(data: CreateBookingData): Promise<Booking> {
   return convertDocId(created);
 }
 
-export async function listUserBookings(userEmail: string): Promise<Booking[]> {
+export async function listUserBookings(
+  userEmail: string,
+  portal: PartnerPortal
+): Promise<Booking[]> {
   const col = await getBookingsCollection();
   const docs = await col
-    .find({ userEmail })
+    .find({ userEmail, ...buildPortalScopeFilter(portal) })
     .sort({ createdAt: -1 })
     .toArray();
   return docs.map(convertDocId);
 }
 
-export async function getBookingByCode(code: string): Promise<Booking | null> {
+export async function getBookingByCode(
+  code: string,
+  portal: PartnerPortal
+): Promise<Booking | null> {
   const col = await getBookingsCollection();
-  const doc = await col.findOne({ bookingCode: code });
+  const doc = await col.findOne({ bookingCode: code, ...buildPortalScopeFilter(portal) });
   if (!doc) return null;
   return convertDocId(doc);
 }
 
-export async function getBookingById(id: string): Promise<Booking | null> {
+export async function getBookingById(
+  id: string,
+  portal: PartnerPortal
+): Promise<Booking | null> {
   const col = await getBookingsCollection();
   const oid = new ObjectId(id);
-  const doc = await col.findOne({ _id: oid as any });
+  const doc = await col.findOne({ _id: oid as any, ...buildPortalScopeFilter(portal) });
   if (!doc) return null;
   return convertDocId(doc);
 }

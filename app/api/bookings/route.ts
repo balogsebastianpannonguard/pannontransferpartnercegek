@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getCurrentCatlSession } from "@/lib/catl-auth";
+import {
+  getCurrentPartnerSession,
+  getCurrentPartnerSessionForPortal,
+  type PartnerPortal,
+} from "@/lib/partner-session";
 import {
   createBooking,
   listUserBookings,
@@ -15,9 +19,17 @@ import { getDb } from "@/lib/mongodb";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+function getRequestedPortal(request: Request): PartnerPortal | null {
+  const portal = request.headers.get("x-partner-portal");
+  return portal === "catl" || portal === "ecopro" ? portal : null;
+}
+
+export async function GET(request: Request) {
   try {
-    const session = await getCurrentCatlSession();
+    const requestedPortal = getRequestedPortal(request);
+    const session = requestedPortal
+      ? await getCurrentPartnerSessionForPortal(requestedPortal)
+      : await getCurrentPartnerSession();
     if (!session) {
       return NextResponse.json(
         { success: false, message: "Nincs aktív munkamenet." },
@@ -25,7 +37,7 @@ export async function GET() {
       );
     }
 
-    const bookings = await listUserBookings(session.email);
+    const bookings = await listUserBookings(session.email, session.portal);
     return NextResponse.json({ success: true, bookings });
   } catch (error) {
     const message =
@@ -39,7 +51,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getCurrentCatlSession();
+    const requestedPortal = getRequestedPortal(request);
+    const session = requestedPortal
+      ? await getCurrentPartnerSessionForPortal(requestedPortal)
+      : await getCurrentPartnerSession();
     if (!session) {
       return NextResponse.json(
         { success: false, message: "Nincs aktív munkamenet." },
@@ -51,6 +66,7 @@ export async function POST(request: Request) {
     const companyName = body.companyName || "CATL Hungary Kft.";
 
     const bookingData: CreateBookingData = {
+      portal: session.portal,
       userEmail: session.email,
       travelerEmail: body.travelerEmail,
       travelerName: body.travelerName,
@@ -71,7 +87,7 @@ export async function POST(request: Request) {
       comment: body.comment,
     };
 
-    const validation = validateTravelConditions(bookingData);
+    const validation = await validateTravelConditions(bookingData);
     if (!validation.valid) {
       return NextResponse.json(
         { success: false, errors: validation.errors },

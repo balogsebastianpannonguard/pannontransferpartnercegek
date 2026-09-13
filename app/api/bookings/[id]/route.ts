@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getCurrentCatlSession } from "@/lib/catl-auth";
+import {
+  getCurrentPartnerSession,
+  getCurrentPartnerSessionForPortal,
+  type PartnerPortal,
+} from "@/lib/partner-session";
 import {
   getBookingById,
   updateBooking,
@@ -9,6 +13,11 @@ import {
 } from "@/lib/bookings";
 
 export const dynamic = "force-dynamic";
+
+function getRequestedPortal(request: Request): PartnerPortal | null {
+  const portal = request.headers.get("x-partner-portal");
+  return portal === "catl" || portal === "ecopro" ? portal : null;
+}
 
 const PICKUP_AFFECTING_FIELDS = [
   "pickupDate",
@@ -34,11 +43,14 @@ const ALLOWED_PATCH_FIELDS = [
 ];
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getCurrentCatlSession();
+    const requestedPortal = getRequestedPortal(request);
+    const session = requestedPortal
+      ? await getCurrentPartnerSessionForPortal(requestedPortal)
+      : await getCurrentPartnerSession();
     if (!session) {
       return NextResponse.json(
         { success: false, message: "Nincs aktív munkamenet." },
@@ -47,7 +59,7 @@ export async function GET(
     }
 
     const { id } = await params;
-    const booking = await getBookingById(id);
+    const booking = await getBookingById(id, session.portal);
 
     if (!booking) {
       return NextResponse.json(
@@ -79,7 +91,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getCurrentCatlSession();
+    const requestedPortal = getRequestedPortal(request);
+    const session = requestedPortal
+      ? await getCurrentPartnerSessionForPortal(requestedPortal)
+      : await getCurrentPartnerSession();
     if (!session) {
       return NextResponse.json(
         { success: false, message: "Nincs aktív munkamenet." },
@@ -88,7 +103,7 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const existingBooking = await getBookingById(id);
+    const existingBooking = await getBookingById(id, session.portal);
 
     if (!existingBooking) {
       return NextResponse.json(
@@ -166,7 +181,7 @@ export async function PATCH(
         companyName: existingBooking.companyName,
       };
 
-      const validation = validateTravelConditions(mergedForValidation);
+      const validation = await validateTravelConditions(mergedForValidation);
       if (!validation.valid) {
         return NextResponse.json(
           { success: false, errors: validation.errors },
