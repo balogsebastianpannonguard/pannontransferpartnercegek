@@ -130,11 +130,13 @@ export async function POST(request: Request) {
     const dispatcherEmails = staffUsers
       .map((u: any) => u.email)
       .filter((e: any) => typeof e === "string" && e.includes("@"));
-    const dispatcherFallback =
-      process.env.DISPATCHER_EMAIL || "minimalwebsoft@gmail.com";
-    const uniqueDispatcherTargets = Array.from(
-      new Set([...dispatcherEmails, dispatcherFallback])
-    );
+
+    // Ha a DB-ben nincs aktív dispatcher, használjuk a fallback env emailt
+    const uniqueDispatcherTargets: string[] =
+      dispatcherEmails.length > 0
+        ? Array.from(new Set(dispatcherEmails))
+        : [process.env.DISPATCHER_EMAIL || "balogh.sebastian@pannonguard.hu"];
+
 
     const dispatcherHtml = buildDispatcherNotificationEmail({
       bookingCode: createdBooking.bookingCode,

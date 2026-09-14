@@ -12,6 +12,7 @@ function createTransporter(): Transporter {
     host: env.email.smtpHost,
     port: env.email.smtpPort,
     secure: env.email.smtpSecure,
+    requireTLS: !env.email.smtpSecure,
     auth: {
       user: env.email.user,
       pass: env.email.pass,

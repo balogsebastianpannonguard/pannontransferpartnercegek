@@ -4,7 +4,7 @@ import {
   getCurrentPartnerSessionForPortal,
   type PartnerPortal,
 } from "@/lib/partner-session";
-import { listUserBookings } from "@/lib/bookings";
+import { listUserBookings, getBookingsCollection, type Booking } from "@/lib/bookings";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,71 @@ export async function GET(request: Request) {
       (b) => b.status !== "completed" && b.status !== "cancelled"
     ).length;
 
-    return NextResponse.json({ success: true, pendingCount });
+    // Parse lastPollTimestamp from query params
+    const { searchParams } = new URL(request.url);
+    const lastPollParam = searchParams.get("lastPollTimestamp");
+    const lastPollTimestamp = lastPollParam
+      ? Number(lastPollParam)
+      : Date.now() - 60000;
+
+    // Query bookings updated since last poll
+    const col = await getBookingsCollection();
+    const portalFilter =
+      session.portal === "ecopro"
+        ? { portal: "ecopro" as const }
+        : {
+            $or: [
+              { portal: "catl" },
+              { portal: { $exists: false } },
+              { portal: null },
+            ],
+          };
+
+    const updatedDocs = await col
+      .find({
+        userEmail: session.email,
+        ...portalFilter,
+        updatedAt: { $gt: lastPollTimestamp },
+      } as import("mongodb").Filter<Booking>)
+      .sort({ updatedAt: -1 })
+      .toArray();
+
+    const statusChanges = updatedDocs
+      .filter((doc) => {
+        const trail = doc.auditTrail;
+        if (!trail || trail.length === 0) return false;
+        const lastEntry = trail[trail.length - 1];
+        return lastEntry.action === "status-change";
+      })
+      .map((doc) => {
+        const trail = doc.auditTrail!;
+        const lastEntry = trail[trail.length - 1];
+
+        // Determine old status from the previous audit trail entry or default
+        let oldStatus = "pending";
+        for (let i = trail.length - 2; i >= 0; i--) {
+          if (trail[i].action === "status-change") {
+            // Extract status from details like "Státusz módosítva: confirmed"
+            const match = trail[i].details?.match(/:\s*(.+)$/);
+            if (match) {
+              oldStatus = match[1].trim();
+            }
+            break;
+          }
+        }
+
+        return {
+          _id: doc._id ? doc._id.toString() : "",
+          bookingCode: doc.bookingCode,
+          travelerName: doc.travelerName,
+          oldStatus,
+          newStatus: doc.status,
+          updatedAt: doc.updatedAt,
+          details: lastEntry.details,
+        };
+      });
+
+    return NextResponse.json({ success: true, pendingCount, statusChanges });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Ismeretlen hiba történt.";

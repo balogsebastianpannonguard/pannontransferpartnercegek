@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin,
@@ -81,6 +81,17 @@ interface Toast {
   message: string;
 }
 
+interface StatusChangeNotification {
+  id: string;
+  bookingCode: string;
+  travelerName: string;
+  oldStatus: string;
+  newStatus: string;
+  updatedAt: number;
+  details?: string;
+  dismissed: boolean;
+}
+
 const STATUS_LABELS: Record<Booking["status"], string> = {
   pending: "Függőben",
   modified: "Módosítva",
@@ -108,6 +119,32 @@ const STATUS_DOT: Record<Booking["status"], string> = {
   cancelled: "bg-rose-400",
 };
 
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.frequency.value = 1320;
+    osc2.type = 'sine';
+    gain2.gain.setValueAtTime(0.2, ctx.currentTime + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.65);
+    osc2.start(ctx.currentTime + 0.15);
+    osc2.stop(ctx.currentTime + 0.65);
+  } catch {}
+}
+
 export default function BookingsClient() {
   const { t, language, setLanguage } = useLanguage();
   const [scrolled, setScrolled] = useState(false);
@@ -129,6 +166,9 @@ export default function BookingsClient() {
   const [cancelLoading, setCancelLoading] = useState(false);
 
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const [statusNotifications, setStatusNotifications] = useState<StatusChangeNotification[]>([]);
+  const lastNotifPollTimestamp = useRef<number>(Date.now());
 
   const [editForm, setEditForm] = useState({
     pickupDate: "",
@@ -218,6 +258,44 @@ export default function BookingsClient() {
     }, 15000);
     return () => clearInterval(interval);
   }, [authedUser, fetchBookings]);
+
+  useEffect(() => {
+    if (!authedUser) return;
+    
+    const pollNotifications = async () => {
+      try {
+        const res = await fetch(`/api/notifications?lastPollTimestamp=${lastNotifPollTimestamp.current}`, {
+          cache: "no-store",
+          headers: { "x-partner-portal": "ecopro" },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.success && json?.statusChanges?.length > 0) {
+            playNotificationSound();
+            const newNotifs = json.statusChanges.map((sc: any) => ({
+              ...sc,
+              id: sc._id + '-' + sc.updatedAt,
+              dismissed: false,
+            }));
+            setStatusNotifications(prev => [...newNotifs, ...prev].slice(0, 20));
+            fetchBookings();
+          }
+          lastNotifPollTimestamp.current = Date.now();
+        }
+      } catch {}
+    };
+
+    const timer = setInterval(pollNotifications, 10000);
+    return () => clearInterval(timer);
+  }, [authedUser, fetchBookings]);
+
+  const dismissNotification = (id: string) => {
+    setStatusNotifications(prev => prev.map(n => n.id === id ? { ...n, dismissed: true } : n));
+  };
+
+  const dismissAllNotifications = () => {
+    setStatusNotifications(prev => prev.map(n => ({ ...n, dismissed: true })));
+  };
 
   const addToast = useCallback((type: "success" | "error", message: string) => {
     const id = Date.now();
@@ -569,6 +647,77 @@ export default function BookingsClient() {
           </div>
         </div>
       </nav>
+
+      <AnimatePresence>
+        {statusNotifications.filter(n => !n.dismissed).length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed top-20 left-0 right-0 z-40 px-6 pt-4"
+          >
+            <div className="max-w-[1280px] mx-auto">
+              <div className="bg-[#0B1221]/95 backdrop-blur-xl rounded-2xl border border-[#12D6DF]/30 shadow-[0_8px_32px_rgba(18,214,223,0.15)] overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-[#12D6DF]/20 bg-gradient-to-r from-[#12D6DF]/10 to-[#29D391]/5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[#12D6DF] animate-pulse" />
+                    <span className="text-sm font-bold text-white">Értesítések</span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#12D6DF]/20 text-[#12D6DF] text-[10px] font-black">
+                      {statusNotifications.filter(n => !n.dismissed).length}
+                    </span>
+                  </div>
+                  <button
+                    onClick={dismissAllNotifications}
+                    className="text-[11px] font-bold text-slate-400 hover:text-white transition px-2 py-1 rounded-lg hover:bg-white/5"
+                  >
+                    Összes elvetése
+                  </button>
+                </div>
+                <div className="max-h-[300px] overflow-y-auto divide-y divide-white/5">
+                  {statusNotifications.filter(n => !n.dismissed).map((notif) => {
+                    const statusMessages: Record<string, { message: string; accent: string; bg: string }> = {
+                      confirmed: { message: "A foglalása jóváhagyásra került!", accent: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/30" },
+                      modified: { message: "A diszpécser módosítást kér a foglalásán", accent: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/30" },
+                      cancelled: { message: "A foglalása lemondásra került", accent: "text-rose-400", bg: "bg-rose-500/10 border-rose-500/30" },
+                      "in-progress": { message: "A foglalása folyamatban van", accent: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/30" },
+                      completed: { message: "A foglalása befejeződött", accent: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/30" },
+                    };
+                    const meta = statusMessages[notif.newStatus] || { message: `Státusz: ${notif.newStatus}`, accent: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/30" };
+                    return (
+                      <div key={notif.id} className="px-5 py-4 flex items-start gap-4 hover:bg-white/[0.02] transition">
+                        <div className={`shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center ${meta.bg}`}>
+                          {notif.newStatus === "confirmed" ? <CheckCircle2 className={`w-5 h-5 ${meta.accent}`} /> :
+                           notif.newStatus === "modified" ? <Edit3 className={`w-5 h-5 ${meta.accent}`} /> :
+                           notif.newStatus === "cancelled" ? <Ban className={`w-5 h-5 ${meta.accent}`} /> :
+                           <Clock className={`w-5 h-5 ${meta.accent}`} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-bold ${meta.accent} mb-1`}>{meta.message}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[11px] font-black text-white bg-white/10 px-2 py-0.5 rounded">#{notif.bookingCode}</span>
+                            <span className="text-[11px] text-slate-400">{notif.travelerName}</span>
+                            <span className="text-[10px] text-slate-500">
+                              {STATUS_LABELS[notif.oldStatus as Booking["status"]] || notif.oldStatus} → {STATUS_LABELS[notif.newStatus as Booking["status"]] || notif.newStatus}
+                            </span>
+                          </div>
+                          {notif.details && <p className="text-[11px] text-slate-500 mt-1">{notif.details}</p>}
+                        </div>
+                        <button
+                          onClick={() => dismissNotification(notif.id)}
+                          className="shrink-0 w-7 h-7 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 flex items-center justify-center transition"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <section className="relative pt-32 pb-24 px-6 min-h-screen flex items-start justify-center z-10">
         <div className="max-w-[1280px] mx-auto w-full">

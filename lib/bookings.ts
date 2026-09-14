@@ -64,6 +64,13 @@ export interface Booking {
   createdAt: number;
   updatedAt: number;
   auditTrail?: AuditTrailEntry[];
+  lastStatusChange?: {
+    oldStatus: string;
+    newStatus: string;
+    changedAt: number;
+    changedBy: string;
+    details?: string;
+  };
 }
 
 export interface ValidationResult {
@@ -559,6 +566,11 @@ export async function updateBookingStatus(
 ): Promise<Booking | null> {
   const col = await getBookingsCollection();
   const oid = new ObjectId(id);
+
+  const existing = await col.findOne({ _id: oid as any });
+  if (!existing) return null;
+  const oldStatus = existing.status;
+
   const now = Date.now();
 
   const auditEntry: AuditTrailEntry = {
@@ -574,6 +586,13 @@ export async function updateBookingStatus(
       $set: {
         status,
         updatedAt: now,
+        lastStatusChange: {
+          oldStatus,
+          newStatus: status,
+          changedAt: now,
+          changedBy: actor,
+          details: details || '',
+        },
       },
       $push: {
         auditTrail: auditEntry,
