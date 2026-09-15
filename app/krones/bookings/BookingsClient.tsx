@@ -145,8 +145,8 @@ function playNotificationSound() {
   } catch {}
 }
 
-export default function BookingsClient() {
-  const { t, language, setLanguage } = useLanguage();
+export default function KronesBookingsClient() {
+  const { t, language, setLanguage, availableLanguages } = useLanguage();
   const [scrolled, setScrolled] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [authedUser, setAuthedUser] = useState<KronesPortalUser | null>(null);
@@ -553,9 +553,10 @@ export default function BookingsClient() {
   return (
     <div className="min-h-screen bg-[#040914] text-slate-300 font-sans selection:bg-[#003F8A]/30 relative overflow-hidden">
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#12D6DF]/20 via-[#0A7EA4]/6 to-transparent blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#29D391]/12 via-transparent to-transparent blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#7dd3fc_1px,transparent_1px),linear-gradient(to_bottom,#7dd3fc_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#003F8A]/20 via-[#1D4ED8]/6 to-transparent blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#60A5FA]/12 via-transparent to-transparent blur-3xl" />
+        <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#93c5fd_1px,transparent_1px),linear-gradient(to_bottom,#93c5fd_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute inset-x-0 top-0 h-[260px] bg-[linear-gradient(180deg,rgba(0,63,138,0.14),rgba(4,9,20,0))]" />
       </div>
 
       <nav
@@ -610,7 +611,7 @@ export default function BookingsClient() {
             <div className="w-px h-5 bg-white/10 mx-2"></div>
 
             <div className="flex items-center gap-1">
-              {(["hu", "en", "zh"] as const).map((lang) => (
+              {availableLanguages.map((lang) => (
                 <button
                   key={lang}
                   onClick={() => setLanguage(lang)}
@@ -722,6 +723,10 @@ export default function BookingsClient() {
       <section className="relative pt-32 pb-24 px-6 min-h-screen flex items-start justify-center z-10">
         <div className="max-w-[1280px] mx-auto w-full">
           <div className="mb-10">
+            <div className="relative overflow-hidden rounded-[26px] border border-[#003F8A]/20 bg-[linear-gradient(135deg,rgba(0,63,138,0.12),rgba(11,18,33,0.95)_42%,rgba(96,165,250,0.12))] px-5 py-6 md:px-7 md:py-7 shadow-[0_20px_70px_rgba(0,63,138,0.12)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-[#60A5FA]/10 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#60A5FA]/70 to-transparent" />
+              <div className="relative">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -770,6 +775,8 @@ export default function BookingsClient() {
                   Új foglalás
                 </Link>
               </motion.div>
+            </div>
+              </div>
             </div>
           </div>
 

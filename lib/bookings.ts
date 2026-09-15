@@ -373,18 +373,6 @@ export async function validateTravelConditions(
       }
     }
 
-    const selectedVehicle = selectPricingVehicle(pricing, {
-      transferType: tt,
-      travelers,
-    });
-
-    if (!selectedVehicle) {
-      errors.push(
-        tt === 'executive'
-          ? 'Az EcoPro executive foglalások maximum 7 utassal rögzíthetők.'
-          : 'Ehhez az utasszámhoz jelenleg nincs elérhető járműkategória.'
-      );
-    }
   }
 
   if (transferType === 'executive') {
@@ -452,7 +440,7 @@ function resolveBookingPortal(companyName?: string): PartnerPortal {
   return partnerKey as PartnerPortal;
 }
 
-function buildPortalScopeFilter(portal: PartnerPortal): Filter<Booking> {
+export function buildPortalScopeFilter(portal: PartnerPortal): Filter<Booking> {
   if (portal !== 'catl') {
     return { portal };
   }

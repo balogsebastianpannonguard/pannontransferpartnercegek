@@ -29,6 +29,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "../context/LanguageContext";
 import EnterairPremiumLogin from "./components/EnterairPremiumLogin";
+import { getPartnerPortalBrand } from "@/lib/partner-portal-brand";
 
 interface EnterairPortalUser {
   email: string;
@@ -37,9 +38,10 @@ interface EnterairPortalUser {
 }
 
 export default function EnterairLandingPage() {
-  const { t, language, setLanguage } = useLanguage();
+  const { t, language, setLanguage, availableLanguages } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
+  const portalBrand = getPartnerPortalBrand("enterair");
   const [scrolled, setScrolled] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [authedUser, setAuthedUser] = useState<EnterairPortalUser | null>(null);
@@ -408,10 +410,11 @@ export default function EnterairLandingPage() {
       
       {/* Background */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#12D6DF]/20 via-[#0A7EA4]/6 to-transparent blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#29D391]/12 via-transparent to-transparent blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#7dd3fc_1px,transparent_1px),linear-gradient(to_bottom,#7dd3fc_1px,transparent_1px)] bg-[size:48px_48px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(18,214,223,0.08),transparent_25%),radial-gradient(circle_at_80%_10%,rgba(41,211,145,0.07),transparent_20%)]" />
+        <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#005BAA]/22 via-[#1D4ED8]/7 to-transparent blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#7DD3FC]/14 via-transparent to-transparent blur-3xl" />
+        <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#bae6fd_1px,transparent_1px),linear-gradient(to_bottom,#bae6fd_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,91,170,0.08),transparent_25%),radial-gradient(circle_at_82%_12%,rgba(125,211,252,0.07),transparent_20%)]" />
+        <div className="absolute inset-x-0 top-0 h-[320px] bg-[linear-gradient(180deg,rgba(0,91,170,0.16),rgba(3,18,24,0))]" />
       </div>
 
       {/* Navbar */}
@@ -463,10 +466,10 @@ export default function EnterairLandingPage() {
             <div className="w-px h-5 bg-white/10 mx-2"></div>
             
             <div className="flex items-center gap-1">
-              {['hu', 'en', 'zh'].map((lang) => (
+              {availableLanguages.map((lang) => (
                 <button 
                   key={lang}
-                  onClick={() => setLanguage(lang as 'hu' | 'en' | 'zh')}
+                  onClick={() => setLanguage(lang)}
                   className={`w-8 h-8 rounded flex items-center justify-center text-[11px] font-bold tracking-wider transition-all duration-200 ${
                     language === lang 
                       ? 'bg-[#12D6DF] text-[#031218] shadow-sm'
@@ -511,18 +514,32 @@ export default function EnterairLandingPage() {
           
           {/* Header Title for the Form */}
           <div className="text-center mb-12">
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#12D6DF]/10 border border-[#12D6DF]/20 mb-6 shadow-[0_0_25px_rgba(18,214,223,0.08)]">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#12D6DF]" />
-              <span className="text-[10px] font-bold text-[#12D6DF] tracking-[0.24em] uppercase">
-                Enter Air Booking Desk
-              </span>
-            </motion.div>
-            <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="text-3xl md:text-6xl font-bold tracking-tight text-white mb-4">
-              Dedikált Enter Air foglalási felület
-            </motion.h1>
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="text-slate-300/80 text-sm md:text-lg max-w-3xl mx-auto leading-relaxed">
-              Ez az Enter Air sajat oldala. Kulon session, kulon booking folyamat, kulon mentes es kulon foglalasi lista tartozik hozza.
-            </motion.p>
+            <div className="relative overflow-hidden rounded-[32px] border border-[#005BAA]/20 bg-[linear-gradient(135deg,rgba(0,91,170,0.13),rgba(3,18,24,0.95)_42%,rgba(125,211,252,0.12))] px-6 py-8 md:px-10 md:py-10 shadow-[0_25px_90px_rgba(0,91,170,0.15)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-[#7DD3FC]/12 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#7DD3FC]/70 to-transparent" />
+              <div className="relative">
+                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#005BAA]/10 border border-[#005BAA]/20 mb-6 shadow-[0_0_25px_rgba(0,91,170,0.08)]">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#7DD3FC]" />
+                  <span className="text-[10px] font-bold text-[#BAE6FD] tracking-[0.24em] uppercase">
+                    {portalBrand.deskLabel}
+                  </span>
+                </motion.div>
+                <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="text-3xl md:text-6xl font-bold tracking-tight text-white mb-4">
+                  {portalBrand.heroTitle}
+                </motion.h1>
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="text-slate-300/80 text-sm md:text-lg max-w-3xl mx-auto leading-relaxed">
+                  {portalBrand.heroDescription}
+                </motion.p>
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-3 max-w-5xl mx-auto">
+                  {portalBrand.heroHighlights.map((item) => (
+                    <div key={item} className="rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-4 text-left backdrop-blur-sm">
+                      <div className="text-[10px] font-black tracking-[0.2em] uppercase text-[#BAE6FD] mb-2">ENTER AIR</div>
+                      <div className="text-sm font-semibold text-white leading-relaxed">{item}</div>
+                    </div>
+                  ))}
+                </motion.div>
+              </div>
+            </div>
           </div>
 
           {submitSuccess ? (

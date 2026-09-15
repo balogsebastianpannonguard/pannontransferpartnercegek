@@ -34,6 +34,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "../context/LanguageContext";
 import { CATL_PRICING, formatHuf } from "./catl-pricing";
 import CatlPremiumLogin from "./components/CatlPremiumLogin";
+import { getPartnerPortalBrand } from "@/lib/partner-portal-brand";
 
 interface CatlPortalUser {
   email: string;
@@ -42,9 +43,10 @@ interface CatlPortalUser {
 }
 
 export default function CatlLandingPage() {
-  const { t, language, setLanguage } = useLanguage();
+  const { t, language, setLanguage, availableLanguages } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
+  const portalBrand = getPartnerPortalBrand("catl");
   const [scrolled, setScrolled] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [authedUser, setAuthedUser] = useState<CatlPortalUser | null>(null);
@@ -430,6 +432,7 @@ export default function CatlLandingPage() {
         <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#0047BA]/15 via-[#0047BA]/5 to-transparent blur-3xl" />
         <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#00B4D8]/10 via-transparent to-transparent blur-3xl" />
         <div className="absolute inset-0 opacity-[0.015] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute inset-x-0 top-0 h-[320px] bg-[linear-gradient(180deg,rgba(0,71,186,0.18),rgba(4,9,20,0))]" />
       </div>
 
       {/* Navbar */}
@@ -459,10 +462,10 @@ export default function CatlLandingPage() {
               </div>
               <div className="flex flex-col justify-center">
                 <span className="font-bold text-lg md:text-xl tracking-tight text-white leading-none flex items-center gap-2">
-                  CATL <span className="text-[#00B4D8] text-sm hidden sm:inline">宁德时代</span>
+                  {portalBrand.navLabel}
                 </span>
                 <span className="text-[10px] font-medium tracking-widest text-slate-400 uppercase mt-1">
-                  Corporate Portal
+                  {portalBrand.navSubline}
                 </span>
               </div>
             </div>
@@ -481,10 +484,10 @@ export default function CatlLandingPage() {
             <div className="w-px h-5 bg-white/10 mx-2"></div>
             
             <div className="flex items-center gap-1">
-              {['hu', 'en', 'zh'].map((lang) => (
+              {availableLanguages.map((lang) => (
                 <button 
                   key={lang}
-                  onClick={() => setLanguage(lang as 'hu' | 'en' | 'zh')}
+                  onClick={() => setLanguage(lang)}
                   className={`w-8 h-8 rounded flex items-center justify-center text-[11px] font-bold tracking-wider transition-all duration-200 ${
                     language === lang 
                       ? 'bg-[#0047BA] text-white shadow-sm' 
@@ -529,18 +532,44 @@ export default function CatlLandingPage() {
           
           {/* Header Title for the Form */}
           <div className="text-center mb-12">
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0047BA]/10 border border-[#0047BA]/20 mb-6">
-              <Briefcase className="w-3.5 h-3.5 text-[#00B4D8]" />
-              <span className="text-[10px] font-bold text-[#00B4D8] tracking-widest uppercase">
-                Official Booking Portal
-              </span>
-            </motion.div>
-            <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-4">
-              Üdvözöljük a CATL Dedikált Portálon
-            </motion.h1>
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="text-slate-400 text-sm md:text-base">
-              Hivatalos transzferfoglalási felület
-            </motion.p>
+            <div className="relative overflow-hidden rounded-[30px] border border-[#0047BA]/20 bg-[linear-gradient(135deg,rgba(0,71,186,0.14),rgba(4,9,20,0.94)_45%,rgba(0,180,216,0.12))] px-6 py-8 md:px-10 md:py-10 shadow-[0_25px_90px_rgba(0,71,186,0.16)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#00B4D8]/15 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#00B4D8]/70 to-transparent" />
+              <div className="relative">
+                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0047BA]/10 border border-[#0047BA]/20 mb-6">
+                  <Briefcase className="w-3.5 h-3.5 text-[#00B4D8]" />
+                  <span className="text-[10px] font-bold text-[#00B4D8] tracking-widest uppercase">
+                    {portalBrand.deskLabel}
+                  </span>
+                </motion.div>
+                <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-4">
+                  {portalBrand.heroTitle}
+                </motion.h1>
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="text-slate-300 text-sm md:text-base max-w-3xl mx-auto">
+                  {portalBrand.heroDescription}
+                </motion.p>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.28 }}
+                  className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-3 max-w-5xl mx-auto"
+                >
+                  {portalBrand.heroHighlights.map((item) => (
+                    <div
+                      key={item}
+                      className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+                    >
+                      <div className="text-[10px] font-black tracking-[0.2em] uppercase text-[#7DE3FF] mb-2">
+                        CATL
+                      </div>
+                      <div className="text-sm font-semibold text-white leading-relaxed">
+                        {item}
+                      </div>
+                    </div>
+                  ))}
+                </motion.div>
+              </div>
+            </div>
           </div>
 
           {submitSuccess ? (

@@ -1,40 +1,55 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useMemo, ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { translations, Language } from "@/lib/translations";
+import { getAllowedLanguagesForPath } from "@/lib/partner-portal-brand";
 
 type LanguageContextType = {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (section: keyof typeof translations.hu, key: string, params?: Record<string, string>) => any;
+  t: (section: keyof typeof translations.hu, key: string, params?: Record<string, string>) => string;
   isTransitioning: boolean;
   transitioningTo: Language | null;
+  availableLanguages: Language[];
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [language, setLanguageState] = useState<Language>("zh");
+  const pathname = usePathname();
+  const [preferredLanguage, setPreferredLanguage] = useState<Language>(() => {
+    if (typeof window === "undefined") return "hu";
+
+    const allowedLanguages = getAllowedLanguagesForPath(window.location.pathname);
+    const savedLang = localStorage.getItem("catl_lang") as Language;
+
+    if (
+      savedLang &&
+      (savedLang === "hu" || savedLang === "en" || savedLang === "zh") &&
+      allowedLanguages.includes(savedLang)
+    ) {
+      return savedLang;
+    }
+
+    return allowedLanguages[0] || "hu";
+  });
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitioningTo, setTransitioningTo] = useState<Language | null>(null);
-
-  useEffect(() => {
-    // Check localStorage on mount
-    const savedLang = localStorage.getItem("catl_lang") as Language;
-    if (savedLang && (savedLang === "hu" || savedLang === "en" || savedLang === "zh")) {
-      setLanguageState(savedLang);
-    }
-  }, []);
+  const availableLanguages = useMemo(() => getAllowedLanguagesForPath(pathname || "/"), [pathname]);
+  const language = availableLanguages.includes(preferredLanguage)
+    ? preferredLanguage
+    : (availableLanguages[0] || "hu");
 
   const setLanguage = (lang: Language) => {
-    if (lang === language) return;
+    if (!availableLanguages.includes(lang) || lang === language) return;
     
     // Trigger transition effect
     setIsTransitioning(true);
     setTransitioningTo(lang);
     
     setTimeout(() => {
-      setLanguageState(lang);
+      setPreferredLanguage(lang);
       localStorage.setItem("catl_lang", lang);
       
       // Remove transition effect after DOM updates
@@ -47,7 +62,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const t = (section: keyof typeof translations.hu, key: string, params?: Record<string, string>) => {
-    const dict = translations[language][section] as any;
+    const dict = translations[language][section] as Record<string, string>;
     if (!dict) return key;
     
     let text = dict[key] || key;
@@ -62,7 +77,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t, isTransitioning, transitioningTo }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, isTransitioning, transitioningTo, availableLanguages }}>
       {children}
     </LanguageContext.Provider>
   );

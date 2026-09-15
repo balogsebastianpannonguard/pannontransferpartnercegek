@@ -4,13 +4,21 @@ import {
   getCurrentPartnerSessionForPortal,
   type PartnerPortal,
 } from "@/lib/partner-session";
-import { listUserBookings, getBookingsCollection, type Booking } from "@/lib/bookings";
+import {
+  listUserBookings,
+  getBookingsCollection,
+  buildPortalScopeFilter,
+  type Booking,
+} from "@/lib/bookings";
 
 export const dynamic = "force-dynamic";
 
 function getRequestedPortal(request: Request): PartnerPortal | null {
   const portal = request.headers.get("x-partner-portal");
-  return portal === "catl" || portal === "ecopro" ? portal : null;
+  return portal &&
+    ["catl", "ecopro", "eccoino", "vitesco", "schaeffler", "krones", "enterair", "tama", "ni"].includes(portal)
+    ? (portal as PartnerPortal)
+    : null;
 }
 
 export async function GET(request: Request) {
@@ -40,16 +48,7 @@ export async function GET(request: Request) {
 
     // Query bookings updated since last poll
     const col = await getBookingsCollection();
-    const portalFilter =
-      session.portal === "ecopro"
-        ? { portal: "ecopro" as const }
-        : {
-            $or: [
-              { portal: "catl" },
-              { portal: { $exists: false } },
-              { portal: null },
-            ],
-          };
+    const portalFilter = buildPortalScopeFilter(session.portal);
 
     const updatedDocs = await col
       .find({

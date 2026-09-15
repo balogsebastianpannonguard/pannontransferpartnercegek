@@ -145,8 +145,8 @@ function playNotificationSound() {
   } catch {}
 }
 
-export default function BookingsClient() {
-  const { t, language, setLanguage } = useLanguage();
+export default function EcoproBookingsClient() {
+  const { t, language, setLanguage, availableLanguages } = useLanguage();
   const [scrolled, setScrolled] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [authedUser, setAuthedUser] = useState<EcoproPortalUser | null>(null);
@@ -553,9 +553,10 @@ export default function BookingsClient() {
   return (
     <div className="min-h-screen bg-[#040914] text-slate-300 font-sans selection:bg-[#0096D6]/30 relative overflow-hidden">
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#12D6DF]/20 via-[#0A7EA4]/6 to-transparent blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#29D391]/12 via-transparent to-transparent blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#7dd3fc_1px,transparent_1px),linear-gradient(to_bottom,#7dd3fc_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#0096D6]/20 via-[#0A7EA4]/6 to-transparent blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#1EC8A5]/12 via-transparent to-transparent blur-3xl" />
+        <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#67e8f9_1px,transparent_1px),linear-gradient(to_bottom,#67e8f9_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute inset-x-0 top-0 h-[260px] bg-[linear-gradient(180deg,rgba(0,150,214,0.14),rgba(4,9,20,0))]" />
       </div>
 
       <nav
@@ -610,7 +611,7 @@ export default function BookingsClient() {
             <div className="w-px h-5 bg-white/10 mx-2"></div>
 
             <div className="flex items-center gap-1">
-              {(["hu", "en", "zh"] as const).map((lang) => (
+              {availableLanguages.map((lang) => (
                 <button
                   key={lang}
                   onClick={() => setLanguage(lang)}
@@ -722,54 +723,60 @@ export default function BookingsClient() {
       <section className="relative pt-32 pb-24 px-6 min-h-screen flex items-start justify-center z-10">
         <div className="max-w-[1280px] mx-auto w-full">
           <div className="mb-10">
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0096D6]/10 border border-[#0096D6]/20 mb-6"
-            >
-              <CalendarDays className="w-3.5 h-3.5 text-[#00B4D8]" />
-              <span className="text-[10px] font-bold text-[#00B4D8] tracking-widest uppercase">
-                Foglalás Kezelő
-              </span>
-              {isRefreshing && (
-                <RefreshCw className="w-3 h-3 text-[#00B4D8] animate-spin ml-1" />
-              )}
-            </motion.div>
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-              <div>
-                <motion.h1
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-3"
+            <div className="relative overflow-hidden rounded-[28px] border border-[#0096D6]/20 bg-[linear-gradient(135deg,rgba(0,150,214,0.12),rgba(11,18,33,0.95)_42%,rgba(30,200,165,0.12))] px-5 py-6 md:px-7 md:py-7 shadow-[0_20px_70px_rgba(0,150,214,0.14)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-[#1EC8A5]/10 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#00B4D8]/70 to-transparent" />
+              <div className="relative">
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0096D6]/10 border border-[#0096D6]/20 mb-6"
                 >
-                  Saját foglalásaim
-                </motion.h1>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-slate-400 text-sm md:text-base"
-                >
-                  Valós idejű státusz és részletek
-                </motion.p>
+                  <CalendarDays className="w-3.5 h-3.5 text-[#00B4D8]" />
+                  <span className="text-[10px] font-bold text-[#00B4D8] tracking-widest uppercase">
+                    Foglalás Kezelő
+                  </span>
+                  {isRefreshing && (
+                    <RefreshCw className="w-3 h-3 text-[#00B4D8] animate-spin ml-1" />
+                  )}
+                </motion.div>
+                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                  <div>
+                    <motion.h1
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.1 }}
+                      className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-3"
+                    >
+                      Saját foglalásaim
+                    </motion.h1>
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="text-slate-400 text-sm md:text-base"
+                    >
+                      Valós idejű státusz és részletek
+                    </motion.p>
+                  </div>
+                  <motion.div className="flex items-center gap-3">
+                    <button
+                      onClick={() => fetchBookings(true)}
+                      className="h-10 px-4 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all inline-flex items-center gap-2 text-sm font-medium"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                      Frissítés
+                    </button>
+                    <Link
+                      href="/ecopro"
+                      className="h-10 px-4 rounded-lg bg-[#0096D6] hover:bg-[#0B1F47] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,180,216,0.3)]"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Új foglalás
+                    </Link>
+                  </motion.div>
+                </div>
               </div>
-              <motion.div className="flex items-center gap-3">
-                <button
-                  onClick={() => fetchBookings(true)}
-                  className="h-10 px-4 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all inline-flex items-center gap-2 text-sm font-medium"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-                  Frissítés
-                </button>
-                <Link
-                  href="/ecopro"
-                  className="h-10 px-4 rounded-lg bg-[#0096D6] hover:bg-[#0B1F47] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,180,216,0.3)]"
-                >
-                  <Plus className="w-4 h-4" />
-                  Új foglalás
-                </Link>
-              </motion.div>
             </div>
           </div>
 

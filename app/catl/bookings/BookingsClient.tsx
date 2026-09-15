@@ -165,8 +165,8 @@ const STATUS_DOT: Record<Booking["status"], string> = {
   cancelled: "bg-rose-400",
 };
 
-export default function BookingsClient() {
-  const { t, language, setLanguage } = useLanguage();
+export default function CatlBookingsClient() {
+  const { t, language, setLanguage, availableLanguages } = useLanguage();
   const [scrolled, setScrolled] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [authedUser, setAuthedUser] = useState<CatlPortalUser | null>(null);
@@ -576,6 +576,7 @@ export default function BookingsClient() {
         <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#0047BA]/15 via-[#0047BA]/5 to-transparent blur-3xl" />
         <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#00B4D8]/10 via-transparent to-transparent blur-3xl" />
         <div className="absolute inset-0 opacity-[0.015] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute inset-x-0 top-0 h-[260px] bg-[linear-gradient(180deg,rgba(0,71,186,0.14),rgba(4,9,20,0))]" />
       </div>
 
       <nav
@@ -630,7 +631,7 @@ export default function BookingsClient() {
             <div className="w-px h-5 bg-white/10 mx-2"></div>
 
             <div className="flex items-center gap-1">
-              {(["hu", "en", "zh"] as const).map((lang) => (
+              {availableLanguages.map((lang) => (
                 <button
                   key={lang}
                   onClick={() => setLanguage(lang)}
@@ -782,6 +783,10 @@ export default function BookingsClient() {
       <section className="relative pt-32 pb-24 px-6 min-h-screen flex items-start justify-center z-10">
         <div className="max-w-[1280px] mx-auto w-full">
           <div className="mb-10">
+            <div className="relative overflow-hidden rounded-[24px] border border-[#0047BA]/20 bg-[linear-gradient(135deg,rgba(0,71,186,0.12),rgba(11,18,33,0.96)_42%,rgba(0,180,216,0.12))] px-5 py-6 md:px-7 md:py-7 shadow-[0_20px_70px_rgba(0,71,186,0.14)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-[#00B4D8]/10 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#00B4D8]/70 to-transparent" />
+              <div className="relative">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -830,6 +835,8 @@ export default function BookingsClient() {
                   Új foglalás
                 </Link>
               </motion.div>
+            </div>
+              </div>
             </div>
           </div>
 
