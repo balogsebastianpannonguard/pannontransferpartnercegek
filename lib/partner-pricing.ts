@@ -40,93 +40,184 @@ export interface PartnerPricing {
 
 const COLLECTION_NAME = "partner_pricing";
 
-export const FALLBACK_CATL_PRICING: Omit<PartnerPricing, "_id" | "createdAt" | "updatedAt"> = {
-  partnerKey: "catl",
-  partnerName: "CATL Hungary Kft.",
-  isActive: true,
-  vehicles: [
-    {
-      id: "skoda",
-      name: "Skoda",
-      capacity: "1-3 passenger",
-      bpBudAirport: 60808,
-      dbDbAirport: 18400,
-      newPrice2026: 82550,
-      modification12to24h: 102157,
-      modification0to12h: 122589,
-      cancellation12to24h: 34052,
-      cancellation0to12h: 54484,
-      extraWaitingPerHour: 7000,
-      dailyRate: 65000,
-    },
-    {
-      id: "opel_ford",
-      name: "Opel/Ford",
-      capacity: "3-8 passenger",
-      bpBudAirport: 94107,
-      dbDbAirport: 25300,
-      newPrice2026: 95250,
-      modification12to24h: 158100,
-      modification0to12h: 189720,
-      cancellation12to24h: 52700,
-      cancellation0to12h: 84320,
-      extraWaitingPerHour: 10000,
-      dailyRate: 80000,
-    },
-    {
-      id: "v_class",
-      name: "V class",
-      capacity: "3-7 passenger",
-      bpBudAirport: 137541,
-      dbDbAirport: null,
-      newPrice2026: 154046,
-      modification12to24h: 154046,
-      modification0to12h: 277283,
-      cancellation12to24h: 77023,
-      cancellation0to12h: 123237,
-      extraWaitingPerHour: 15000,
-      dailyRate: 120000,
-    },
-    {
-      id: "s_class",
-      name: "S class",
-      capacity: "1-3 passenger",
-      bpBudAirport: 166497,
-      dbDbAirport: null,
-      newPrice2026: 186477,
-      modification12to24h: 186477,
-      modification0to12h: 335658,
-      cancellation12to24h: 93238,
-      cancellation0to12h: 149181,
-      extraWaitingPerHour: 25000,
-      dailyRate: 150000,
-    },
-    {
-      id: "man_bus",
-      name: "MAN busz",
-      capacity: "Large group",
-      bpBudAirport: 173736,
-      dbDbAirport: 40250,
-      newPrice2026: 194584,
-      modification12to24h: 194584,
-      modification0to12h: 350252,
-      cancellation12to24h: 97292,
-      cancellation0to12h: 155667,
-      extraWaitingPerHour: 20000,
-      dailyRate: 145000,
-    },
-  ],
-  terms: {
+function createVehicles(input: {
+  skoda: [number, number];
+  opel_ford: [number, number];
+  v_class: [number, number];
+  s_class: [number, number];
+  man_bus: [number, number];
+  dbDbAirport?: Partial<Record<"skoda" | "opel_ford" | "v_class" | "s_class" | "man_bus", number | null>>;
+  dailyRate?: Partial<Record<"skoda" | "opel_ford" | "v_class" | "s_class" | "man_bus", number>>;
+  waiting?: Partial<Record<"skoda" | "opel_ford" | "v_class" | "s_class" | "man_bus", number>>;
+}): PricingVehicle[] {
+  const names = {
+    skoda: { name: "Skoda", capacity: "1-3 passenger" },
+    opel_ford: { name: "Opel/Ford", capacity: "3-8 passenger" },
+    v_class: { name: "V class", capacity: "3-7 passenger" },
+    s_class: { name: "S class", capacity: "1-3 passenger" },
+    man_bus: { name: "MAN busz", capacity: "Large group" },
+  } as const;
+
+  return (Object.keys(names) as Array<keyof typeof names>).map((id) => {
+    const [bpBudAirport, newPrice2026] = input[id];
+    return {
+      id,
+      name: names[id].name,
+      capacity: names[id].capacity,
+      bpBudAirport,
+      dbDbAirport: input.dbDbAirport?.[id] ?? null,
+      newPrice2026,
+      modification12to24h: Math.round(newPrice2026 * 1.4),
+      modification0to12h: Math.round(newPrice2026 * 1.6),
+      cancellation12to24h: Math.round(newPrice2026 * 0.5),
+      cancellation0to12h: Math.round(newPrice2026 * 0.8),
+      extraWaitingPerHour: input.waiting?.[id] ?? (id === "skoda" ? 7000 : id === "opel_ford" ? 10000 : id === "v_class" ? 15000 : id === "s_class" ? 25000 : 20000),
+      dailyRate: input.dailyRate?.[id] ?? (id === "skoda" ? 65000 : id === "opel_ford" ? 80000 : id === "v_class" ? 120000 : id === "s_class" ? 150000 : 145000),
+    };
+  });
+}
+
+function createTerms(
+  modification12to24h: number,
+  modification0to12h: number,
+  cancellation12to24h: number,
+  cancellation0to12h: number
+): PricingTerms {
+  return {
     modification: {
-      "12-24h": { percentage: 150, description: "150% felár" },
-      "0-12h": { percentage: 180, description: "180% felár" },
+      "12-24h": { percentage: modification12to24h, description: `${modification12to24h}% felár` },
+      "0-12h": { percentage: modification0to12h, description: `${modification0to12h}% felár` },
     },
     cancellation: {
-      "12-24h": { percentage: 50, description: "50% kötbér" },
-      "0-12h": { percentage: 80, description: "80% kötbér" },
+      "12-24h": { percentage: cancellation12to24h, description: `${cancellation12to24h}% kötbér` },
+      "0-12h": { percentage: cancellation0to12h, description: `${cancellation0to12h}% kötbér` },
     },
+  };
+}
+
+export const PARTNER_FALLBACK_PRICING: Record<string, Omit<PartnerPricing, "_id" | "createdAt" | "updatedAt">> = {
+  catl: {
+    partnerKey: "catl",
+    partnerName: "CATL Hungary Kft.",
+    isActive: true,
+    vehicles: createVehicles({
+      skoda: [60808, 82550],
+      opel_ford: [94107, 95250],
+      v_class: [137541, 154046],
+      s_class: [166497, 186477],
+      man_bus: [173736, 194584],
+      dbDbAirport: { skoda: 18400, opel_ford: 25300, man_bus: 40250 },
+    }),
+    terms: createTerms(150, 180, 50, 80),
+  },
+  ecopro: {
+    partnerKey: "ecopro",
+    partnerName: "EcoPro BM Hungary",
+    isActive: true,
+    vehicles: createVehicles({
+      skoda: [60808, 82550],
+      opel_ford: [94107, 95250],
+      v_class: [137541, 154046],
+      s_class: [166497, 186477],
+      man_bus: [173736, 194584],
+      dbDbAirport: { skoda: 18400, opel_ford: 25300, man_bus: 40250 },
+    }),
+    terms: createTerms(150, 180, 50, 80),
+  },
+  eccoino: {
+    partnerKey: "eccoino",
+    partnerName: "Eccoino",
+    isActive: true,
+    vehicles: createVehicles({
+      skoda: [55000, 62000],
+      opel_ford: [80000, 90000],
+      v_class: [110000, 125000],
+      s_class: [140000, 160000],
+      man_bus: [160000, 180000],
+    }),
+    terms: createTerms(140, 160, 55, 85),
+  },
+  vitesco: {
+    partnerKey: "vitesco",
+    partnerName: "Vitesco Technologies",
+    isActive: true,
+    vehicles: createVehicles({
+      skoda: [58000, 65000],
+      opel_ford: [85000, 96000],
+      v_class: [115000, 130000],
+      s_class: [145000, 165000],
+      man_bus: [165000, 185000],
+    }),
+    terms: createTerms(135, 165, 50, 75),
+  },
+  schaeffler: {
+    partnerKey: "schaeffler",
+    partnerName: "Schaeffler",
+    isActive: true,
+    vehicles: createVehicles({
+      skoda: [54000, 60000],
+      opel_ford: [82000, 92000],
+      v_class: [112000, 127000],
+      s_class: [142000, 162000],
+      man_bus: [162000, 182000],
+    }),
+    terms: createTerms(140, 160, 50, 80),
+  },
+  krones: {
+    partnerKey: "krones",
+    partnerName: "Krones AG",
+    isActive: true,
+    vehicles: createVehicles({
+      skoda: [56000, 63000],
+      opel_ford: [86000, 97000],
+      v_class: [116000, 131000],
+      s_class: [146000, 166000],
+      man_bus: [166000, 187000],
+    }),
+    terms: createTerms(130, 150, 55, 85),
+  },
+  enterair: {
+    partnerKey: "enterair",
+    partnerName: "Enter Air",
+    isActive: true,
+    vehicles: createVehicles({
+      skoda: [57000, 64000],
+      opel_ford: [84000, 95000],
+      v_class: [114000, 129000],
+      s_class: [144000, 164000],
+      man_bus: [164000, 184000],
+    }),
+    terms: createTerms(135, 155, 50, 75),
+  },
+  tama: {
+    partnerKey: "tama",
+    partnerName: "Tama",
+    isActive: true,
+    vehicles: createVehicles({
+      skoda: [53000, 59000],
+      opel_ford: [81000, 91000],
+      v_class: [111000, 126000],
+      s_class: [141000, 161000],
+      man_bus: [161000, 181000],
+    }),
+    terms: createTerms(140, 160, 50, 80),
+  },
+  ni: {
+    partnerKey: "ni",
+    partnerName: "National Instruments",
+    isActive: true,
+    vehicles: createVehicles({
+      skoda: [55000, 62000],
+      opel_ford: [83000, 93000],
+      v_class: [113000, 128000],
+      s_class: [143000, 163000],
+      man_bus: [163000, 183000],
+    }),
+    terms: createTerms(135, 160, 55, 80),
   },
 };
+
+export const FALLBACK_CATL_PRICING = PARTNER_FALLBACK_PRICING.catl;
 
 export const CATL_PRICING: Record<string, PricingVehicle> = {};
 for (const v of FALLBACK_CATL_PRICING.vehicles) {
@@ -157,7 +248,8 @@ export async function getPartnerPricing(
     // silently fall back to static data
   }
   const now = Date.now();
-  return { ...FALLBACK_CATL_PRICING, createdAt: now, updatedAt: now };
+  const fallback = PARTNER_FALLBACK_PRICING[partnerKey] || FALLBACK_CATL_PRICING;
+  return { ...fallback, createdAt: now, updatedAt: now };
 }
 
 export async function getPartnerPricingLegacy(partnerKey: string) {
@@ -193,10 +285,10 @@ export async function upsertPartnerPricing(
     }
     const seedDoc: PartnerPricing = {
       partnerKey,
-      partnerName: data.partnerName || partnerKey.toUpperCase(),
+      partnerName: data.partnerName || (PARTNER_FALLBACK_PRICING[partnerKey]?.partnerName ?? partnerKey.toUpperCase()),
       isActive: data.isActive ?? true,
-      vehicles: data.vehicles || FALLBACK_CATL_PRICING.vehicles,
-      terms: data.terms || FALLBACK_CATL_PRICING.terms,
+      vehicles: data.vehicles || (PARTNER_FALLBACK_PRICING[partnerKey]?.vehicles ?? FALLBACK_CATL_PRICING.vehicles),
+      terms: data.terms || (PARTNER_FALLBACK_PRICING[partnerKey]?.terms ?? FALLBACK_CATL_PRICING.terms),
       meta: data.meta || {},
       createdAt: now,
       updatedAt: now,

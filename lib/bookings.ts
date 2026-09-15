@@ -3,7 +3,16 @@ import { ObjectId, Collection, type Filter } from 'mongodb';
 import { getTravelConditions, isTimeInOperatingHours } from './travel-conditions';
 import { getPartnerPricing, type PartnerPricing, type PricingVehicle } from './partner-pricing';
 
-export type PartnerPortal = 'catl' | 'ecopro';
+export type PartnerPortal =
+  | 'catl'
+  | 'ecopro'
+  | 'eccoino'
+  | 'vitesco'
+  | 'schaeffler'
+  | 'krones'
+  | 'enterair'
+  | 'tama'
+  | 'ni';
 
 export type BookingStatus =
   | 'pending'
@@ -439,12 +448,13 @@ function convertDocId(doc: any): Booking {
 }
 
 function resolveBookingPortal(companyName?: string): PartnerPortal {
-  return resolvePartnerKey(companyName) === 'ecopro' ? 'ecopro' : 'catl';
+  const partnerKey = resolvePartnerKey(companyName);
+  return partnerKey as PartnerPortal;
 }
 
 function buildPortalScopeFilter(portal: PartnerPortal): Filter<Booking> {
-  if (portal === 'ecopro') {
-    return { portal: 'ecopro' };
+  if (portal !== 'catl') {
+    return { portal };
   }
 
   return {

@@ -5,7 +5,6 @@ import {
   consumeCatlTwoFactorBackupCode,
   setCatlTwoFactorEnabled,
 } from "@/lib/catl-portal-users";
-import { createCatlSessionToken, setCatlSessionCookie } from "@/lib/catl-auth";
 import { ObjectId } from "mongodb";
 
 export const dynamic = "force-dynamic";

@@ -5,7 +5,6 @@ import {
   consumeEcoproTwoFactorBackupCode,
   setEcoproTwoFactorEnabled,
 } from "@/lib/ecopro-portal-users";
-import { createEcoproSessionToken, setEcoproSessionCookie } from "@/lib/ecopro-auth";
 import { ObjectId } from "mongodb";
 
 export const dynamic = "force-dynamic";

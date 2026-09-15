@@ -19,9 +19,28 @@ import { getDb } from "@/lib/mongodb";
 
 export const dynamic = "force-dynamic";
 
+interface StaffEmailRecord {
+  email?: string;
+}
+
+const DEFAULT_COMPANY_BY_PORTAL: Record<PartnerPortal, string> = {
+  catl: "CATL Hungary Kft.",
+  ecopro: "EcoPro BM Hungary",
+  eccoino: "Eccoino",
+  vitesco: "Vitesco Technologies",
+  schaeffler: "Schaeffler",
+  krones: "Krones AG",
+  enterair: "Enter Air",
+  tama: "Tama",
+  ni: "National Instruments",
+};
+
 function getRequestedPortal(request: Request): PartnerPortal | null {
   const portal = request.headers.get("x-partner-portal");
-  return portal === "catl" || portal === "ecopro" ? portal : null;
+  return portal &&
+    ["catl", "ecopro", "eccoino", "vitesco", "schaeffler", "krones", "enterair", "tama", "ni"].includes(portal)
+    ? (portal as PartnerPortal)
+    : null;
 }
 
 export async function GET(request: Request) {
@@ -63,7 +82,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const companyName = body.companyName || "CATL Hungary Kft.";
+    const companyName = body.companyName || DEFAULT_COMPANY_BY_PORTAL[session.portal];
 
     const bookingData: CreateBookingData = {
       portal: session.portal,
@@ -127,9 +146,9 @@ export async function POST(request: Request) {
       })
       .project({ email: 1, _id: 0 })
       .toArray();
-    const dispatcherEmails = staffUsers
-      .map((u: any) => u.email)
-      .filter((e: any) => typeof e === "string" && e.includes("@"));
+    const dispatcherEmails = (staffUsers as StaffEmailRecord[])
+      .map((user) => user.email)
+      .filter((email): email is string => typeof email === "string" && email.includes("@"));
 
     // Ha a DB-ben nincs aktív dispatcher, használjuk a fallback env emailt
     const uniqueDispatcherTargets: string[] =

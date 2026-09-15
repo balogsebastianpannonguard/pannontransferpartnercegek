@@ -13,6 +13,7 @@ const partners = [
     accent: "#0047BA",
     accentSecondary: "#00B4D8",
     description: "Dedikált partnerportál, meghívásos belépéssel és vállalati foglalási folyamattal.",
+    image: null,
   },
   {
     key: "ecopro",
@@ -22,6 +23,77 @@ const partners = [
     accent: "#0096D6",
     accentSecondary: "#F28C28",
     description: "Saját EcoPro portál külön meghívófolyamattal, egyedi auth linkkel és foglalási felülettel.",
+    image: null,
+  },
+  {
+    key: "eccoino",
+    name: "Eccoino",
+    label: "EC",
+    href: "/eccoino",
+    accent: "#60B8FF",
+    accentSecondary: "#7B68EE",
+    description: "Nemzetközi partnerportál külön belépéssel, saját feltételekkel és elkülönített foglalási nézettel.",
+    image: null,
+  },
+  {
+    key: "vitesco",
+    name: "Vitesco Technologies",
+    label: "VT",
+    href: "/vitesco",
+    accent: "#E30613",
+    accentSecondary: "#B80010",
+    description: "Autóipari partneroldal saját vállalati foglalási folyamattal és külön booking listával.",
+    image: null,
+  },
+  {
+    key: "schaeffler",
+    name: "Schaeffler",
+    label: "SC",
+    href: "/schaeffler",
+    accent: "#009A44",
+    accentSecondary: "#007335",
+    description: "Schaeffler arculatú vállalati portál, saját utazási feltételekkel és partnerenként leválasztott foglalásokkal.",
+    image: "/partners/schaeffler/hero-flags.png",
+  },
+  {
+    key: "krones",
+    name: "Krones AG",
+    label: "KR",
+    href: "/krones",
+    accent: "#003F8A",
+    accentSecondary: "#002E5F",
+    description: "Krones brandelt partneroldal vállalati transzferekre, egyedi belépéssel és saját booking előzményekkel.",
+    image: "/partners/krones/hero-logo.png",
+  },
+  {
+    key: "enterair",
+    name: "Enter Air",
+    label: "EA",
+    href: "/enterair",
+    accent: "#005BAA",
+    accentSecondary: "#004480",
+    description: "Repüléshez kapcsolódó partnerfoglalások külön folyamatban, saját céges megjelenéssel és jogokkal.",
+    image: "/partners/enterair/hero-a.png",
+  },
+  {
+    key: "tama",
+    name: "Tama",
+    label: "TM",
+    href: "/tama",
+    accent: "#5CA700",
+    accentSecondary: "#47840B",
+    description: "Tama saját partnerkapu külön meghívóval, önálló feltételrendszerrel és dedikált foglalási nézettel.",
+    image: "/partners/tama/hero-a.png",
+  },
+  {
+    key: "ni",
+    name: "National Instruments",
+    label: "NI",
+    href: "/ni",
+    accent: "#F5D000",
+    accentSecondary: "#D9B800",
+    description: "NI partneroldal külön munkatársi hozzáféréssel, önálló booking kezeléssel és sárga brandréteggel.",
+    image: "/partners/ni/hero.png",
   },
 ] as const;
 
@@ -66,6 +138,15 @@ export default function HomePage() {
                 }}
               />
               <div className="p-8">
+                {partner.image && (
+                  <div className="mb-6 overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/5">
+                    <img
+                      src={partner.image}
+                      alt={`${partner.name} design preview`}
+                      className="w-full h-40 object-cover"
+                    />
+                  </div>
+                )}
                 <div className="flex items-start justify-between gap-4 mb-8">
                   <div
                     className="w-16 h-16 rounded-[1.35rem] flex items-center justify-center shadow-xl"

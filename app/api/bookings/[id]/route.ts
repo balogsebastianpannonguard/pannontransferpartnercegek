@@ -16,7 +16,10 @@ export const dynamic = "force-dynamic";
 
 function getRequestedPortal(request: Request): PartnerPortal | null {
   const portal = request.headers.get("x-partner-portal");
-  return portal === "catl" || portal === "ecopro" ? portal : null;
+  return portal &&
+    ["catl", "ecopro", "eccoino", "vitesco", "schaeffler", "krones", "enterair", "tama", "ni"].includes(portal)
+    ? (portal as PartnerPortal)
+    : null;
 }
 
 const PICKUP_AFFECTING_FIELDS = [
@@ -26,7 +29,7 @@ const PICKUP_AFFECTING_FIELDS = [
   "toAddress",
   "travelers",
   "luggage",
-];
+ ] as const;
 
 const ALLOWED_PATCH_FIELDS = [
   "travelerPhone",
@@ -40,7 +43,9 @@ const ALLOWED_PATCH_FIELDS = [
   "luggage",
   "comment",
   "status",
-];
+] as const;
+
+type AllowedPatchField = (typeof ALLOWED_PATCH_FIELDS)[number];
 
 export async function GET(
   request: Request,
@@ -124,8 +129,9 @@ export async function PATCH(
     const keys = Object.keys(body);
 
     for (const key of keys) {
-      if (ALLOWED_PATCH_FIELDS.includes(key)) {
-        (patch as any)[key] = body[key];
+      if (ALLOWED_PATCH_FIELDS.includes(key as AllowedPatchField)) {
+        const typedKey = key as AllowedPatchField;
+        patch[typedKey] = body[typedKey];
       }
     }
 
@@ -142,7 +148,7 @@ export async function PATCH(
     }
 
     const hasPickupChange = PICKUP_AFFECTING_FIELDS.some(
-      (field) => (patch as any)[field] !== undefined
+      (field) => patch[field] !== undefined
     );
 
     if (hasPickupChange) {
@@ -193,7 +199,7 @@ export async function PATCH(
     let updatedBooking: Booking | null;
 
     if (patch.status === "cancelled") {
-      const { status, ...restPatch } = patch;
+      const { status: _status, ...restPatch } = patch;
       if (Object.keys(restPatch).length > 0) {
         updatedBooking = await updateBooking(
           id,

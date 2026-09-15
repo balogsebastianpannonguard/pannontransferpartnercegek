@@ -119,7 +119,7 @@ export async function POST(request: Request) {
     const { raw: magicRaw } = await rotateMagicLoginToken(userId);
 
     // 2) 2FA secret előkészítés HA KÖTELEZŐ (a usernek még be kell mutatnia, hogy tudja használni → 2FA step setup-password oldalon)
-    let twoFactorSetup: any = null;
+    let twoFactorSetup: null | { issuer: string; label: string; secretBase32: string; uri: string; backupCodes: string[]; qrDataUrl?: string } = null;
     if (require2FA) {
       const tfa = generateEcoproTwoFactorSecret(res.user.email);
       twoFactorSetup = {
