@@ -68,6 +68,8 @@ export interface Booking {
   assignedDriverName?: string;
   assignedVehicleId?: string;
   assignedVehicleName?: string;
+  driverNotified?: boolean;
+  driverAcknowledged?: boolean;
   price?: number;
   createdBy?: string;
   createdAt: number;

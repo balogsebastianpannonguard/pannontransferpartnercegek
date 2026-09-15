@@ -220,11 +220,23 @@ export async function PATCH(
         );
       }
     } else {
+      // Ha a partner módosítja a foglalást, állítsuk "modified" státuszra,
+      // hogy a diszpécser lássa, hogy változás történt.
+      const isSignificantChange = Object.keys(patch).some(k => k !== 'comment' && k !== 'status');
+      
+      const patchToApply: Partial<Booking> = { ...patch };
+      
+      if (isSignificantChange && existingBooking.status !== 'pending') {
+        patchToApply.status = 'modified';
+        patchToApply.driverNotified = false;
+        patchToApply.driverAcknowledged = false;
+      }
+
       updatedBooking = await updateBooking(
         id,
-        patch,
+        patchToApply,
         session.email,
-        "Foglalás adatai módosítva"
+        "Foglalás adatai módosítva a partner által"
       );
     }
 
