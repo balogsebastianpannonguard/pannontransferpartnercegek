@@ -1,6 +1,8 @@
 export function buildCustomerConfirmationEmail(params: {
   bookingCode: string;
   travelerName: string;
+  userEmail: string;
+  travelerEmail: string;
   pickupDate: string;
   pickupTime: string;
   fromAddress: string;
@@ -15,6 +17,8 @@ export function buildCustomerConfirmationEmail(params: {
   const {
     bookingCode,
     travelerName,
+    userEmail,
+    travelerEmail,
     pickupDate,
     pickupTime,
     fromAddress,
@@ -86,7 +90,11 @@ export function buildCustomerConfirmationEmail(params: {
 <td style="font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.3;">Foglalás visszaigazolása</td>
 </tr>
 <tr>
-<td style="padding-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#7A7A7A;line-height:1.6;">Kedves ${travelerName}! Köszönjük, hogy a Pannon Transfert választotta.</td>
+<td style="padding-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#7A7A7A;line-height:1.6;">
+  ${userEmail === travelerEmail
+    ? `Kedves ${travelerName}! Köszönjük, hogy a Pannon Transfert választotta.`
+    : `Kedves Partnerünk! Köszönjük, hogy <strong>${travelerName}</strong> részére rögzítette a foglalást.`}
+</td>
 </tr>
 </table>
 </td>
@@ -680,4 +688,207 @@ export function buildDispatcherNotificationEmail(params: {
 </table>
 </body>
 </html>`;
+}
+
+
+export function buildNiCustomerConfirmationEmail(params: {
+  bookingCode: string;
+  travelerName: string;
+  userEmail: string;
+  travelerEmail: string;
+  pickupDate: string;
+  pickupTime: string;
+  fromAddress: string;
+  toAddress: string;
+  travelers: number;
+  luggage: number;
+  transferType: 'standard' | 'executive';
+  paymentMethod: 'card' | 'bank';
+  comment?: string;
+  price?: number;
+}): string {
+  const {
+    bookingCode,
+    travelerName,
+    userEmail,
+    travelerEmail,
+    pickupDate,
+    pickupTime,
+    fromAddress,
+    toAddress,
+    travelers,
+    luggage,
+    transferType,
+    paymentMethod,
+    comment,
+    price,
+  } = params;
+
+  const paymentMethodLabel = paymentMethod === 'card' ? 'Bankkártya' : 'Banki átutalás';
+  const transferTypeLabel = transferType === 'executive' ? 'EXECUTIVE' : 'STANDARD';
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /></head>
+<body style="margin:0; padding:0; background:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+<div style="display:none; max-height:0; overflow:hidden; opacity:0;">
+Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: ${pickupDate} ${pickupTime}.
+</div>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#F3F4F6">
+  <tr>
+    <td align="center" style="padding:40px 14px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;">
+        <tr>
+          <td style="padding-bottom:16px; text-align:center; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#94A3B8; font-weight:700;">
+            Pannon Transfer · NI Portál · Foglalás
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#FFFFFF; border-radius:24px; overflow:hidden; box-shadow:0 12px 40px rgba(15,23,42,0.08);">
+            <!-- HEADER SECTION -->
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td style="padding:40px 32px; background:linear-gradient(135deg, #0B172D 0%, #163669 100%);">
+                  
+                  <!-- Tags -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+                    <tr>
+                      <td bgcolor="#FDF5D3" style="padding:8px 16px; border-radius:12px;">
+                        <span style="font-size:16px; font-weight:900; color:#8A6B00;">NI</span>
+                        <span style="font-size:13px; font-weight:700; color:#8A6B00; margin-left:6px;">Booking Confirmation</span>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                  <div style="display:inline-block; padding:6px 12px; margin-bottom:16px; border-radius:999px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#E2E8F0;">
+                    FOGLALÁS RÖGZÍTVE · JÓVÁHAGYÁSRA VÁR
+                  </div>
+                  
+                  <h1 style="margin:0 0 16px 0; font-size:28px; line-height:1.2; color:#FFFFFF; font-weight:800;">
+                    Foglalás visszaigazolása
+                  </h1>
+                  
+                  <p style="margin:0 0 32px 0; font-size:15px; line-height:1.6; color:#CBD5E1;">
+                    ${userEmail === travelerEmail
+                      ? `Tisztelt ${travelerName}! Köszönjük a foglalását. Utazási igényét a Pannon Transfer rendszere rögzítette, hamarosan diszpécserünk véglegesíti azt.`
+                      : `Tisztelt Partnerünk! Köszönjük, hogy <strong>${travelerName}</strong> utasa számára foglalást rögzített. Az utazási igényt a Pannon Transfer rendszere fogadta, hamarosan diszpécserünk véglegesíti azt.`}
+                  </p>
+                  
+                  <!-- Info boxes -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                    <tr>
+                      <td width="48%" style="padding-right:8px;">
+                        <div style="background:rgba(255,255,255,0.08); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,0.1);">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8; margin-bottom:6px;">Foglalás kód</div>
+                          <div style="font-size:14px; font-weight:600; color:#60A5FA; word-break:break-all;">#${bookingCode}</div>
+                        </div>
+                      </td>
+                      <td width="48%" style="padding-left:8px;">
+                        <div style="background:rgba(255,255,255,0.08); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,0.1);">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8; margin-bottom:6px;">Szolgáltatás</div>
+                          <div style="font-size:14px; font-weight:600; color:#FFFFFF;">${transferTypeLabel}</div>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                </td>
+              </tr>
+              
+              <!-- BODY SECTION -->
+              <tr>
+                <td style="padding:32px;">
+                  
+                  <div style="font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#64748B; margin-bottom:16px;">
+                    Utazás részletei
+                  </div>
+                  
+                  <!-- Route box -->
+                  <div style="border:1px solid #E2E8F0; border-radius:16px; padding:20px; margin-bottom:24px; background:#F8FAFC;">
+                    
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td width="50%" valign="top" style="padding-right:16px;">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Dátum</div>
+                          <div style="font-size:15px; font-weight:700; color:#0F172A; margin-bottom:16px;">${pickupDate}</div>
+                          
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Időpont</div>
+                          <div style="font-size:18px; font-weight:800; color:#EAB308;">${pickupTime}</div>
+                        </td>
+                        <td width="50%" valign="top" style="padding-left:16px; border-left:1px solid #E2E8F0;">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Indulás</div>
+                          <div style="font-size:14px; font-weight:600; color:#0F172A; margin-bottom:12px; line-height:1.4;">${fromAddress}</div>
+                          
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Érkezés</div>
+                          <div style="font-size:14px; font-weight:600; color:#0F172A; line-height:1.4;">${toAddress}</div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                  </div>
+                  
+                  <!-- Additional info boxes -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
+                    <tr>
+                      <td width="32%" style="padding-right:6px;" valign="top">
+                        <div style="height:100%; border:1px solid #E2E8F0; border-radius:12px; padding:12px; background:#FFFFFF;">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">Utasok</div>
+                          <div style="font-size:14px; font-weight:700; color:#0F172A;">${travelers} fő</div>
+                        </div>
+                      </td>
+                      <td width="32%" style="padding-right:6px; padding-left:6px;" valign="top">
+                        <div style="height:100%; border:1px solid #E2E8F0; border-radius:12px; padding:12px; background:#FFFFFF;">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">Csomagok</div>
+                          <div style="font-size:14px; font-weight:700; color:#0F172A;">${luggage} db</div>
+                        </div>
+                      </td>
+                      <td width="36%" style="padding-left:6px;" valign="top">
+                        <div style="height:100%; border:1px solid #E2E8F0; border-radius:12px; padding:12px; background:#FFFFFF;">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">Fizetés</div>
+                          <div style="font-size:14px; font-weight:700; color:#0F172A;">${paymentMethodLabel}</div>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                  ${comment ? `
+                  <div style="border-left:3px solid #EAB308; background:#FEFCE8; border-radius:0 12px 12px 0; padding:16px; margin-bottom:24px;">
+                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#A16207; margin-bottom:6px;">Megjegyzés</div>
+                    <div style="font-size:13px; line-height:1.6; font-style:italic; color:#713F12;">
+                      "${comment}"
+                    </div>
+                  </div>
+                  ` : ''}
+                  
+                  <!-- Support box -->
+                  <div style="background:#0F172A; border-radius:16px; padding:20px; color:#F8FAFC;">
+                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#EAB308; margin-bottom:8px;">
+                      További teendők
+                    </div>
+                    <div style="font-size:13px; line-height:1.6;">
+                      A foglalás véglegesítéséről és a sofőr adatairól külön emailben tájékoztatjuk az utazás előtt. Kérdés esetén forduljon az NI dedikált kapcsolattartójához.
+                    </div>
+                  </div>
+                  
+                </td>
+              </tr>
+              
+              <!-- FOOTER SECTION -->
+              <tr>
+                <td bgcolor="#F8FAFC" style="padding:24px 32px; border-top:1px solid #E2E8F0; text-align:center;">
+                  <p style="margin:0; font-size:11px; line-height:1.6; color:#94A3B8;">
+                    Ezt az üzenetet a Pannon Transfer NI Portál rendszere küldte.<br>
+                    Üdvözlettel, Pannon Transfer csapata<br>
+                    © ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body></html>`;
 }

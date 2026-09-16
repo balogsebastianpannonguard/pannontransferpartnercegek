@@ -13,6 +13,7 @@ import {
 import { sendEmail } from "@/lib/email";
 import {
   buildCustomerConfirmationEmail,
+  buildNiCustomerConfirmationEmail,
   buildDispatcherNotificationEmail,
 } from "@/lib/email-templates";
 import { getDb } from "@/lib/mongodb";
@@ -116,9 +117,11 @@ export async function POST(request: Request) {
 
     const createdBooking = await createBooking(bookingData);
 
-    const customerHtml = buildCustomerConfirmationEmail({
+    const emailParams = {
       bookingCode: createdBooking.bookingCode,
       travelerName: createdBooking.travelerName,
+      userEmail: session.email,
+      travelerEmail: createdBooking.travelerEmail,
       pickupDate: createdBooking.pickupDate,
       pickupTime: createdBooking.pickupTime,
       fromAddress: createdBooking.fromAddress,
@@ -129,10 +132,14 @@ export async function POST(request: Request) {
       paymentMethod: createdBooking.paymentMethod,
       comment: createdBooking.comment,
       price: createdBooking.price,
-    });
+    };
+
+    const customerHtml = session.portal === "ni"
+      ? buildNiCustomerConfirmationEmail(emailParams)
+      : buildCustomerConfirmationEmail(emailParams);
 
     await sendEmail({
-      to: createdBooking.travelerEmail,
+      to: session.email,
       subject: `Foglalás visszaigazolása - #${createdBooking.bookingCode}`,
       html: customerHtml,
     });
