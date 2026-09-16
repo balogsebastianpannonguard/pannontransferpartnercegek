@@ -37,6 +37,7 @@ import {
   Plus,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useLanguage } from "../../context/LanguageContext";
 import NiPremiumLogin from "../components/NiPremiumLogin";
 
@@ -92,6 +93,16 @@ interface StatusChangeNotification {
   dismissed: boolean;
 }
 
+interface RawStatusChangeNotification {
+  _id: string;
+  bookingCode: string;
+  travelerName: string;
+  oldStatus: string;
+  newStatus: string;
+  updatedAt: number;
+  details?: string;
+}
+
 const STATUS_LABELS: Record<Booking["status"], string> = {
   pending: "Függőben",
   modified: "Módosítva",
@@ -121,7 +132,12 @@ const STATUS_DOT: Record<Booking["status"], string> = {
 
 function playNotificationSound() {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AudioContextCtor) return;
+    const ctx = new AudioContextCtor();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -168,7 +184,7 @@ export default function NiBookingsClient() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const [statusNotifications, setStatusNotifications] = useState<StatusChangeNotification[]>([]);
-  const lastNotifPollTimestamp = useRef<number>(Date.now());
+  const lastNotifPollTimestamp = useRef<number>(0);
 
   const [editForm, setEditForm] = useState({
     pickupDate: "",
@@ -181,16 +197,6 @@ export default function NiBookingsClient() {
   });
 
   useEffect(() => {
-    if (authedUser) {
-      setPortalBooting(true);
-      const t = setTimeout(() => {
-        setPortalBooting(false);
-      }, 1800);
-      return () => clearTimeout(t);
-    }
-  }, [authedUser]);
-
-  useEffect(() => {
     let active = true;
     (async () => {
       try {
@@ -200,10 +206,19 @@ export default function NiBookingsClient() {
           const json = await res.json();
           if (json?.success && json?.user) {
             setAuthedUser(json.user);
+            setPortalBooting(true);
+            window.setTimeout(() => {
+              if (active) setPortalBooting(false);
+            }, 1500);
+          } else {
+            setPortalBooting(false);
           }
         }
       } catch {}
-      if (active) setAuthChecked(true);
+      if (active) {
+        setPortalBooting(false);
+        setAuthChecked(true);
+      }
     })();
     return () => {
       active = false;
@@ -223,6 +238,14 @@ export default function NiBookingsClient() {
       await fetch("/api/ni-auth/logout", { method: "POST" });
     } catch {}
     setAuthedUser(null);
+  };
+
+  const handleLoginSuccess = (user: NiPortalUser) => {
+    setAuthedUser(user);
+    setPortalBooting(true);
+    window.setTimeout(() => {
+      setPortalBooting(false);
+    }, 1500);
   };
 
   const fetchBookings = useCallback(async (showSpinner = false) => {
@@ -246,9 +269,11 @@ export default function NiBookingsClient() {
   }, []);
 
   useEffect(() => {
-    if (authChecked && authedUser) {
-      fetchBookings();
-    }
+    if (!authChecked || !authedUser) return;
+    const timer = window.setTimeout(() => {
+      void fetchBookings();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [authChecked, authedUser, fetchBookings]);
 
   useEffect(() => {
@@ -272,9 +297,9 @@ export default function NiBookingsClient() {
           const json = await res.json();
           if (json?.success && json?.statusChanges?.length > 0) {
             playNotificationSound();
-            const newNotifs = json.statusChanges.map((sc: any) => ({
+            const newNotifs = json.statusChanges.map((sc: RawStatusChangeNotification) => ({
               ...sc,
-              id: sc._id + '-' + sc.updatedAt,
+              id: `${sc._id}-${sc.updatedAt}`,
               dismissed: false,
             }));
             setStatusNotifications(prev => [...newNotifs, ...prev].slice(0, 20));
@@ -343,7 +368,7 @@ export default function NiBookingsClient() {
       if (!res.ok || !json?.success) {
         if (json?.errors) {
           const errMap: Record<string, string> = {};
-          Object.entries(json.errors).forEach(([k, v]: [string, any]) => {
+          Object.entries(json.errors as Record<string, string | string[]>).forEach(([k, v]) => {
             errMap[k] = Array.isArray(v) ? v[0] : String(v);
           });
           setEditErrors(errMap);
@@ -406,16 +431,28 @@ export default function NiBookingsClient() {
 
   if (!authChecked) {
     return (
-      <div className="relative min-h-screen bg-[#FAFBFC] text-zinc-900 flex flex-col">
-        <div className="w-full border-b border-zinc-200/70 bg-white/60 backdrop-blur-md">
+      <div className="relative min-h-screen bg-[#030816] text-white flex flex-col overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(10,92,203,0.36),transparent_30%),radial-gradient(circle_at_78%_18%,rgba(65,182,121,0.2),transparent_22%),radial-gradient(circle_at_50%_100%,rgba(4,38,86,0.72),transparent_50%),linear-gradient(135deg,#020613_0%,#051326_36%,#062043_68%,#071628_100%)]" />
+          <div className="absolute left-[-10%] top-[-8%] h-[30rem] w-[30rem] rounded-full bg-[#41B679]/16 blur-[120px]" />
+          <div className="absolute right-[-12%] top-[4%] h-[36rem] w-[36rem] rounded-full bg-[#0A5CCB]/22 blur-[140px]" />
+          <div className="absolute inset-x-[12%] top-[16%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+        </div>
+        <div className="w-full border-b border-white/10 bg-[#030816]/70 backdrop-blur-xl relative z-10">
           <div className="max-w-6xl mx-auto px-6 h-16 flex items-center">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F5D000] to-[#D9B800] flex items-center justify-center shadow-sm">
-                <span className="text-white font-black text-sm tracking-tighter">C</span>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.22)]">
+                <Image
+                  src="/partners/ni/hero.png"
+                  alt="NI"
+                  width={28}
+                  height={28}
+                  className="h-7 w-7 object-contain"
+                />
               </div>
               <div className="flex flex-col">
-                <span className="text-[15px] font-bold text-zinc-900 leading-none">NI Portál</span>
-                <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">
+                <span className="text-[15px] font-bold text-white leading-none">NI Portál</span>
+                <span className="text-[11px] text-slate-400 mt-0.5 tracking-wide">
                   Pannon Transfer · Hozzáférés ellenőrzése
                 </span>
               </div>
@@ -428,26 +465,47 @@ export default function NiBookingsClient() {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25 }}
-              className="flex flex-col items-center py-20 gap-5"
+              className="flex flex-col items-center py-20 gap-6"
             >
-              <div className="w-14 h-14 rounded-2xl bg-[#F5D000]/[0.08] border border-[#F5D000]/10 flex items-center justify-center shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                <Building2 className="w-7 h-7 text-[#F5D000] animate-pulse" />
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
+                <div className="absolute inset-0 rounded-[28px] bg-[radial-gradient(circle_at_top,rgba(65,182,121,0.18),transparent_50%)]" />
+                <Image
+                  src="/partners/ni/hero.png"
+                  alt="NI"
+                  width={40}
+                  height={40}
+                  className="relative z-10 h-10 w-10 object-contain"
+                />
               </div>
-              <div className="flex items-center gap-2.5">
+              <div className="text-center">
+                <div className="mb-3 flex items-center justify-center gap-4">
+                  <span className="font-serif text-xl tracking-[0.24em] text-white/90">
+                    EMERSON
+                  </span>
+                  <span className="h-5 w-px bg-white/20" />
+                  <span className="font-sans text-xl font-black tracking-[0.22em] text-[#41B679]">
+                    NI
+                  </span>
+                </div>
+                <p className="text-[10px] tracking-[0.42em] uppercase text-slate-500 font-medium">
+                  Corporate Mobility Access
+                </p>
+              </div>
+              <div className="flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2">
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
-                  className="w-5 h-5 rounded-full border-2 border-zinc-200 border-t-[#F5D000]"
+                  className="w-5 h-5 rounded-full border-2 border-white/20 border-t-[#41B679]"
                 />
-                <p className="text-[14px] text-zinc-600 font-semibold tracking-wide">
+                <p className="text-[14px] text-slate-300 font-semibold tracking-wide">
                   Hozzáférés és munkamenet ellenőrzése...
                 </p>
               </div>
             </motion.div>
           </div>
         </div>
-        <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
-          <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
+        <div className="w-full border-t border-white/10 bg-[#030816]/70 backdrop-blur-xl mt-auto relative z-10">
+          <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-slate-500 font-medium">
             <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
             <span className="tracking-wider">NI Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
           </div>
@@ -457,49 +515,82 @@ export default function NiBookingsClient() {
   }
 
   if (!authedUser) {
-    return <NiPremiumLogin _onSuccess={setAuthedUser} />;
+    return <NiPremiumLogin _onSuccess={handleLoginSuccess} />;
   }
 
   if (portalBooting) {
     return (
       <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center overflow-hidden font-sans">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(10,92,203,0.36),transparent_28%),radial-gradient(circle_at_78%_16%,rgba(65,182,121,0.24),transparent_22%),radial-gradient(circle_at_50%_60%,rgba(4,38,86,0.78),transparent_48%),linear-gradient(135deg,#01040D_0%,#041229_40%,#062043_68%,#071628_100%)]" />
+        <div className="absolute left-[-8%] top-[-10%] h-[36rem] w-[36rem] rounded-full bg-[#41B679]/16 blur-[140px]" />
+        <div className="absolute right-[-14%] top-[2%] h-[42rem] w-[42rem] rounded-full bg-[#0A5CCB]/22 blur-[160px]" />
+        <div className="absolute bottom-[-24%] left-[20%] h-[28rem] w-[40rem] rounded-full bg-[#003E7E]/28 blur-[160px]" />
+        <div className="absolute inset-x-[14%] top-[18%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: [0, 0.35, 0], scale: [0.75, 1.05, 1.2] }}
+          transition={{ duration: 2.2, ease: "easeOut" }}
+          className="absolute h-[24rem] w-[24rem] rounded-full border border-[#41B679]/15"
+        />
+        <motion.div
+          initial={{ x: "-120%", opacity: 0 }}
+          animate={{ x: "120%", opacity: [0, 0.65, 0] }}
+          transition={{ duration: 1.6, delay: 0.15, ease: "easeInOut" }}
+          className="absolute top-1/2 h-px w-[36rem] bg-gradient-to-r from-transparent via-[#41B679]/70 to-transparent blur-[1px]"
+        />
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 0.4 }}
-          transition={{ duration: 3, ease: "easeOut" }}
-          className="absolute w-[800px] h-[800px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#F5D000]/20 via-transparent to-transparent rounded-full blur-[100px] pointer-events-none"
+          animate={{ scale: 1, opacity: 0.65 }}
+          transition={{ duration: 2.4, ease: "easeOut" }}
+          className="absolute w-[860px] h-[860px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#41B679]/14 via-[#0A5CCB]/10 to-transparent rounded-full blur-[110px] pointer-events-none"
         />
         <motion.div
           animate={{ y: [0, -20, 0], opacity: [0.1, 0.4, 0.1] }}
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/4 left-1/4 w-1 h-1 bg-[#D9B800] rounded-full blur-[1px]"
+          className="absolute top-1/4 left-1/4 w-1 h-1 bg-[#41B679] rounded-full blur-[1px]"
         />
         <motion.div
           animate={{ y: [0, 20, 0], opacity: [0.1, 0.3, 0.1] }}
           transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute bottom-1/3 right-1/4 w-1.5 h-1.5 bg-[#F5D000] rounded-full blur-[2px]"
+          className="absolute bottom-1/3 right-1/4 w-1.5 h-1.5 bg-[#0A5CCB] rounded-full blur-[2px]"
+        />
+        <motion.div
+          animate={{ x: [-12, 12, -12], opacity: [0.15, 0.35, 0.15] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 0.6 }}
+          className="absolute top-[22%] right-[22%] h-24 w-24 rounded-full border border-white/6"
         />
         <div className="relative z-10 flex flex-col items-center">
-          <div className="relative w-40 h-40 flex items-center justify-center mb-10">
+          <div className="relative mb-10 flex h-48 w-48 items-center justify-center">
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 12, ease: "linear", repeat: Infinity }}
-              className="absolute inset-0 rounded-full border-[1px] border-white/[0.03] border-t-[#D9B800]/60 border-r-[#F5D000]/40"
+              className="absolute inset-0 rounded-full border-[1px] border-white/[0.03] border-t-[#41B679]/60 border-r-[#0A5CCB]/40"
             />
             <motion.div
               animate={{ rotate: -360 }}
               transition={{ duration: 16, ease: "linear", repeat: Infinity }}
-              className="absolute inset-[-16px] rounded-full border-[1px] border-white/[0.02] border-b-[#D9B800]/30 border-l-[#F5D000]/50"
+              className="absolute inset-[-16px] rounded-full border-[1px] border-white/[0.02] border-b-[#0A5CCB]/30 border-l-[#41B679]/50"
             />
-            <div className="absolute inset-2 bg-[#020617] rounded-full shadow-[inset_0_0_20px_rgba(0,180,216,0.1)] flex items-center justify-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 22, ease: "linear", repeat: Infinity }}
+              className="absolute inset-[-34px] rounded-full border border-white/[0.02]"
+            />
+            <div className="absolute inset-4 rounded-full bg-[#03111E]/90 shadow-[inset_0_0_30px_rgba(65,182,121,0.08)] flex items-center justify-center">
               <motion.div
                 initial={{ opacity: 0, scale: 0.5 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
-                className="w-14 h-14 bg-gradient-to-br from-[#F5D000] to-[#D9B800] rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(0,180,216,0.4)] relative overflow-hidden"
+                className="flex h-20 w-20 items-center justify-center rounded-[26px] border border-white/15 bg-white shadow-[0_0_60px_rgba(10,92,203,0.22)] relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-white/20 mix-blend-overlay" />
-                <span className="text-white font-black text-2xl tracking-tighter relative z-10">C</span>
+                <Image
+                  src="/partners/ni/hero.png"
+                  alt="NI"
+                  width={42}
+                  height={42}
+                  className="relative z-10 h-10 w-10 object-contain"
+                />
               </motion.div>
             </div>
           </div>
@@ -509,33 +600,36 @@ export default function NiBookingsClient() {
             transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
             className="text-center"
           >
-            <div className="flex items-center justify-center gap-5 mb-4">
-              <span className="font-serif text-2xl tracking-[0.25em] text-white/90">PANNON</span>
+            <div className="mb-4 inline-flex items-center gap-5 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2 backdrop-blur-md">
+              <span className="font-serif text-2xl tracking-[0.25em] text-white/90">EMERSON</span>
               <span className="w-[1px] h-6 bg-white/20" />
-              <span className="font-sans font-black text-2xl tracking-[0.2em] text-[#D9B800]">NI</span>
+              <span className="font-sans font-black text-2xl tracking-[0.2em] text-[#41B679]">NI</span>
             </div>
-            <p className="text-[10px] tracking-[0.4em] uppercase text-slate-500 font-medium">
-              Premium Corporate Transfer
+            <h2 className="text-[42px] font-semibold tracking-[-0.05em] text-white sm:text-[56px]">
+              Executive Mobility Portal
+            </h2>
+            <p className="mt-4 text-[10px] tracking-[0.4em] uppercase text-slate-500 font-medium">
+              NI | Emerson Corporate Transfer Experience
             </p>
           </motion.div>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-16 w-64"
+            transition={{ duration: 0.45, delay: 0.3 }}
+            className="mt-14 w-[320px]"
           >
-            <div className="h-[2px] w-full bg-white/5 relative overflow-hidden rounded-full">
+            <div className="h-[3px] w-full bg-white/5 relative overflow-hidden rounded-full">
               <motion.div
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
-                transition={{ duration: 1.2, ease: [0.7, 0, 0.3, 1], delay: 0.4 }}
-                className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-transparent via-[#D9B800] to-[#D9B800] shadow-[0_0_12px_rgba(0,180,216,1)]"
+                transition={{ duration: 1.7, ease: [0.7, 0, 0.3, 1], delay: 0.2 }}
+                className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-transparent via-[#41B679] to-[#0A5CCB] shadow-[0_0_12px_rgba(65,182,121,0.7)]"
               />
             </div>
             <motion.div
               animate={{ opacity: [0.3, 1, 0.3] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="mt-5 text-center text-[9px] tracking-[0.3em] text-[#D9B800] uppercase font-bold"
+              className="mt-5 text-center text-[9px] tracking-[0.3em] text-[#41B679] uppercase font-bold"
             >
               Rendszer előkészítése...
             </motion.div>
@@ -545,24 +639,27 @@ export default function NiBookingsClient() {
     );
   }
 
-  const fadeIn: any = {
+  const fadeIn = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" as const } },
   };
 
   return (
-    <div className="min-h-screen bg-[#040914] text-slate-300 font-sans selection:bg-[#F5D000]/30 relative overflow-hidden">
+    <div className="min-h-screen bg-[#030816] text-slate-300 font-sans selection:bg-[#41B679]/30 relative overflow-hidden">
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#F5D000]/20 via-[#A67C00]/6 to-transparent blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#FACC15]/12 via-transparent to-transparent blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#fde68a_1px,transparent_1px),linear-gradient(to_bottom,#fde68a_1px,transparent_1px)] bg-[size:48px_48px]" />
-        <div className="absolute inset-x-0 top-0 h-[260px] bg-[linear-gradient(180deg,rgba(245,208,0,0.14),rgba(4,9,20,0))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(10,92,203,0.42),transparent_30%),radial-gradient(circle_at_80%_12%,rgba(65,182,121,0.24),transparent_20%),radial-gradient(circle_at_55%_62%,rgba(6,31,79,0.82),transparent_46%),linear-gradient(135deg,#01050E_0%,#041229_34%,#072447_66%,#071A2F_100%)]" />
+        <div className="absolute top-[-10%] left-[-14%] h-[36rem] w-[36rem] rounded-full bg-[#41B679]/20 blur-[130px]" />
+        <div className="absolute right-[-12%] top-[2%] h-[40rem] w-[40rem] rounded-full bg-[#0A5CCB]/26 blur-[160px]" />
+        <div className="absolute bottom-[-24%] left-[16%] h-[34rem] w-[44rem] rounded-full bg-[#003E7E]/34 blur-[170px]" />
+        <div className="absolute inset-x-0 top-0 h-[30rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(4,9,20,0))]" />
+        <div className="absolute inset-x-[10%] top-[14%] h-px bg-gradient-to-r from-transparent via-white/18 to-transparent" />
+        <div className="absolute inset-y-0 left-[10%] w-[1px] bg-gradient-to-b from-transparent via-[#41B679]/8 to-transparent" />
       </div>
 
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-[#031218]/85 backdrop-blur-xl border-b border-[#12D6DF]/10 shadow-sm"
+            ? "bg-[#020813]/80 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)]"
             : "bg-transparent border-b border-white/5"
         }`}
       >
@@ -578,15 +675,23 @@ export default function NiBookingsClient() {
             </div>
             <div className="w-px h-8 bg-white/20 transform rotate-12"></div>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#12D6DF] via-[#00B7C7] to-[#29D391] flex items-center justify-center shadow-[0_0_30px_rgba(18,214,223,0.24)] ring-1 ring-white/10">
-                <Building2 className="w-4 h-4 text-white" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.22)]">
+                <Image
+                  src="/partners/ni/hero.png"
+                  alt="NI"
+                  width={28}
+                  height={28}
+                  className="h-7 w-7 object-contain"
+                />
               </div>
               <div className="flex flex-col justify-center">
                 <span className="font-bold text-lg md:text-xl tracking-tight text-white leading-none flex items-center gap-2">
-                  NI <span className="text-[#12D6DF] text-sm hidden sm:inline">Mobility Desk</span>
+                  <span className="text-[#41B679]">NI</span>
+                  <span className="text-white/50">|</span>
+                  Emerson Portal
                 </span>
                 <span className="text-[10px] font-medium tracking-[0.24em] text-slate-400 uppercase mt-1">
-                  Dedicated NI Portal
+                  NI Corporate Access
                 </span>
               </div>
             </div>
@@ -596,13 +701,13 @@ export default function NiBookingsClient() {
             <div className="flex items-center gap-8 h-full">
               <Link
                 href="/ni#booking"
-                className="text-slate-300 text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-transparent hover:border-[#12D6DF]/30"
+                className="text-slate-300 text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-transparent hover:border-[#41B679]/30"
               >
                 {t("nav", "booking")}
               </Link>
               <Link
                 href="/ni/bookings"
-                className="text-white text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-[#29D391]"
+                className="text-white text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-[#41B679]"
               >
                 Saját foglalásaim
               </Link>
@@ -617,7 +722,7 @@ export default function NiBookingsClient() {
                   onClick={() => setLanguage(lang)}
                   className={`w-8 h-8 rounded flex items-center justify-center text-[11px] font-bold tracking-wider transition-all duration-200 ${
                     language === lang
-                      ? "bg-[#12D6DF] text-[#031218] shadow-sm"
+                      ? "bg-[#41B679] text-white shadow-sm"
                       : "text-slate-400 hover:text-white hover:bg-white/5"
                   }`}
                 >
@@ -634,7 +739,7 @@ export default function NiBookingsClient() {
                   {authedUser.email}
                 </span>
               </div>
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#12D6DF] to-[#29D391] flex items-center justify-center shadow-[0_0_20px_rgba(18,214,223,0.35)] shrink-0 ring-1 ring-white/10">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#003E7E] to-[#41B679] flex items-center justify-center shadow-[0_0_20px_rgba(65,182,121,0.28)] shrink-0 ring-1 ring-white/10">
                 <UserCircle className="w-5 h-5 text-white" />
               </div>
               <button
@@ -659,12 +764,12 @@ export default function NiBookingsClient() {
             className="fixed top-20 left-0 right-0 z-40 px-6 pt-4"
           >
             <div className="max-w-[1280px] mx-auto">
-              <div className="bg-[#0B1221]/95 backdrop-blur-xl rounded-2xl border border-[#12D6DF]/30 shadow-[0_8px_32px_rgba(18,214,223,0.15)] overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-[#12D6DF]/20 bg-gradient-to-r from-[#12D6DF]/10 to-[#29D391]/5">
+              <div className="bg-[#0B1221]/95 backdrop-blur-xl rounded-2xl border border-[#41B679]/25 shadow-[0_8px_32px_rgba(65,182,121,0.14)] overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-[#41B679]/15 bg-gradient-to-r from-[#41B679]/10 to-[#0A5CCB]/5">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-[#12D6DF] animate-pulse" />
+                    <div className="w-2 h-2 rounded-full bg-[#41B679] animate-pulse" />
                     <span className="text-sm font-bold text-white">Értesítések</span>
-                    <span className="px-2 py-0.5 rounded-full bg-[#12D6DF]/20 text-[#12D6DF] text-[10px] font-black">
+                    <span className="px-2 py-0.5 rounded-full bg-[#41B679]/20 text-[#41B679] text-[10px] font-black">
                       {statusNotifications.filter(n => !n.dismissed).length}
                     </span>
                   </div>
@@ -723,21 +828,21 @@ export default function NiBookingsClient() {
       <section className="relative pt-32 pb-24 px-6 min-h-screen flex items-start justify-center z-10">
         <div className="max-w-[1280px] mx-auto w-full">
           <div className="mb-10">
-            <div className="relative overflow-hidden rounded-[28px] border border-[#F5D000]/20 bg-[linear-gradient(135deg,rgba(245,208,0,0.12),rgba(11,18,33,0.95)_42%,rgba(166,124,0,0.12))] px-5 py-6 md:px-7 md:py-7 shadow-[0_20px_70px_rgba(245,208,0,0.12)]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-[#FACC15]/10 via-transparent to-transparent pointer-events-none" />
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#F5D000]/70 to-transparent" />
+            <div className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(135deg,rgba(65,182,121,0.08),rgba(11,18,33,0.95)_35%,rgba(10,92,203,0.14))] px-5 py-6 md:px-7 md:py-7 shadow-[0_20px_70px_rgba(10,92,203,0.12)] backdrop-blur-xl">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-[#41B679]/10 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#41B679]/70 to-transparent" />
               <div className="relative">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#F5D000]/10 border border-[#F5D000]/20 mb-6"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/[0.05] border border-white/10 mb-6"
             >
-              <CalendarDays className="w-3.5 h-3.5 text-[#D9B800]" />
-              <span className="text-[10px] font-bold text-[#D9B800] tracking-widest uppercase">
+              <CalendarDays className="w-3.5 h-3.5 text-[#41B679]" />
+              <span className="text-[10px] font-bold text-[#41B679] tracking-widest uppercase">
                 Foglalás Kezelő
               </span>
               {isRefreshing && (
-                <RefreshCw className="w-3 h-3 text-[#D9B800] animate-spin ml-1" />
+                <RefreshCw className="w-3 h-3 text-[#41B679] animate-spin ml-1" />
               )}
             </motion.div>
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
@@ -769,7 +874,7 @@ export default function NiBookingsClient() {
                 </button>
                 <Link
                   href="/ni"
-                  className="h-10 px-4 rounded-lg bg-[#F5D000] hover:bg-[#0B1F47] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,180,216,0.3)]"
+                  className="h-10 px-4 rounded-lg bg-[#41B679] hover:bg-[#10B981] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(65,182,121,0.28)]"
                 >
                   <Plus className="w-4 h-4" />
                   Új foglalás
@@ -792,9 +897,9 @@ export default function NiBookingsClient() {
           >
             <motion.div
               variants={fadeIn}
-              className="bg-[#0B1221] rounded-2xl border border-slate-800 p-5 relative overflow-hidden group hover:border-slate-700/60 transition-colors"
+              className="bg-[#0B1221]/92 rounded-2xl border border-white/8 p-5 relative overflow-hidden group hover:border-[#41B679]/20 transition-colors backdrop-blur-xl"
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#F5D000]/15 via-transparent to-transparent blur-2xl pointer-events-none" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#41B679]/15 via-transparent to-transparent blur-2xl pointer-events-none" />
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
@@ -810,9 +915,9 @@ export default function NiBookingsClient() {
 
             <motion.div
               variants={fadeIn}
-              className="bg-[#0B1221] rounded-2xl border border-slate-800 p-5 relative overflow-hidden group hover:border-amber-500/30 transition-colors"
+              className="bg-[#0B1221]/92 rounded-2xl border border-white/8 p-5 relative overflow-hidden group hover:border-[#41B679]/20 transition-colors backdrop-blur-xl"
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-amber-500/15 via-transparent to-transparent blur-2xl pointer-events-none" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#41B679]/12 via-transparent to-transparent blur-2xl pointer-events-none" />
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
@@ -831,7 +936,7 @@ export default function NiBookingsClient() {
 
             <motion.div
               variants={fadeIn}
-              className="bg-[#0B1221] rounded-2xl border border-slate-800 p-5 relative overflow-hidden group hover:border-emerald-500/30 transition-colors"
+              className="bg-[#0B1221]/92 rounded-2xl border border-white/8 p-5 relative overflow-hidden group hover:border-[#41B679]/25 transition-colors backdrop-blur-xl"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/15 via-transparent to-transparent blur-2xl pointer-events-none" />
               <div className="relative">
@@ -852,7 +957,7 @@ export default function NiBookingsClient() {
 
             <motion.div
               variants={fadeIn}
-              className="bg-[#0B1221] rounded-2xl border border-slate-800 p-5 relative overflow-hidden group hover:border-slate-600/60 transition-colors"
+              className="bg-[#0B1221]/92 rounded-2xl border border-white/8 p-5 relative overflow-hidden group hover:border-[#0A5CCB]/25 transition-colors backdrop-blur-xl"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-slate-500/15 via-transparent to-transparent blur-2xl pointer-events-none" />
               <div className="relative">
@@ -879,7 +984,7 @@ export default function NiBookingsClient() {
             transition={{ delay: 0.4 }}
             className="mb-6"
           >
-            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#0B1221] border border-slate-800">
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#0B1221]/92 border border-white/8 backdrop-blur-xl">
               {([
                 { key: "all", label: "Minden" },
                 { key: "pending", label: "Függőben" },
@@ -903,8 +1008,8 @@ export default function NiBookingsClient() {
 
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-5">
-              <div className="w-12 h-12 rounded-2xl bg-[#F5D000]/10 border border-[#F5D000]/20 flex items-center justify-center">
-                <Loader2 className="w-6 h-6 text-[#D9B800] animate-spin" />
+              <div className="w-12 h-12 rounded-2xl bg-[#41B679]/10 border border-[#41B679]/20 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 text-[#41B679] animate-spin" />
               </div>
               <p className="text-sm text-slate-400 font-medium">Foglalások betöltése...</p>
             </div>
@@ -912,9 +1017,9 @@ export default function NiBookingsClient() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-[#0B1221] rounded-2xl border border-slate-800 p-16 text-center relative overflow-hidden"
+              className="bg-[#0B1221]/92 rounded-[28px] border border-white/8 p-16 text-center relative overflow-hidden backdrop-blur-xl"
             >
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#F5D000]/8 via-transparent to-transparent blur-3xl pointer-events-none" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#41B679]/10 via-transparent to-transparent blur-3xl pointer-events-none" />
               <div className="relative flex flex-col items-center">
                 <div className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
                   <CalendarPlus className="w-10 h-10 text-slate-500" />
@@ -925,7 +1030,7 @@ export default function NiBookingsClient() {
                 </p>
                 <Link
                   href="/ni"
-                  className="h-11 px-6 rounded-xl bg-[#F5D000] hover:bg-[#0B1F47] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,180,216,0.3)]"
+                  className="h-11 px-6 rounded-xl bg-[#41B679] hover:bg-[#10B981] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(65,182,121,0.28)]"
                 >
                   Menjen a foglalási oldalra
                   <ArrowRight className="w-4 h-4" />
@@ -949,14 +1054,14 @@ export default function NiBookingsClient() {
                   <motion.div
                     key={booking._id}
                     variants={fadeIn}
-                    className="bg-[#0B1221] rounded-2xl border border-slate-800 overflow-hidden hover:border-slate-700/70 transition-colors"
+                    className="bg-[#0B1221]/92 rounded-[26px] border border-white/8 overflow-hidden hover:border-[#41B679]/18 transition-colors backdrop-blur-xl"
                   >
                     <div className="p-6">
                       <div className="flex flex-col lg:flex-row lg:items-stretch gap-6">
                         <div className="flex-1 lg:max-w-[320px] flex flex-col gap-4">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-[#F5D000]/20 to-[#D9B800]/10 border border-[#F5D000]/30 text-[11px] font-black tracking-wider text-white tracking-wider">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#D9B800]" />
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-[#003E7E]/40 to-[#41B679]/15 border border-[#41B679]/20 text-[11px] font-black tracking-wider text-white tracking-wider">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#41B679]" />
                               #{booking.bookingCode}
                             </span>
                             <span
@@ -973,7 +1078,7 @@ export default function NiBookingsClient() {
 
                           <div>
                             <div className="flex items-baseline gap-2 mb-1">
-                              <CalendarDays className="w-4 h-4 text-[#D9B800] shrink-0" />
+                              <CalendarDays className="w-4 h-4 text-[#41B679] shrink-0" />
                               <p className="text-2xl font-black text-white tracking-tight">
                                 {booking.pickupDate}
                               </p>
@@ -1023,7 +1128,7 @@ export default function NiBookingsClient() {
                             <p
                               className={`text-sm font-bold ${
                                 booking.transferType === "executive"
-                                  ? "text-[#D9B800]"
+                                  ? "text-[#41B679]"
                                   : "text-white"
                               }`}
                             >
@@ -1098,7 +1203,7 @@ export default function NiBookingsClient() {
 
                         <div className="hidden lg:block w-px bg-white/5 shrink-0" />
 
-                        <div className="flex lg:flex-col items-stretch lg:items-end gap-2 lg:min-w-[140px">
+                        <div className="flex lg:flex-col items-stretch lg:items-end gap-2 lg:min-w-[140px]">
                           <button
                             onClick={() => setExpandedId(isExpanded ? null : booking._id)}
                             className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-medium"
@@ -1114,7 +1219,7 @@ export default function NiBookingsClient() {
                             <>
                               <button
                                 onClick={() => openEditModal(booking)}
-                                className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-[#F5D000]/15 border border-[#F5D000]/30 text-[#D9B800] hover:bg-[#F5D000]/25 hover:border-[#F5D000]/50 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-bold"
+                                className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-[#41B679]/15 border border-[#41B679]/30 text-[#41B679] hover:bg-[#41B679]/25 hover:border-[#41B679]/50 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-bold"
                               >
                                 <Edit3 className="w-4 h-4" />
                                 Módosítás
@@ -1183,7 +1288,7 @@ export default function NiBookingsClient() {
                                   {booking.price !== undefined && (
                                     <div className="flex items-center gap-2">
                                       <DollarSign className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                      <span className="text-sm font-bold text-[#D9B800]">
+                                      <span className="text-sm font-bold text-[#41B679]">
                                         {booking.price.toLocaleString("hu-HU")} Ft
                                       </span>
                                     </div>
@@ -1243,15 +1348,15 @@ export default function NiBookingsClient() {
         </div>
       </section>
 
-      <footer className="border-t border-white/5 bg-[#040914] py-10 px-6 z-10 relative">
+      <footer className="border-t border-white/8 bg-[#030816]/80 py-10 px-6 z-10 relative backdrop-blur-xl">
         <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="flex flex-col text-center md:text-left">
               <span className="font-serif font-bold tracking-widest text-slate-400 text-sm leading-none">
-                PANNON <span className="text-[#D4AF37]/80">TRANSFER</span>
+                PANNON <span className="text-[#41B679]/80">TRANSFER</span>
               </span>
               <span className="text-[9px] text-slate-500 font-medium tracking-[0.2em] mt-1">
-                EXECUTIVE TRAVEL
+                NI CORPORATE TRAVEL
               </span>
             </div>
             <div className="hidden md:block w-px h-6 bg-white/10"></div>
@@ -1284,10 +1389,10 @@ export default function NiBookingsClient() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="relative w-full max-w-xl bg-[#0B1221] rounded-2xl border border-slate-800 shadow-[0_30px_80px_rgba(0,0,0,0.6)] overflow-hidden max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-xl bg-[#0B1221]/96 rounded-2xl border border-white/8 shadow-[0_30px_80px_rgba(0,0,0,0.6)] overflow-hidden max-h-[90vh] overflow-y-auto backdrop-blur-xl"
             >
-              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#F5D000] to-transparent" />
-              <div className="sticky top-0 z-10 bg-[#0B1221] border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#41B679] to-[#0A5CCB]" />
+              <div className="sticky top-0 z-10 bg-[#0B1221]/95 border-b border-white/8 px-6 py-4 flex items-center justify-between backdrop-blur-xl">
                 <div>
                   <h3 className="text-lg font-bold text-white">Foglalás módosítása</h3>
                   <p className="text-xs text-slate-400 mt-0.5">#{editModal.bookingCode}</p>
@@ -1303,10 +1408,10 @@ export default function NiBookingsClient() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Dátum <span className="text-[#D9B800]">*</span>
+                      Dátum <span className="text-[#41B679]">*</span>
                     </label>
                     <div
-                      className={`w-full bg-[#151E32] border rounded-lg p-3.5 focus-within:border-[#F5D000] focus-within:ring-1 focus-within:ring-[#F5D000]/30 transition-all ${
+                      className={`w-full bg-[#151E32] border rounded-lg p-3.5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all ${
                         editErrors.pickupDate
                           ? "border-rose-500/50 ring-1 ring-rose-500/20"
                           : "border-slate-700/50"
@@ -1329,10 +1434,10 @@ export default function NiBookingsClient() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Időpont <span className="text-[#D9B800]">*</span>
+                      Időpont <span className="text-[#41B679]">*</span>
                     </label>
                     <div
-                      className={`w-full bg-[#151E32] border rounded-lg p-3.5 focus-within:border-[#F5D000] focus-within:ring-1 focus-within:ring-[#F5D000]/30 transition-all ${
+                      className={`w-full bg-[#151E32] border rounded-lg p-3.5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all ${
                         editErrors.pickupTime
                           ? "border-rose-500/50 ring-1 ring-rose-500/20"
                           : "border-slate-700/50"
@@ -1357,10 +1462,10 @@ export default function NiBookingsClient() {
 
                 <div className="space-y-2">
                   <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                    Indulási cím <span className="text-[#D9B800]">*</span>
+                    Indulási cím <span className="text-[#41B679]">*</span>
                   </label>
                   <div
-                    className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#F5D000] focus-within:ring-1 focus-within:ring-[#F5D000]/30 transition-all ${
+                    className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all ${
                       editErrors.fromAddress
                         ? "border-rose-500/50 ring-1 ring-rose-500/20"
                         : "border-slate-700/50"
@@ -1385,10 +1490,10 @@ export default function NiBookingsClient() {
 
                 <div className="space-y-2">
                   <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                    Célcím <span className="text-[#D9B800]">*</span>
+                    Célcím <span className="text-[#41B679]">*</span>
                   </label>
                   <div
-                    className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#F5D000] focus-within:ring-1 focus-within:ring-[#F5D000]/30 transition-all ${
+                    className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all ${
                       editErrors.toAddress
                         ? "border-rose-500/50 ring-1 ring-rose-500/20"
                         : "border-slate-700/50"
@@ -1414,7 +1519,7 @@ export default function NiBookingsClient() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Utasok száma <span className="text-[#D9B800]">*</span>
+                      Utasok száma <span className="text-[#41B679]">*</span>
                     </label>
                     <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-2.5 flex justify-between items-center text-white">
                       <div className="flex items-center gap-3 px-2">
@@ -1451,7 +1556,7 @@ export default function NiBookingsClient() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Csomagok száma <span className="text-[#D9B800]">*</span>
+                      Csomagok száma <span className="text-[#41B679]">*</span>
                     </label>
                     <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-2.5 flex justify-between items-center text-white">
                       <div className="flex items-center gap-3 px-2">
@@ -1492,7 +1597,7 @@ export default function NiBookingsClient() {
                   <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
                     Megjegyzés
                   </label>
-                  <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 focus-within:border-[#F5D000] focus-within:ring-1 focus-within:ring-[#F5D000]/30 transition-all">
+                  <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
                     <textarea
                       rows={3}
                       value={editForm.comment}
@@ -1529,7 +1634,7 @@ export default function NiBookingsClient() {
                   <button
                     type="submit"
                     disabled={editLoading}
-                    className="flex-[2] h-11 rounded-lg bg-[#F5D000] hover:bg-[#0B1F47] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm tracking-wide transition-all inline-flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,180,216,0.3)]"
+                    className="flex-[2] h-11 rounded-lg bg-[#41B679] hover:bg-[#10B981] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm tracking-wide transition-all inline-flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(65,182,121,0.28)]"
                   >
                     {editLoading ? (
                       <>

@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 interface Props {
-  _onSuccess: (user: any) => void;
+  _onSuccess: (user: { email: string; company?: string; role?: string }) => void;
 }
 
 type State = "login" | "twofactor" | "done";
@@ -139,21 +139,22 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#041218] text-zinc-900 flex flex-col overflow-hidden">
+    <div className="relative min-h-screen bg-[#030816] text-white flex flex-col overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] right-[-5%] w-[42rem] h-[42rem] rounded-full bg-[#12D6DF]/15 blur-[140px]" />
-        <div className="absolute bottom-[-12%] left-[-8%] w-[34rem] h-[34rem] rounded-full bg-[#29D391]/10 blur-[130px]" />
-        <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(to_right,#67e8f9_1px,transparent_1px),linear-gradient(to_bottom,#67e8f9_1px,transparent_1px)] bg-[size:44px_44px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(12,88,178,0.34),transparent_32%),radial-gradient(circle_at_78%_18%,rgba(65,182,121,0.18),transparent_24%),radial-gradient(circle_at_50%_100%,rgba(6,31,79,0.68),transparent_52%),linear-gradient(135deg,#020613_0%,#041229_40%,#041934_62%,#071628_100%)]" />
+        <div className="absolute top-[-10%] right-[-5%] w-[42rem] h-[42rem] rounded-full bg-[#0A5CCB]/18 blur-[140px]" />
+        <div className="absolute bottom-[-12%] left-[-8%] w-[34rem] h-[34rem] rounded-full bg-[#41B679]/14 blur-[130px]" />
+        <div className="absolute left-[10%] top-[18%] h-px w-[28rem] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
       </div>
 
-      <div className="w-full border-b border-white/10 bg-[#041218]/70 backdrop-blur-xl relative z-10">
+      <div className="w-full border-b border-white/10 bg-[#030816]/70 backdrop-blur-xl relative z-10">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#12D6DF] to-[#29D391] flex items-center justify-center shadow-[0_0_20px_rgba(18,214,223,0.25)]">
-              <span className="text-white font-black text-sm tracking-tighter">C</span>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#003E7E] to-[#002A54] flex items-center justify-center shadow-[0_0_20px_rgba(0,62,126,0.25)]">
+              <span className="text-white font-black text-sm tracking-tighter">ni</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-white leading-none">NI Portál</span>
+              <span className="text-[15px] font-bold text-white leading-none">Emerson | ni Portál</span>
               <span className="text-[11px] text-slate-400 mt-0.5 tracking-wide">
                 Pannon Transfer · Dedikált Partnerbejelentkezés
               </span>
@@ -165,27 +166,28 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
       <div className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16 relative z-10">
         <div className="w-full max-w-6xl grid lg:grid-cols-[1fr_460px] gap-10 items-center">
           <div className="hidden lg:block text-white">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#12D6DF]/10 border border-[#12D6DF]/20 mb-6">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#12D6DF]" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#12D6DF]">NI Access Layer</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10 mb-6">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#41B679]" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/75">NI Access Layer</span>
             </div>
             <h1 className="text-5xl font-bold tracking-tight leading-[1.05] mb-5">
-              Saját NI belépési élmény, külön partnerkapuval.
+              Belépés, ami már önmagában is prezentációképes.
             </h1>
             <p className="text-slate-300/80 text-lg leading-relaxed max-w-xl mb-8">
-              Itt mar a belépés is az NI portal része: külön arculat, kétfaktoros védelem,
-              és ugyanaz a dedikált partnerfolyamat, mint amit az NI meghívásoknál kialakítottunk.
+              Az NI partnerkapu belépése is ugyanazt a prémium Emerson-hangulatot
+              viszi tovább: dedikált arculat, kétfaktoros védelem és tiszta,
+              nagyvállalati összhatás.
             </p>
             <div className="grid grid-cols-2 gap-4 max-w-2xl">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
+              <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-5 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.22)]">
                 <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold mb-2">Portal scope</div>
                 <div className="text-xl font-semibold">NI corporate access</div>
-                <p className="text-sm text-slate-400 mt-2">Kulon meghivo, kulon session, kulon foglalasi kor.</p>
+                <p className="text-sm text-slate-400 mt-2">Külön meghívó, külön session, külön partnerfolyamat.</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
+              <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(65,182,121,0.12),rgba(255,255,255,0.05))] p-5 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.22)]">
                 <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold mb-2">Security</div>
                 <div className="text-xl font-semibold">2FA ready</div>
-                <p className="text-sm text-slate-400 mt-2">Authenticator es backup kodos belépési folyamat.</p>
+                <p className="text-sm text-slate-400 mt-2">Authenticator és backup kódos belépési folyamat.</p>
               </div>
             </div>
           </div>
@@ -202,23 +204,23 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                 className="flex flex-col"
               >
                 <div className="mb-7 text-center">
-                  <div className="mx-auto w-16 h-16 rounded-2xl bg-[#F5D000]/[0.08] border border-[#F5D000]/10 flex items-center justify-center mb-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                    <ShieldCheck className="w-8 h-8 text-[#F5D000]" />
+                  <div className="mx-auto w-16 h-16 rounded-2xl bg-[#41B679]/[0.08] border border-[#41B679]/10 flex items-center justify-center mb-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                    <ShieldCheck className="w-8 h-8 text-[#41B679]" />
                   </div>
-                  <h1 className="text-[28px] font-bold text-zinc-900 tracking-tight mb-2">
+                  <h1 className="text-[28px] font-bold text-white tracking-tight mb-2">
                     Jelentkezz be a NI Portálba
                   </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed max-w-md mx-auto">
+                  <p className="text-[15px] text-slate-400 leading-relaxed max-w-md mx-auto">
                     Add meg a céges email címedet és a fiókodhoz társított jelszót.
                     Ha a fiókodhoz kétfaktoros hitelesítés (2FA) tartozik, a következő lépésben kérjük be azt.
                   </p>
                 </div>
 
-                <div className="bg-white border border-zinc-200 rounded-2xl p-4 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 mb-1.5">
+                <div className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-4 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-1.5">
                     Tudnivalók
                   </div>
-                  <ul className="text-[13px] text-zinc-700 leading-relaxed space-y-1.5">
+                  <ul className="text-[13px] text-slate-300 leading-relaxed space-y-1.5">
                     <li>• A bejelentkezéshez használd a Pannon Transfer által kiosztott céges címet.</li>
                     <li>• 2FA kötelezőség esetén az Authenticator app 6 számjegyű kódját vagy backup kódot add meg.</li>
                     <li>• Belépési problémák esetén vedd fel a kapcsolatot az ügyfélszolgálattal.</li>
@@ -227,13 +229,13 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
 
                 <div className="space-y-4 mb-5">
                   <div className="space-y-2">
-                    <label className="text-[12px] font-semibold text-zinc-700 ml-1">
+                    <label className="text-[12px] font-semibold text-slate-300 ml-1">
                       E-mail cím
                     </label>
-                    <div className={`relative flex items-center bg-white border transition-all duration-200 rounded-xl overflow-hidden ${
-                      step1Error ? "border-red-300 ring-1 ring-red-200" : "border-zinc-200 focus-within:border-[#F5D000]/60 focus-within:ring-2 focus-within:ring-[#F5D000]/15"
+                    <div className={`relative flex items-center bg-white/5 border transition-all duration-200 rounded-xl overflow-hidden ${
+                      step1Error ? "border-red-300 ring-1 ring-red-200" : "border-white/10 focus-within:border-[#41B679]/60 focus-within:ring-2 focus-within:ring-[#41B679]/15"
                     }`}>
-                      <Mail className={`absolute left-4 w-[18px] h-[18px] ${step1Error ? "text-red-500" : "text-zinc-500"}`} />
+                      <Mail className={`absolute left-4 w-[18px] h-[18px] ${step1Error ? "text-red-500" : "text-slate-400"}`} />
                       <input
                         type="email"
                         value={email}
@@ -242,7 +244,7 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                           if (step1Error) setStep1Error(null);
                         }}
                         placeholder="neve@ni.hu"
-                        className="w-full bg-transparent pl-12 pr-4 py-3.5 text-[15px] text-zinc-900 placeholder:text-zinc-400 font-medium outline-none"
+                        className="w-full bg-transparent pl-12 pr-4 py-3.5 text-[15px] text-white placeholder:text-slate-500 font-medium outline-none"
                         autoComplete="email"
                         spellCheck={false}
                       />
@@ -251,14 +253,14 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between ml-1 mr-1">
-                      <label className="text-[12px] font-semibold text-zinc-700">
+                      <label className="text-[12px] font-semibold text-slate-300">
                         Jelszó
                       </label>
                     </div>
-                    <div className={`relative flex items-center bg-white border transition-all duration-200 rounded-xl overflow-hidden ${
-                      step1Error ? "border-red-300 ring-1 ring-red-200" : "border-zinc-200 focus-within:border-[#F5D000]/60 focus-within:ring-2 focus-within:ring-[#F5D000]/15"
+                    <div className={`relative flex items-center bg-white/5 border transition-all duration-200 rounded-xl overflow-hidden ${
+                      step1Error ? "border-red-300 ring-1 ring-red-200" : "border-white/10 focus-within:border-[#41B679]/60 focus-within:ring-2 focus-within:ring-[#41B679]/15"
                     }`}>
-                      <Lock className={`absolute left-4 w-[18px] h-[18px] ${step1Error ? "text-red-500" : "text-zinc-500"}`} />
+                      <Lock className={`absolute left-4 w-[18px] h-[18px] ${step1Error ? "text-red-500" : "text-slate-400"}`} />
                       <input
                         type={showPassword ? "text" : "password"}
                         value={password}
@@ -267,13 +269,13 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                           if (step1Error) setStep1Error(null);
                         }}
                         placeholder="••••••••"
-                        className="w-full bg-transparent pl-12 pr-12 py-3.5 text-[15px] text-zinc-900 placeholder:text-zinc-400 font-medium outline-none"
+                        className="w-full bg-transparent pl-12 pr-12 py-3.5 text-[15px] text-white placeholder:text-slate-500 font-medium outline-none"
                         autoComplete="current-password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-2 w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-800 transition-colors rounded-lg"
+                        className="absolute right-2 w-9 h-9 flex items-center justify-center text-slate-400 hover:text-white transition-colors rounded-lg"
                         tabIndex={-1}
                       >
                         {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
@@ -286,15 +288,15 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                   <div
                     className={`w-4 h-4 rounded flex items-center justify-center border transition-all duration-200 ${
                       remember
-                        ? "bg-[#F5D000] border-[#F5D000]"
-                        : "bg-white border-zinc-300 group-hover:border-zinc-400"
+                        ? "bg-[#41B679] border-[#41B679]"
+                        : "bg-white/5 border-white/20 group-hover:border-zinc-400"
                     }`}
                     onClick={() => setRemember((v) => !v)}
                   >
                     {remember && <Check className="w-3 h-3 text-white" />}
                   </div>
                   <span
-                    className="text-[13px] text-zinc-700 font-medium select-none"
+                    className="text-[13px] text-slate-300 font-medium select-none"
                     onClick={() => setRemember((v) => !v)}
                   >
                     Emlékezzen rám ezen az eszközön (7 nap)
@@ -321,7 +323,7 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                 <button
                   type="submit"
                   disabled={step1Loading}
-                  className="w-full h-[54px] rounded-xl bg-[#F5D000] hover:bg-[#0B1F47] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(0,180,216,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(0,180,216,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  className="w-full h-[54px] rounded-xl bg-[#41B679] hover:bg-[#10B981] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(65,182,121,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(65,182,121,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
                   {step1Loading ? (
                     <>
@@ -336,11 +338,11 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                   )}
                 </button>
 
-                <p className="mt-7 text-center text-[12px] text-zinc-500 leading-relaxed">
+                <p className="mt-7 text-center text-[12px] text-slate-400 leading-relaxed">
                   Még nincs hozzáférésed, vagy elfelejtetted a jelszavad?{" "}
                   <a
                     href="mailto:balog.sebastian@pannonguard.hu?subject=NI%20Port%C3%A1l%20-%20Hozz%C3%A1f%C3%A9r%C3%A9s%20k%C3%A9r%C3%A9se"
-                    className="text-[#F5D000] font-semibold hover:underline"
+                    className="text-[#41B679] font-semibold hover:underline"
                   >
                     Ügyfélszolgálat
                   </a>
@@ -359,42 +361,42 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                 className="flex flex-col"
               >
                 <div className="mb-7">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F5D000]/[0.07] border border-[#F5D000]/10 text-[#F5D000] text-[11px] font-bold tracking-widest uppercase mb-4">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#41B679]/[0.07] border border-[#41B679]/10 text-[#41B679] text-[11px] font-bold tracking-widest uppercase mb-4">
                     <KeyRound className="w-3.5 h-3.5" />
                     2. lépés · Kétfaktoros hitelesítés
                   </div>
-                  <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
+                  <h1 className="text-[26px] font-bold text-white tracking-tight mb-2">
                     Erősítsd meg a bejelentkezést
                   </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed">
-                    A fiókodhoz <strong className="font-semibold text-zinc-800">2FA kötelező</strong>.
+                  <p className="text-[15px] text-slate-400 leading-relaxed">
+                    A fiókodhoz <strong className="font-semibold text-white">2FA kötelező</strong>.
                     Írd be az Authenticator alkalmazásod által generált
-                    <strong className="font-semibold text-zinc-800"> 6 számjegyű kódot</strong>,
+                    <strong className="font-semibold text-white"> 6 számjegyű kódot</strong>,
                     vagy használd a biztonsági mentett kódot.
                   </p>
                 </div>
 
-                <div className="bg-white border border-zinc-200 rounded-2xl p-4 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                <div className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-4 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-[#F5D000]/[0.06] border border-[#F5D000]/10 flex items-center justify-center shrink-0">
-                      <Mail className="w-5 h-5 text-[#F5D000]" />
+                    <div className="w-11 h-11 rounded-xl bg-[#41B679]/[0.06] border border-[#41B679]/10 flex items-center justify-center shrink-0">
+                      <Mail className="w-5 h-5 text-[#41B679]" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 mb-0.5">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-0.5">
                         Bejelentkező fiók
                       </div>
-                      <div className="text-[15px] font-semibold text-zinc-900 truncate">
+                      <div className="text-[15px] font-semibold text-white truncate">
                         {twoFaEmail || email}
                       </div>
                     </div>
-                    <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#F5D000]/[0.07] border border-[#F5D000]/10 text-[#F5D000] text-[11px] font-bold tracking-wide">
+                    <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#41B679]/[0.07] border border-[#41B679]/10 text-[#41B679] text-[11px] font-bold tracking-wide">
                       <KeyRound className="w-3.5 h-3.5" /> 2FA
                     </span>
                   </div>
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-[13px] font-semibold text-zinc-800 mb-2 pl-0.5">
+                  <label className="block text-[13px] font-semibold text-white mb-2 pl-0.5">
                     {twoFaUseBackup ? "Biztonsági kód (Backup code)" : "Authenticator kód (6 szám)"}
                   </label>
                   <input
@@ -410,7 +412,7 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                       if (step2Error) setStep2Error(null);
                     }}
                     placeholder={twoFaUseBackup ? "pl. A1B2-C3D4-E5" : "000000"}
-                    className="w-full h-[54px] px-4 bg-white border border-zinc-200 rounded-xl text-[18px] text-center tracking-[0.45em] text-zinc-900 placeholder:text-zinc-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#F5D000]/20 focus:border-[#F5D000]/50 transition-all"
+                    className="w-full h-[54px] px-4 bg-white/5 border border-white/10 backdrop-blur-xl rounded-xl text-[18px] text-center tracking-[0.45em] text-white placeholder:text-slate-500 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#41B679]/20 focus:border-[#41B679]/50 transition-all"
                   />
                 </div>
 
@@ -424,9 +426,9 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                       setTwoFaCode("");
                       if (step2Error) setStep2Error(null);
                     }}
-                    className="w-4 h-4 rounded border-zinc-300 text-[#F5D000] focus:ring-[#F5D000]/30"
+                    className="w-4 h-4 rounded border-white/20 text-[#41B679] focus:ring-[#41B679]/30"
                   />
-                  <label htmlFor="2fa-backup-login" className="text-[13px] font-medium text-zinc-600">
+                  <label htmlFor="2fa-backup-login" className="text-[13px] font-medium text-slate-300">
                     Biztonsági kód használata (ha nincs hozzáférés az Authenticator apphoz)
                   </label>
                 </div>
@@ -453,14 +455,14 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                     type="button"
                     onClick={goBackToLogin}
                     disabled={step2Loading}
-                    className="sm:flex-1 h-[54px] rounded-xl bg-white hover:bg-zinc-50 text-zinc-900 text-[14px] font-semibold border border-zinc-200 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center"
+                    className="sm:flex-1 h-[54px] rounded-xl bg-white/5 hover:bg-white/10 text-white text-[14px] font-semibold border border-white/10 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center"
                   >
                     ← Vissza
                   </button>
                   <button
                     type="submit"
                     disabled={step2Loading}
-                    className="sm:flex-[2] h-[54px] rounded-xl bg-[#F5D000] hover:bg-[#0B1F47] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(0,180,216,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(0,180,216,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                    className="sm:flex-[2] h-[54px] rounded-xl bg-[#41B679] hover:bg-[#10B981] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(65,182,121,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(65,182,121,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                   >
                     {step2Loading ? (
                       <>
@@ -495,10 +497,10 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                     transition={{ delay: 0.2, duration: 0.6 }}
                     className="flex flex-col items-center"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-zinc-900 flex items-center justify-center shadow-lg mb-4">
+                    <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center shadow-lg mb-4">
                       <span className="text-white font-black text-xl tracking-tighter">PT</span>
                     </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase text-center w-24">Pannon Transfer</span>
+                    <span className="text-[10px] font-bold tracking-[0.2em] text-slate-500 uppercase text-center w-24">Pannon Transfer</span>
                   </motion.div>
 
                   {/* Arrow Transition */}
@@ -507,13 +509,13 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                     animate={{ scaleX: 1, opacity: 1 }}
                     transition={{ delay: 0.8, duration: 0.6 }}
                     style={{ transformOrigin: "left center" }}
-                    className="flex-1 mx-4 h-[2px] bg-gradient-to-r from-zinc-200 via-[#F5D000]/50 to-[#F5D000] relative mt-[-24px]"
+                    className="flex-1 mx-4 h-[2px] bg-gradient-to-r from-zinc-200 via-[#41B679]/50 to-[#41B679] relative mt-[-24px]"
                   >
                     <motion.div 
                       initial={{ left: "0%", opacity: 0, scale: 0 }}
                       animate={{ left: "100%", opacity: 1, scale: 1 }}
                       transition={{ delay: 1.4, duration: 0.8, ease: "easeInOut" }}
-                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#F5D000] shadow-[0_0_12px_4px_rgba(0,180,216,0.4)]"
+                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#41B679] shadow-[0_0_12px_4px_rgba(65,182,121,0.4)]"
                     />
                   </motion.div>
 
@@ -524,10 +526,10 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                     transition={{ delay: 0.5, duration: 0.6 }}
                     className="flex flex-col items-center"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#F5D000] to-[#D9B800] flex items-center justify-center shadow-xl shadow-[#F5D000]/20 mb-4">
-                      <span className="text-white font-black text-xl tracking-tighter">C</span>
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#41B679] to-[#10B981] flex items-center justify-center shadow-xl shadow-[#41B679]/20 mb-4">
+                      <span className="text-white font-black text-xl tracking-tighter">ni</span>
                     </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#F5D000] uppercase text-center w-24">NI Portál</span>
+                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#41B679] uppercase text-center w-24">Emerson | ni Portál</span>
                   </motion.div>
                 </div>
 
@@ -539,13 +541,13 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">
+                    <h1 className="text-[20px] font-bold text-white tracking-tight">
                       Sikeres hitelesítés
                     </h1>
                   </div>
-                  <div className="flex items-center gap-2.5 px-4 py-2 bg-zinc-100 rounded-full">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#F5D000]" />
-                    <p className="text-[13px] text-zinc-600 font-medium">
+                  <div className="flex items-center gap-2.5 px-4 py-2 bg-white/10 rounded-full">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#41B679]" />
+                    <p className="text-[13px] text-slate-300 font-medium">
                       Biztonságos kapcsolat felépítése...
                     </p>
                   </div>
@@ -557,16 +559,16 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
       </div>
       </div>
 
-      <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
+      <div className="w-full border-t border-white/5 bg-[#020813] backdrop-blur-md mt-auto">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-[11px] text-zinc-500 font-medium">
+            <span className="text-[11px] text-slate-400 font-medium">
               © {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.
             </span>
           </div>
           <a
             href="mailto:balog.sebastian@pannonguard.hu"
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[12px] font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[12px] font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
           >
             <Mail className="w-3.5 h-3.5" />
             Ügyfélszolgálat
