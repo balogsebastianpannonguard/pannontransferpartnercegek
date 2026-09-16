@@ -154,9 +154,9 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
               <span className="text-white font-black text-sm tracking-tighter">ni</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-white leading-none">Emerson | ni Portál</span>
+              <span className="text-[15px] font-bold text-white leading-none">NI Portál</span>
               <span className="text-[11px] text-slate-400 mt-0.5 tracking-wide">
-                Pannon Transfer · Dedikált Partnerbejelentkezés
+                Pannon Transfer · Zárt Partnerbejelentkezés
               </span>
             </div>
           </div>
@@ -168,26 +168,24 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
           <div className="hidden lg:block text-white">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10 mb-6">
               <ShieldCheck className="w-3.5 h-3.5 text-[#41B679]" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/75">NI Access Layer</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/75">Zárt rendszer</span>
             </div>
             <h1 className="text-5xl font-bold tracking-tight leading-[1.05] mb-5">
-              Belépés, ami már önmagában is prezentációképes.
+              Biztonságos hozzáférés az NI partnerportáljához.
             </h1>
             <p className="text-slate-300/80 text-lg leading-relaxed max-w-xl mb-8">
-              Az NI partnerkapu belépése is ugyanazt a prémium Emerson-hangulatot
-              viszi tovább: dedikált arculat, kétfaktoros védelem és tiszta,
-              nagyvállalati összhatás.
+              Kérjük, adja meg hitelesítő adatait a belépéshez. A rendszer kétfaktoros védelemmel (2FA) biztosítja a vállalati adatok és foglalások védelmét.
             </p>
             <div className="grid grid-cols-2 gap-4 max-w-2xl">
               <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-5 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.22)]">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold mb-2">Portal scope</div>
-                <div className="text-xl font-semibold">NI corporate access</div>
-                <p className="text-sm text-slate-400 mt-2">Külön meghívó, külön session, külön partnerfolyamat.</p>
+                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold mb-2">Hozzáférés</div>
+                <div className="text-xl font-semibold">Vállalati hozzáférés</div>
+                <p className="text-sm text-slate-400 mt-2">Kizárólag meghívóval rendelkező, dedikált partnerek számára.</p>
               </div>
               <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(65,182,121,0.12),rgba(255,255,255,0.05))] p-5 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.22)]">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold mb-2">Security</div>
-                <div className="text-xl font-semibold">2FA ready</div>
-                <p className="text-sm text-slate-400 mt-2">Authenticator és backup kódos belépési folyamat.</p>
+                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold mb-2">Biztonság</div>
+                <div className="text-xl font-semibold">2FA Hitelesítés</div>
+                <p className="text-sm text-slate-400 mt-2">Authenticator és biztonsági kódos védelem.</p>
               </div>
             </div>
           </div>
@@ -211,8 +209,8 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                     Jelentkezz be a NI Portálba
                   </h1>
                   <p className="text-[15px] text-slate-400 leading-relaxed max-w-md mx-auto">
-                    Add meg a céges email címedet és a fiókodhoz társított jelszót.
-                    Ha a fiókodhoz kétfaktoros hitelesítés (2FA) tartozik, a következő lépésben kérjük be azt.
+                    Kérjük, adja meg a céges email címét és a fiókhoz társított jelszót. 
+                    Amennyiben fiókjához kétfaktoros hitelesítés (2FA) tartozik, a kód megadása a következő lépésben történik.
                   </p>
                 </div>
 
@@ -221,9 +219,9 @@ export default function NiPremiumLogin({ _onSuccess }: Props) {
                     Tudnivalók
                   </div>
                   <ul className="text-[13px] text-slate-300 leading-relaxed space-y-1.5">
-                    <li>• A bejelentkezéshez használd a Pannon Transfer által kiosztott céges címet.</li>
-                    <li>• 2FA kötelezőség esetén az Authenticator app 6 számjegyű kódját vagy backup kódot add meg.</li>
-                    <li>• Belépési problémák esetén vedd fel a kapcsolatot az ügyfélszolgálattal.</li>
+                    <li>• A bejelentkezéshez kérjük, használja a Pannon Transfer által regisztrált céges email címét.</li>
+                    <li>• 2FA hitelesítés esetén készítse elő Authenticator alkalmazását vagy biztonsági kódját.</li>
+                    <li>• Belépési probléma esetén kérjük, forduljon a dedikált ügyfélszolgálathoz.</li>
                   </ul>
                 </div>
 
