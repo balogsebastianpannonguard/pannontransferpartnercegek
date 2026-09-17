@@ -34,6 +34,73 @@ export interface NiPortalUser {
   createdAt: number;
   updatedAt: number;
   lastLoginAt: number | null;
+  invitedByUserId?: string | null;
+  invitedByEmail?: string | null;
+  inviteStatus?: "active" | "pending_approval" | "rejected";
+  approvalRequestedAt?: number | null;
+  approvedAt?: number | null;
+  approvedBy?: string | null;
+}
+
+export function generateNiInviteToken(): { raw: string; hash: string; expiresAt: number } {
+  const raw = randomBytes(32).toString("base64url");
+  return {
+    raw,
+    hash: createHash("sha256").update(raw).digest("hex"),
+    expiresAt: Date.now() + INVITE_TOKEN_TTL_MS,
+  };
+}
+
+export async function createDelegatedNiInvite(
+  email: string,
+  inviter: { _id?: ObjectId | string | null; email: string },
+  opts: { requireTwoFactor?: boolean; pendingApproval?: boolean } = {}
+) {
+  const col = await getNiCollection();
+  const normalizedEmail = normalizeEmail(email);
+  const existing = await col.findOne({ normalizedEmail });
+  if (existing?.isActivated) {
+    throw new Error("Ehhez az e-mail címhez már aktív NI-fiók tartozik.");
+  }
+
+  const token = generateNiInviteToken();
+  const now = Date.now();
+  const values = {
+    email: email.trim(),
+    normalizedEmail,
+    hashedPassword: null,
+    inviteRawToken: token.raw,
+    inviteTokenHash: token.hash,
+    inviteIssuedAt: now,
+    inviteExpiresAt: token.expiresAt,
+    isActivated: false,
+    activatedAt: null,
+    requireTwoFactor: opts.requireTwoFactor !== false,
+    twoFactorSecret: null,
+    twoFactorEnabled: false,
+    twoFactorBackupCodes: null,
+    welcomeEmailSent: false,
+    invitedByUserId: inviter._id?.toString() || null,
+    invitedByEmail: normalizeEmail(inviter.email),
+    inviteStatus: opts.pendingApproval ? "pending_approval" : "active",
+    approvalRequestedAt: opts.pendingApproval ? now : null,
+    approvedAt: opts.pendingApproval ? null : now,
+    approvedBy: opts.pendingApproval ? null : normalizeEmail(inviter.email),
+    updatedAt: now,
+  };
+
+  if (existing) {
+    await col.updateOne({ _id: existing._id }, { $set: values });
+    return { ...(existing as NiPortalUser), ...values, _id: existing._id, rawToken: token.raw };
+  }
+
+  const created = {
+    ...values,
+    createdAt: now,
+    lastLoginAt: null,
+  } as NiPortalUser;
+  const result = await col.insertOne(created as any);
+  return { ...created, _id: result.insertedId, rawToken: token.raw };
 }
 
 const COLLECTION_NAME = "ni_portal_users";

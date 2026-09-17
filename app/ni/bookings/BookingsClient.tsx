@@ -35,6 +35,7 @@ import {
   Phone,
   Minus,
   Plus,
+  Bell,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -84,6 +85,7 @@ interface Toast {
 
 interface StatusChangeNotification {
   id: string;
+  _id: string;
   bookingCode: string;
   travelerName: string;
   oldStatus: string;
@@ -110,6 +112,14 @@ const STATUS_LABELS: Record<Booking["status"], string> = {
   "in-progress": "Folyamatban",
   completed: "Lezárt",
   cancelled: "Lemondott",
+};
+const STATUS_LABELS_EN: Record<Booking["status"], string> = {
+  pending: "Pending",
+  modified: "Modified",
+  confirmed: "Confirmed",
+  "in-progress": "In progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
 };
 
 const STATUS_COLORS: Record<Booking["status"], string> = {
@@ -163,6 +173,7 @@ function playNotificationSound() {
 
 export default function NiBookingsClient() {
   const { t, language, setLanguage, availableLanguages } = useLanguage();
+  const english = language === "en";
   const [scrolled, setScrolled] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [authedUser, setAuthedUser] = useState<NiPortalUser | null>(null);
@@ -185,6 +196,8 @@ export default function NiBookingsClient() {
 
   const [statusNotifications, setStatusNotifications] = useState<StatusChangeNotification[]>([]);
   const lastNotifPollTimestamp = useRef<number>(0);
+  const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+  const [dismissedNotificationIds, setDismissedNotificationIds] = useState<string[]>([]);
 
   const [editForm, setEditForm] = useState({
     pickupDate: "",
@@ -231,6 +244,17 @@ export default function NiBookingsClient() {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("ni-dismissed-notifications") || "[]");
+      if (Array.isArray(stored)) {
+        setDismissedNotificationIds(stored.filter((id): id is string => typeof id === "string"));
+      }
+    } catch {
+      // Ignore malformed local notification state and start cleanly.
+    }
   }, []);
 
   const handleLogout = async () => {
@@ -300,26 +324,41 @@ export default function NiBookingsClient() {
             const newNotifs = json.statusChanges.map((sc: RawStatusChangeNotification) => ({
               ...sc,
               id: `${sc._id}-${sc.updatedAt}`,
-              dismissed: false,
+              dismissed: dismissedNotificationIds.includes(`${sc._id}-${sc.updatedAt}`),
             }));
-            setStatusNotifications(prev => [...newNotifs, ...prev].slice(0, 20));
+            setStatusNotifications(prev => {
+              const merged = [...newNotifs, ...prev];
+              return Array.from(new Map(merged.map((notification) => [notification.id, notification])).values())
+                .slice(0, 20);
+            });
+            setNotificationPanelOpen(true);
             fetchBookings();
           }
-          lastNotifPollTimestamp.current = Date.now();
+          // A small overlap prevents events written during the request from being missed.
+          // Notification IDs deduplicate events returned by the overlap.
+          lastNotifPollTimestamp.current = Date.now() - 3000;
         }
       } catch {}
     };
 
     const timer = setInterval(pollNotifications, 10000);
     return () => clearInterval(timer);
-  }, [authedUser, fetchBookings]);
+  }, [authedUser, fetchBookings, dismissedNotificationIds]);
 
   const dismissNotification = (id: string) => {
+    const next = Array.from(new Set([...dismissedNotificationIds, id])).slice(-100);
+    setDismissedNotificationIds(next);
+    localStorage.setItem("ni-dismissed-notifications", JSON.stringify(next));
     setStatusNotifications(prev => prev.map(n => n.id === id ? { ...n, dismissed: true } : n));
   };
 
   const dismissAllNotifications = () => {
+    const ids = statusNotifications.map((notification) => notification.id);
+    const next = Array.from(new Set([...dismissedNotificationIds, ...ids])).slice(-100);
+    setDismissedNotificationIds(next);
+    localStorage.setItem("ni-dismissed-notifications", JSON.stringify(next));
     setStatusNotifications(prev => prev.map(n => ({ ...n, dismissed: true })));
+    setNotificationPanelOpen(false);
   };
 
   const addToast = useCallback((type: "success" | "error", message: string) => {
@@ -709,11 +748,31 @@ export default function NiBookingsClient() {
                 href="/ni/bookings"
                 className="text-white text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-[#41B679]"
               >
-                Saját foglalásaim
+                {english ? "My bookings" : "Saját foglalásaim"}
+              </Link>
+              <Link
+                href="/ni/invites"
+                className="text-slate-300 text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-transparent hover:border-[#41B679]/30"
+              >
+                {english ? "Invitations" : "Meghívók"}
               </Link>
             </div>
 
             <div className="w-px h-5 bg-white/10 mx-2"></div>
+
+            <button
+              type="button"
+              onClick={() => setNotificationPanelOpen((open) => !open)}
+              aria-label="Értesítések megnyitása"
+              className="relative w-10 h-10 rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 hover:text-white hover:bg-white/10 transition"
+            >
+              <Bell className={`mx-auto h-4 w-4 ${statusNotifications.some((notification) => !notification.dismissed) ? "animate-bounce text-[#41B679]" : ""}`} />
+              {statusNotifications.filter((notification) => !notification.dismissed).length > 0 && (
+                <span className="absolute -right-1 -top-1 min-w-5 h-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-[#020813]">
+                  {Math.min(statusNotifications.filter((notification) => !notification.dismissed).length, 99)}
+                </span>
+              )}
+            </button>
 
             <div className="flex items-center gap-1">
               {availableLanguages.map((lang) => (
@@ -744,7 +803,7 @@ export default function NiBookingsClient() {
               </div>
               <button
                 onClick={handleLogout}
-                title="Kijelentkezés"
+                title={english ? "Log out" : "Kijelentkezés"}
                 className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all shrink-0"
               >
                 <LogOut className="w-4 h-4" />
@@ -755,7 +814,7 @@ export default function NiBookingsClient() {
       </nav>
 
       <AnimatePresence>
-        {statusNotifications.filter(n => !n.dismissed).length > 0 && (
+        {notificationPanelOpen && statusNotifications.filter(n => !n.dismissed).length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -791,7 +850,24 @@ export default function NiBookingsClient() {
                     };
                     const meta = statusMessages[notif.newStatus] || { message: `Státusz: ${notif.newStatus}`, accent: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/30" };
                     return (
-                      <div key={notif.id} className="px-5 py-4 flex items-start gap-4 hover:bg-white/[0.02] transition">
+                      <div
+                        key={notif.id}
+                        onClick={() => {
+                          setExpandedId(notif._id);
+                          dismissNotification(notif.id);
+                          setNotificationPanelOpen(false);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            setExpandedId(notif._id);
+                            dismissNotification(notif.id);
+                            setNotificationPanelOpen(false);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        className="w-full text-left px-5 py-4 flex items-start gap-4 hover:bg-white/[0.02] transition cursor-pointer"
+                      >
                         <div className={`shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center ${meta.bg}`}>
                           {notif.newStatus === "confirmed" ? <CheckCircle2 className={`w-5 h-5 ${meta.accent}`} /> :
                            notif.newStatus === "modified" ? <Edit3 className={`w-5 h-5 ${meta.accent}`} /> :
@@ -839,7 +915,7 @@ export default function NiBookingsClient() {
             >
               <CalendarDays className="w-3.5 h-3.5 text-[#41B679]" />
               <span className="text-[10px] font-bold text-[#41B679] tracking-widest uppercase">
-                Foglalás Kezelő
+                {english ? "Booking manager" : "Foglalás Kezelő"}
               </span>
               {isRefreshing && (
                 <RefreshCw className="w-3 h-3 text-[#41B679] animate-spin ml-1" />
@@ -853,7 +929,7 @@ export default function NiBookingsClient() {
                   transition={{ delay: 0.1 }}
                   className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-3"
                 >
-                  Saját foglalásaim
+                  {english ? "My bookings" : "Saját foglalásaim"}
                 </motion.h1>
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -861,7 +937,7 @@ export default function NiBookingsClient() {
                   transition={{ delay: 0.2 }}
                   className="text-slate-400 text-sm md:text-base"
                 >
-                  Valós idejű státusz és részletek
+                  {english ? "Real-time status and details" : "Valós idejű státusz és részletek"}
                 </motion.p>
               </div>
               <motion.div className="flex items-center gap-3">
@@ -870,14 +946,14 @@ export default function NiBookingsClient() {
                   className="h-10 px-4 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all inline-flex items-center gap-2 text-sm font-medium"
                 >
                   <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-                  Frissítés
+                  {english ? "Refresh" : "Frissítés"}
                 </button>
                 <Link
                   href="/ni"
                   className="h-10 px-4 rounded-lg bg-[#41B679] hover:bg-[#10B981] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(65,182,121,0.28)]"
                 >
                   <Plus className="w-4 h-4" />
-                  Új foglalás
+                  {english ? "New booking" : "Új foglalás"}
                 </Link>
               </motion.div>
             </div>
@@ -907,7 +983,7 @@ export default function NiBookingsClient() {
                   </div>
                 </div>
                 <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                  Összes foglalás
+                  {english ? "Total bookings" : "Összes foglalás"}
                 </p>
                 <p className="text-3xl font-black text-white tracking-tight">{stats.total}</p>
               </div>
@@ -924,11 +1000,11 @@ export default function NiBookingsClient() {
                     <Clock className="w-5 h-5" />
                   </div>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[10px] font-bold tracking-wider uppercase border border-amber-500/30">
-                    Függőben
+                    {english ? "Pending" : "Függőben"}
                   </span>
                 </div>
                 <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                  Feldolgozás alatt
+                  {english ? "Processing" : "Feldolgozás alatt"}
                 </p>
                 <p className="text-3xl font-black text-white tracking-tight">{stats.pending}</p>
               </div>
@@ -945,11 +1021,11 @@ export default function NiBookingsClient() {
                     <UserCheck className="w-5 h-5" />
                   </div>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold tracking-wider uppercase border border-emerald-500/30">
-                    Aktív
+                    {english ? "Active" : "Aktív"}
                   </span>
                 </div>
                 <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                  Jóváhagyott
+                  {english ? "Confirmed" : "Jóváhagyott"}
                 </p>
                 <p className="text-3xl font-black text-white tracking-tight">{stats.confirmed}</p>
               </div>
@@ -966,11 +1042,11 @@ export default function NiBookingsClient() {
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-400 text-[10px] font-bold tracking-wider uppercase border border-slate-500/30">
-                    Lezárt
+                    {english ? "Closed" : "Lezárt"}
                   </span>
                 </div>
                 <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                  Befejezett
+                  {english ? "Completed" : "Befejezett"}
                 </p>
                 <p className="text-3xl font-black text-white tracking-tight">{stats.closed}</p>
               </div>
@@ -986,10 +1062,10 @@ export default function NiBookingsClient() {
           >
             <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#0B1221]/92 border border-white/8 backdrop-blur-xl">
               {([
-                { key: "all", label: "Minden" },
-                { key: "pending", label: "Függőben" },
-                { key: "confirmed", label: "Jóváhagyott" },
-                { key: "closed", label: "Lezárt" },
+                { key: "all", label: english ? "All" : "Minden" },
+                { key: "pending", label: english ? "Pending" : "Függőben" },
+                { key: "confirmed", label: english ? "Confirmed" : "Jóváhagyott" },
+                { key: "closed", label: english ? "Closed" : "Lezárt" },
               ] as { key: FilterTab; label: string }[]).map((tab) => (
                 <button
                   key={tab.key}
@@ -1011,7 +1087,7 @@ export default function NiBookingsClient() {
               <div className="w-12 h-12 rounded-2xl bg-[#41B679]/10 border border-[#41B679]/20 flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-[#41B679] animate-spin" />
               </div>
-              <p className="text-sm text-slate-400 font-medium">Foglalások betöltése...</p>
+              <p className="text-sm text-slate-400 font-medium">{english ? "Loading bookings..." : "Foglalások betöltése..."}</p>
             </div>
           ) : filteredBookings.length === 0 ? (
             <motion.div
@@ -1024,7 +1100,7 @@ export default function NiBookingsClient() {
                 <div className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
                   <CalendarPlus className="w-10 h-10 text-slate-500" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">Még nincs foglalása</h3>
+                <h3 className="text-xl font-bold text-white mb-2">{english ? "No bookings yet" : "Még nincs foglalása"}</h3>
                 <p className="text-slate-400 text-sm mb-6 max-w-sm">
                   Nincs még foglalás a kiválasztott szűrésnél. Menjen a foglalási oldalra és hozzon létre egy új átutalást.
                 </p>
@@ -1032,7 +1108,7 @@ export default function NiBookingsClient() {
                   href="/ni"
                   className="h-11 px-6 rounded-xl bg-[#41B679] hover:bg-[#10B981] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(65,182,121,0.28)]"
                 >
-                  Menjen a foglalási oldalra
+                  {english ? "Go to booking page" : "Menjen a foglalási oldalra"}
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -1072,7 +1148,7 @@ export default function NiBookingsClient() {
                               <span
                                 className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[booking.status]}`}
                               />
-                              {STATUS_LABELS[booking.status]}
+                              {(english ? STATUS_LABELS_EN : STATUS_LABELS)[booking.status]}
                             </span>
                           </div>
 

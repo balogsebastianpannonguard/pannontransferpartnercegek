@@ -609,19 +609,33 @@ export async function updateBooking(
   id: string,
   patch: Partial<Booking>,
   actor: string,
-  details?: string
+  details?: string,
+  auditAction: string = 'modified'
 ): Promise<Booking | null> {
   const col = await getBookingsCollection();
   const oid = new ObjectId(id);
   const now = Date.now();
 
+  const existing = await col.findOne({ _id: oid as any });
+  if (!existing) return null;
+
   const { _id, bookingCode, createdAt, auditTrail, ...rest } = patch;
+  const changes = Object.entries(rest)
+    .filter(([field]) => field !== 'updatedAt')
+    .map(([field, value]) => ({
+      field,
+      oldValue: (existing as any)[field] ?? null,
+      newValue: value,
+    }));
 
   const auditEntry: AuditTrailEntry = {
     timestamp: now,
-    action: 'modified',
+    action: auditAction,
     actor,
-    details: details || 'Foglalás adatai módosítva',
+    details: JSON.stringify({
+      message: details || 'Foglalás adatai módosítva',
+      changes,
+    }),
   };
 
   const res = await col.findOneAndUpdate(
@@ -639,5 +653,22 @@ export async function updateBooking(
   );
 
   if (!res) return null;
+
+  if (auditAction === 'partner_modified') {
+    const db = await getDb();
+    await db.collection("audit_logs").insertOne({
+      timestamp: now,
+      action: "booking.partner_modified",
+      actor,
+      targetType: "booking",
+      targetId: id,
+      details: {
+        message: details || "Foglalás adatai módosítva a partner által",
+        bookingCode: existing.bookingCode,
+        changes,
+      },
+    } as any);
+  }
+
   return convertDocId(res);
 }

@@ -55,44 +55,72 @@ export async function GET(request: Request) {
         userEmail: session.email,
         ...portalFilter,
         updatedAt: { $gt: lastPollTimestamp },
+        auditTrail: {
+          $elemMatch: {
+            action: { $in: ["status-change", "modified"] },
+            timestamp: { $gt: lastPollTimestamp },
+          },
+        },
       } as import("mongodb").Filter<Booking>)
       .sort({ updatedAt: -1 })
       .toArray();
 
-    const statusChanges = updatedDocs
-      .filter((doc) => {
-        const trail = doc.auditTrail;
-        if (!trail || trail.length === 0) return false;
-        const lastEntry = trail[trail.length - 1];
-        return lastEntry.action === "status-change";
-      })
-      .map((doc) => {
-        const trail = doc.auditTrail!;
-        const lastEntry = trail[trail.length - 1];
-
-        // Determine old status from the previous audit trail entry or default
-        let oldStatus = "pending";
-        for (let i = trail.length - 2; i >= 0; i--) {
-          if (trail[i].action === "status-change") {
-            // Extract status from details like "Státusz módosítva: confirmed"
-            const match = trail[i].details?.match(/:\s*(.+)$/);
-            if (match) {
-              oldStatus = match[1].trim();
+    const statusChanges = updatedDocs.flatMap((doc) => {
+      const trail = doc.auditTrail || [];
+      return trail
+        .map((entry, index) => ({ entry, index }))
+        .filter(({ entry }) =>
+          (entry.action === "status-change" || entry.action === "modified") &&
+          typeof entry.timestamp === "number" &&
+          entry.timestamp > lastPollTimestamp
+        )
+        .map(({ entry, index }) => {
+          if (entry.action === "modified") {
+            let details = entry.details || "A diszpécser módosította a foglalást.";
+            try {
+              const parsed = JSON.parse(entry.details || "{}") as {
+                message?: string;
+                changes?: Array<{ field?: string; oldValue?: unknown; newValue?: unknown }>;
+              };
+              const changes = (parsed.changes || [])
+                .map((change) => `${change.field || "Adat"}: ${change.oldValue ?? "—"} → ${change.newValue ?? "—"}`)
+                .join("; ");
+              details = changes ? `${parsed.message || "A diszpécser módosította a foglalást."} ${changes}` : (parsed.message || details);
+            } catch {
+              // Older audit entries contain plain text; keep that message.
             }
-            break;
+            return {
+              _id: doc._id ? doc._id.toString() : "",
+              bookingCode: doc.bookingCode,
+              travelerName: doc.travelerName,
+              oldStatus: doc.status,
+              newStatus: "modified",
+              updatedAt: entry.timestamp,
+              details,
+            };
           }
-        }
+          let oldStatus = "pending";
+          for (let i = index - 1; i >= 0; i -= 1) {
+            if (trail[i].action === "status-change") {
+              const match = trail[i].details?.match(/:\s*(.+)$/);
+              if (match) oldStatus = match[1].trim();
+              break;
+            }
+          }
 
-        return {
-          _id: doc._id ? doc._id.toString() : "",
-          bookingCode: doc.bookingCode,
-          travelerName: doc.travelerName,
-          oldStatus,
-          newStatus: doc.status,
-          updatedAt: doc.updatedAt,
-          details: lastEntry.details,
-        };
-      });
+          const statusMatch = entry.details?.match(/:\s*(.+)$/);
+          const newStatus = statusMatch?.[1]?.trim() || doc.status;
+          return {
+            _id: doc._id ? doc._id.toString() : "",
+            bookingCode: doc.bookingCode,
+            travelerName: doc.travelerName,
+            oldStatus,
+            newStatus,
+            updatedAt: entry.timestamp,
+            details: entry.details,
+          };
+        });
+    });
 
     return NextResponse.json({ success: true, pendingCount, statusChanges });
   } catch (error) {

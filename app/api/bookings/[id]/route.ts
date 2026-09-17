@@ -236,7 +236,8 @@ export async function PATCH(
         id,
         patchToApply,
         session.email,
-        "Foglalás adatai módosítva a partner által"
+        "Foglalás adatai módosítva a partner által",
+        "partner_modified"
       );
     }
 
