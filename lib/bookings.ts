@@ -57,6 +57,7 @@ export interface Booking {
   fromAddress: string;
   toType: 'airport' | 'other';
   toAddress: string;
+  flightNumber?: string;
   pickupDate: string;
   pickupTime: string;
   travelers: number;
@@ -261,6 +262,7 @@ export async function validateTravelConditions(
     toType?: 'airport' | 'other';
     transferType?: TransferType;
     companyName?: string;
+    flightNumber?: string;
   }
 ): Promise<ValidationResult> {
   const errors: string[] = [];
@@ -281,6 +283,7 @@ export async function validateTravelConditions(
     fromType,
     toType,
     transferType,
+    flightNumber,
   } = bookingData;
 
   const pricing = await getPartnerPricing(partnerKey);
@@ -299,6 +302,9 @@ export async function validateTravelConditions(
   }
   if (!toAddress || toAddress.trim() === '') {
     errors.push('A célállomás címe kötelező');
+  }
+  if (toType === 'airport' && (!flightNumber || flightNumber.trim() === '')) {
+    errors.push('Reptéri érkezésnél a járatszám megadása kötelező');
   }
   if (!pickupDate || pickupDate.trim() === '') {
     errors.push('Az átvétel dátuma kötelező');

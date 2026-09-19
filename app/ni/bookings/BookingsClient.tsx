@@ -16,6 +16,7 @@ import {
   Car,
   User,
   Truck,
+  Plane,
   ChevronDown,
   ChevronUp,
   Edit3,
@@ -64,6 +65,7 @@ interface Booking {
   fromAddress: string;
   toType: "airport" | "other";
   toAddress: string;
+  flightNumber?: string;
   pickupDate: string;
   pickupTime: string;
   travelers: number;
@@ -204,6 +206,7 @@ export default function NiBookingsClient() {
     pickupTime: "",
     fromAddress: "",
     toAddress: "",
+    flightNumber: "",
     travelers: 1,
     luggage: 0,
     comment: "",
@@ -376,6 +379,7 @@ export default function NiBookingsClient() {
       pickupTime: booking.pickupTime,
       fromAddress: booking.fromAddress,
       toAddress: booking.toAddress,
+      flightNumber: booking.flightNumber || "",
       travelers: booking.travelers,
       luggage: booking.luggage,
       comment: booking.comment || "",
@@ -727,7 +731,7 @@ export default function NiBookingsClient() {
                 <span className="font-bold text-lg md:text-xl tracking-tight text-white leading-none flex items-center gap-2">
                   <span className="text-[#41B679]">NI</span>
                   <span className="text-white/50">|</span>
-                  Emerson Portal
+                  Emerson
                 </span>
                 <span className="text-[10px] font-medium tracking-[0.24em] text-slate-400 uppercase mt-1">
                   NI Corporate Access
@@ -1335,6 +1339,7 @@ export default function NiBookingsClient() {
                                       {booking.travelerName}
                                     </span>
                                   </div>
+
                                   <div className="flex items-center gap-2">
                                     <UserCircle className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                                     <span className="text-sm text-slate-300">
@@ -1591,6 +1596,27 @@ export default function NiBookingsClient() {
                     </p>
                   )}
                 </div>
+
+                {editModal.toType === "airport" && (
+                  <div className="space-y-2">
+                    <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
+                      Járatszám <span className="text-[#41B679]">*</span>
+                    </label>
+                    <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
+                      <Plane className="w-4 h-4 text-slate-500 shrink-0" />
+                      <input
+                        type="text"
+                        value={editForm.flightNumber}
+                        onChange={(e) => setEditForm({ ...editForm, flightNumber: e.target.value.toUpperCase() })}
+                        className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                        placeholder="pl. LH1234"
+                      />
+                    </div>
+                    {editErrors.flightNumber && (
+                      <p className="text-[11px] text-rose-400 font-medium">{editErrors.flightNumber}</p>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">

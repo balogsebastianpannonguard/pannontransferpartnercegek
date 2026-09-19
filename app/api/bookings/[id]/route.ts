@@ -27,6 +27,7 @@ const PICKUP_AFFECTING_FIELDS = [
   "pickupTime",
   "fromAddress",
   "toAddress",
+  "flightNumber",
   "travelers",
   "luggage",
  ] as const;
@@ -39,6 +40,7 @@ const ALLOWED_PATCH_FIELDS = [
   "pickupTime",
   "fromAddress",
   "toAddress",
+  "flightNumber",
   "travelers",
   "luggage",
   "comment",
@@ -169,6 +171,10 @@ export async function PATCH(
           patch.toAddress !== undefined
             ? patch.toAddress
             : existingBooking.toAddress,
+        flightNumber:
+          patch.flightNumber !== undefined
+            ? patch.flightNumber
+            : existingBooking.flightNumber,
         pickupDate:
           patch.pickupDate !== undefined
             ? patch.pickupDate

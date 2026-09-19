@@ -358,6 +358,7 @@ export function buildDispatcherNotificationEmail(params: {
   pickupTime: string;
   fromAddress: string;
   toAddress: string;
+  flightNumber?: string;
   travelers: number;
   luggage: number;
   transferType: string;
@@ -372,6 +373,7 @@ export function buildDispatcherNotificationEmail(params: {
     pickupTime,
     fromAddress,
     toAddress,
+    flightNumber,
     travelers,
     luggage,
     transferType,
@@ -559,6 +561,12 @@ export function buildDispatcherNotificationEmail(params: {
 <tr>
 <td style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;color:#1A1A1A;line-height:1.5;padding-bottom:18px;">${toAddress}</td>
 </tr>
+${flightNumber ? `<tr>
+<td style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:600;color:#7A7A7A;letter-spacing:1.5px;text-transform:uppercase;padding-top:12px;padding-bottom:6px;">Járatszám</td>
+</tr>
+<tr>
+<td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#0B1A2A;">✈ ${flightNumber}</td>
+</tr>` : ''}
 <tr>
 <td>
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
@@ -700,6 +708,7 @@ export function buildNiCustomerConfirmationEmail(params: {
   pickupTime: string;
   fromAddress: string;
   toAddress: string;
+  flightNumber?: string;
   travelers: number;
   luggage: number;
   transferType: 'standard' | 'executive';
@@ -716,6 +725,7 @@ export function buildNiCustomerConfirmationEmail(params: {
     pickupTime,
     fromAddress,
     toAddress,
+    flightNumber,
     travelers,
     luggage,
     transferType,
@@ -821,6 +831,7 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                           
                           <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Érkezés</div>
                           <div style="font-size:14px; font-weight:600; color:#0F172A; line-height:1.4;">${toAddress}</div>
+                          ${flightNumber ? `<div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-top:12px; margin-bottom:4px;">Járatszám</div><div style="font-size:15px; font-weight:800; color:#0F172A;">✈ ${flightNumber}</div>` : ''}
                         </td>
                       </tr>
                     </table>

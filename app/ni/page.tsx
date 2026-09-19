@@ -60,6 +60,7 @@ export default function NiLandingPage() {
   const [secondTravelerPhone, setSecondTravelerPhone] = useState("");
   const [fromAddress, setFromAddress] = useState("");
   const [toAddress, setToAddress] = useState("");
+  const [flightNumber, setFlightNumber] = useState("");
   const [pickupDate, setPickupDate] = useState("");
   const [pickupTime, setPickupTime] = useState("");
   const [commentText, setCommentText] = useState("");
@@ -131,6 +132,9 @@ export default function NiLandingPage() {
     travelerPhone: { value: travelerPhone, label: "Telefonszám" },
     fromAddress: { value: fromAddress, label: "Felvételi cím" },
     toAddress: { value: toAddress, label: "Érkezési cím" },
+    ...(toType === "airport"
+      ? { flightNumber: { value: flightNumber, label: "Járatszám" } }
+      : {}),
     pickupDate: { value: pickupDate, label: "Dátum" },
     pickupTime: { value: pickupTime, label: "Időpont" },
   };
@@ -198,6 +202,7 @@ export default function NiLandingPage() {
     setSecondTravelerPhone("");
     setFromAddress("");
     setToAddress("");
+    setFlightNumber("");
     setPickupDate("");
     setPickupTime("");
     setCommentText("");
@@ -244,6 +249,7 @@ export default function NiLandingPage() {
         fromAddress,
         toType,
         toAddress,
+        flightNumber: toType === "airport" ? flightNumber : undefined,
         pickupDate,
         pickupTime,
         travelers,
@@ -310,7 +316,7 @@ export default function NiLandingPage() {
               </div>
               <div className="flex flex-col">
                 <span className="text-[15px] font-bold text-white leading-none">
-                  NI | Emerson Portál
+                  Pannon Transfer NI | Emerson
                 </span>
                 <span className="text-[11px] text-slate-400 mt-0.5 tracking-wide">
                   Pannon Transfer · Hozzáférés ellenőrzése
@@ -1143,7 +1149,10 @@ export default function NiLandingPage() {
                           <span className="text-sm font-bold">Airport</span>
                         </button>
                         <button
-                          onClick={() => setToType("other")}
+                          onClick={() => {
+                            setToType("other");
+                            setFlightNumber("");
+                          }}
                           className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all relative z-10 ${
                             toType === "other"
                               ? "text-white"
@@ -1186,6 +1195,36 @@ export default function NiLandingPage() {
                           <XCircle className="w-3 h-3" />
                           {getFieldError("toAddress")}
                         </p>
+                      )}
+                      {toType === "airport" && (
+                        <div className="space-y-2 pt-3">
+                          <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
+                            Flight number / Járatszám <span className="text-[#10B981]">*</span>
+                          </label>
+                          <div
+                            className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${
+                              isFieldInvalid("flightNumber")
+                                ? "border-red-500/70 ring-1 ring-red-500/20"
+                                : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"
+                            }`}
+                          >
+                            <Plane className="w-4 h-4 text-slate-500" />
+                            <input
+                              type="text"
+                              value={flightNumber}
+                              onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
+                              onBlur={() => handleBlur("flightNumber")}
+                              placeholder="pl. LH1234"
+                              className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                            />
+                          </div>
+                          {getFieldError("flightNumber") && (
+                            <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
+                              <XCircle className="w-3 h-3" />
+                              {getFieldError("flightNumber")}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
