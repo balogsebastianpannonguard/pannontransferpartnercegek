@@ -258,6 +258,13 @@ export default function NiBookingsClient() {
     } catch {
       // Ignore malformed local notification state and start cleanly.
     }
+    try {
+      const storedPoll = Number(localStorage.getItem("ni-last-notif-poll"));
+      lastNotifPollTimestamp.current =
+        Number.isFinite(storedPoll) && storedPoll > 0 ? storedPoll : Date.now();
+    } catch {
+      lastNotifPollTimestamp.current = Date.now();
+    }
   }, []);
 
   const handleLogout = async () => {
@@ -323,23 +330,33 @@ export default function NiBookingsClient() {
         if (res.ok) {
           const json = await res.json();
           if (json?.success && json?.statusChanges?.length > 0) {
-            playNotificationSound();
             const newNotifs = json.statusChanges.map((sc: RawStatusChangeNotification) => ({
               ...sc,
               id: `${sc._id}-${sc.updatedAt}`,
               dismissed: dismissedNotificationIds.includes(`${sc._id}-${sc.updatedAt}`),
             }));
+            const hasUndismissed = newNotifs.some(
+              (notification: StatusChangeNotification) => !notification.dismissed,
+            );
+            if (hasUndismissed) {
+              playNotificationSound();
+              setNotificationPanelOpen(true);
+            }
             setStatusNotifications(prev => {
               const merged = [...newNotifs, ...prev];
               return Array.from(new Map(merged.map((notification) => [notification.id, notification])).values())
                 .slice(0, 20);
             });
-            setNotificationPanelOpen(true);
             fetchBookings();
           }
           // A small overlap prevents events written during the request from being missed.
           // Notification IDs deduplicate events returned by the overlap.
           lastNotifPollTimestamp.current = Date.now() - 3000;
+          try {
+            localStorage.setItem("ni-last-notif-poll", String(lastNotifPollTimestamp.current));
+          } catch {
+            // Ignore storage errors (e.g. private browsing quota).
+          }
         }
       } catch {}
     };
