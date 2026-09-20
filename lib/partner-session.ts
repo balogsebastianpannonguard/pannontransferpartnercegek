@@ -26,6 +26,8 @@ export interface PartnerSession {
   requireTwoFactor: boolean;
   twoFactorEnabled: boolean;
   loginAt: number;
+  role?: "admin-ni" | "normal";
+  displayName?: string | null;
 }
 
 export async function getCurrentPartnerSessionForPortal(
@@ -144,6 +146,8 @@ export async function getCurrentPartnerSessionForPortal(
     requireTwoFactor: ni.requireTwoFactor,
     twoFactorEnabled: ni.twoFactorEnabled,
     loginAt: ni.loginAt,
+    role: ni.role === "admin-ni" ? "admin-ni" : "normal",
+    displayName: ni.displayName ?? null,
   };
 }
 

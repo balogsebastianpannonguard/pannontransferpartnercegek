@@ -754,12 +754,14 @@ export default function NiBookingsClient() {
               >
                 {english ? "My bookings" : "Saját foglalásaim"}
               </Link>
-              <Link
-                href="/ni/invites"
-                className="text-slate-300 text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-transparent hover:border-[#41B679]/30"
-              >
-                {english ? "Invitations" : "Meghívók"}
-              </Link>
+              {authedUser.role === "admin-ni" && (
+                <Link
+                  href="/ni/company"
+                  className="text-slate-300 text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-transparent hover:border-[#41B679]/30"
+                >
+                  {english ? "Company bookings" : "Céges foglalások"}
+                </Link>
+              )}
             </div>
 
             <div className="w-px h-5 bg-white/10 mx-2"></div>

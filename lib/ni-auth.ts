@@ -19,6 +19,8 @@ export interface NiPortalSessionUser {
   requireTwoFactor: boolean;
   twoFactorEnabled: boolean;
   loginAt: number;
+  role?: "admin-ni" | "normal";
+  displayName?: string | null;
 }
 
 export async function validateInviteTokenOnly(rawToken: string): Promise<{
@@ -68,13 +70,15 @@ export async function setNiPasswordByInvite(
 
 export function createNiSessionToken(user: NiDbUser | NiPortalSessionUser): string {
   const payload: NiPortalSessionUser =
-    "normalizedEmail" in (user as any) || "requireTwoFactor" in (user as any)
+    "normalizedEmail" in (user as any)
       ? {
           userId: (user as NiDbUser)._id!.toString(),
           email: user.email,
           requireTwoFactor: (user as NiDbUser).requireTwoFactor,
           twoFactorEnabled: (user as NiDbUser).twoFactorEnabled,
           loginAt: Date.now(),
+          role: (user as NiDbUser).role === "admin-ni" ? "admin-ni" : "normal",
+          displayName: (user as NiDbUser).displayName ?? null,
         }
       : (user as NiPortalSessionUser);
   return jwt.sign(payload as any, NI_COOKIE_SECRET, { expiresIn: "7d" });

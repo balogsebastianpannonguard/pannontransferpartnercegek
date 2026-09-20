@@ -85,7 +85,8 @@ export async function POST(request: Request) {
       user: {
         email: user.email,
         company: "National Instruments",
-        role: "partner",
+        role: user.role === "admin-ni" ? "admin-ni" : "normal",
+        displayName: user.displayName || null,
         requireTwoFactor: !!user.requireTwoFactor,
         twoFactorEnabled: !!user.twoFactorEnabled,
       },

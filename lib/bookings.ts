@@ -83,6 +83,10 @@ export interface Booking {
     changedBy: string;
     details?: string;
   };
+  // Track link fields
+  bookingTrackToken?: string;   // Unique token for passenger status/modify page
+  trackLinkActive?: boolean;    // Set to false by driver on finalization
+  sharedLinkToken?: string;     // The company shared-link token used to create this booking
 }
 
 export interface ValidationResult {
@@ -420,6 +424,37 @@ export async function initBookingIndexes(): Promise<void> {
   await col.createIndex({ status: 1 });
   await col.createIndex({ pickupDate: 1 });
   await col.createIndex({ createdAt: -1 });
+  await col.createIndex({ bookingTrackToken: 1 }, { sparse: true });
+  await col.createIndex({ sharedLinkToken: 1 }, { sparse: true });
+}
+
+export function generateTrackToken(): string {
+  const { randomBytes } = require('crypto');
+  return randomBytes(36).toString('base64url');
+}
+
+export async function getBookingByTrackToken(token: string): Promise<Booking | null> {
+  if (!token || token.length < 10) return null;
+  const col = await getBookingsCollection();
+  const doc = await col.findOne({ bookingTrackToken: token });
+  return doc ? convertDocId(doc) : null;
+}
+
+export async function deactivateTrackLink(bookingId: string): Promise<void> {
+  const col = await getBookingsCollection();
+  await col.updateOne(
+    { _id: new ObjectId(bookingId) as any },
+    { $set: { trackLinkActive: false, updatedAt: Date.now() } }
+  );
+}
+
+export async function listSharedLinkBookings(portal: PartnerPortal): Promise<Booking[]> {
+  const col = await getBookingsCollection();
+  const docs = await col
+    .find({ portal, sharedLinkToken: { $exists: true, $ne: null as any } } as Filter<Booking>)
+    .sort({ createdAt: -1 })
+    .toArray();
+  return docs.map(convertDocId);
 }
 
 export function generateBookingCode(): string {
@@ -509,6 +544,9 @@ export async function createBooking(data: CreateBookingData): Promise<Booking> {
     details: `Foglalás létrehozva. Becsült ár: ${computedPrice.toLocaleString('hu-HU')} Ft`,
   };
 
+  // Generate unique track token for passenger status page
+  const bookingTrackToken = generateTrackToken();
+
   const booking: Booking = {
     ...data,
     portal,
@@ -520,6 +558,8 @@ export async function createBooking(data: CreateBookingData): Promise<Booking> {
     createdAt: now,
     updatedAt: now,
     auditTrail: [auditEntry],
+    bookingTrackToken,
+    trackLinkActive: true,
   };
 
   const res = await col.insertOne(booking as any);

@@ -13,6 +13,7 @@ export function buildCustomerConfirmationEmail(params: {
   paymentMethod: 'card' | 'bank';
   comment?: string;
   price?: number;
+  trackUrl?: string;
 }): string {
   const {
     bookingCode,
@@ -29,6 +30,7 @@ export function buildCustomerConfirmationEmail(params: {
     paymentMethod,
     comment,
     price,
+    trackUrl,
   } = params;
 
   const transferTypeLabel = transferType === 'executive' ? 'EXECUTIVE' : 'STANDARD';
@@ -272,6 +274,37 @@ ${comment ? `
 </tr>
 <tr>
 <td style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-style:italic;color:#4A4A4A;line-height:1.6;">${comment}</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+` : ''}
+${trackUrl ? `
+<tr>
+<td style="padding-top:24px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F0F7FF;border:1px solid #BFD9F0;border-radius:8px;">
+<tr>
+<td style="padding:20px 24px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+<tr>
+<td style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:600;color:#1A5C8A;letter-spacing:1.5px;text-transform:uppercase;padding-bottom:8px;">FOGLALÁS KÖVETÉSE ÉS MÓDOSÍTÁSA</td>
+</tr>
+<tr>
+<td style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#4A4A4A;line-height:1.6;padding-bottom:14px;">Az alábbi egyedi linkre kattintva valós időben nyomon követheti foglalása állapotát, és szükség esetén módosítást is kérhet:</td>
+</tr>
+<tr>
+<td>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="display:inline-block;">
+<tr>
+<td style="background-color:#1A5C8A;border-radius:6px;">
+<a href="${trackUrl}" style="display:inline-block;padding:12px 24px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;color:#FFFFFF;text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;">Foglalás követése →</a>
+</td>
+</tr>
+</table>
+</td>
 </tr>
 </table>
 </td>
@@ -562,7 +595,7 @@ export function buildDispatcherNotificationEmail(params: {
 <td style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;color:#1A1A1A;line-height:1.5;padding-bottom:18px;">${toAddress}</td>
 </tr>
 ${flightNumber ? `<tr>
-<td style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:600;color:#7A7A7A;letter-spacing:1.5px;text-transform:uppercase;padding-top:12px;padding-bottom:6px;">Járatszám</td>
+<td style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:600;color:#7A7A7A;letter-spacing:1.5px;text-transform:uppercase;padding-top:12px;padding-bottom:6px;">Flight number / Járatszám</td>
 </tr>
 <tr>
 <td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#0B1A2A;">✈ ${flightNumber}</td>
@@ -715,6 +748,7 @@ export function buildNiCustomerConfirmationEmail(params: {
   paymentMethod: 'card' | 'bank';
   comment?: string;
   price?: number;
+  trackUrl?: string;
 }): string {
   const {
     bookingCode,
@@ -732,6 +766,7 @@ export function buildNiCustomerConfirmationEmail(params: {
     paymentMethod,
     comment,
     price,
+    trackUrl,
   } = params;
 
   const paymentMethodLabel = paymentMethod === 'card' ? 'Bankkártya' : 'Banki átutalás';
@@ -831,7 +866,7 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                           
                           <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Érkezés</div>
                           <div style="font-size:14px; font-weight:600; color:#0F172A; line-height:1.4;">${toAddress}</div>
-                          ${flightNumber ? `<div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-top:12px; margin-bottom:4px;">Járatszám</div><div style="font-size:15px; font-weight:800; color:#0F172A;">✈ ${flightNumber}</div>` : ''}
+                          ${flightNumber ? `<div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-top:12px; margin-bottom:4px;">Flight number / Járatszám</div><div style="font-size:15px; font-weight:800; color:#0F172A;">✈ ${flightNumber}</div>` : ''}
                         </td>
                       </tr>
                     </table>
@@ -871,6 +906,25 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                   </div>
                   ` : ''}
                   
+                  <!-- Track link box -->
+                  ${trackUrl ? `
+                  <div style="border:1px solid #2563EB; background:#EFF6FF; border-radius:16px; padding:20px; margin-bottom:24px;">
+                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#1E40AF; margin-bottom:8px;">
+                      Foglalás követése és módosítása
+                    </div>
+                    <div style="font-size:13px; line-height:1.6; color:#1E3A8A; margin-bottom:14px;">
+                      Az alábbi egyedi linkre kattintva valós időben nyomon követheti foglalása állapotát, és szükség esetén módosítást is kérhet:
+                    </div>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td bgcolor="#1D4ED8" style="border-radius:10px;">
+                          <a href="${trackUrl}" style="display:inline-block; padding:12px 24px; font-size:12px; font-weight:800; color:#FFFFFF; text-decoration:none; letter-spacing:1px; text-transform:uppercase; border-radius:10px;">Foglalás követése →</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                  ` : ''}
+
                   <!-- Support box -->
                   <div style="background:#0F172A; border-radius:16px; padding:20px; color:#F8FAFC;">
                     <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#EAB308; margin-bottom:8px;">
@@ -901,5 +955,120 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
     </td>
   </tr>
 </table>
+</body></html>`;
+}
+
+export function buildStatusUpdateEmail(params: {
+  bookingCode: string;
+  travelerName: string;
+  newStatus: string;
+  oldStatus: string;
+  details?: string;
+  trackUrl?: string;
+  pickupDate?: string;
+  pickupTime?: string;
+  fromAddress?: string;
+  toAddress?: string;
+  driverName?: string;
+  vehicleName?: string;
+}): string {
+  const {
+    bookingCode,
+    travelerName,
+    newStatus,
+    oldStatus,
+    details,
+    trackUrl,
+    pickupDate,
+    pickupTime,
+    fromAddress,
+    toAddress,
+    driverName,
+    vehicleName,
+  } = params;
+
+  const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
+    pending:      { label: 'Jóváhagyásra vár', color: '#D97706', bg: '#FEF3C7' },
+    modified:     { label: 'Módosítva',          color: '#7C3AED', bg: '#EDE9FE' },
+    confirmed:    { label: 'Visszaigazolva',      color: '#059669', bg: '#D1FAE5' },
+    'in-progress':{ label: 'Úton van',            color: '#2563EB', bg: '#DBEAFE' },
+    completed:    { label: 'Teljesítve',           color: '#059669', bg: '#D1FAE5' },
+    cancelled:    { label: 'Lemondva',             color: '#DC2626', bg: '#FEE2E2' },
+  };
+  const s = statusLabels[newStatus] || { label: newStatus, color: '#4B5563', bg: '#F3F4F6' };
+
+  return `<!DOCTYPE html>
+<html lang="hu">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#FAF8F5;font-family:Arial,Helvetica,sans-serif;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FAF8F5;padding:40px 16px;">
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:580px;">
+<tr><td style="padding-bottom:14px;text-align:center;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#94A3B8;font-weight:700;">Pannon Transfer · Foglalás frissítés</td></tr>
+<tr><td style="background:#FFFFFF;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(15,23,42,0.08);">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+<tr><td style="background:linear-gradient(135deg,#0B172D 0%,#163669 100%);padding:32px;">
+<p style="margin:0 0 10px;font-size:11px;font-weight:700;color:#94A3B8;letter-spacing:2px;text-transform:uppercase;">FOGLALÁS STÁTUSZVÁLTOZÁS</p>
+<p style="margin:0 0 16px;font-size:26px;font-weight:800;color:#FFFFFF;">Kedves ${travelerName}!</p>
+<p style="margin:0;font-size:14px;line-height:1.6;color:#CBD5E1;">Foglalása státusza megváltozott. Az alábbi részletekben tájékoztatjuk az aktuális helyzetről.</p>
+</td></tr>
+<tr><td style="padding:28px 32px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #E2E8F0;border-radius:12px;margin-bottom:20px;">
+<tr><td style="padding:16px 20px;">
+<p style="margin:0 0 6px;font-size:10px;font-weight:700;color:#64748B;letter-spacing:1.5px;text-transform:uppercase;">Foglalás kód</p>
+<p style="margin:0;font-size:17px;font-weight:700;color:#0F172A;">#${bookingCode}</p>
+</td></tr>
+</table>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px;">
+<tr>
+<td width="48%" style="padding-right:8px;">
+<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:14px;">
+<p style="margin:0 0 4px;font-size:10px;font-weight:700;color:#94A3B8;letter-spacing:1px;text-transform:uppercase;">Előző állapot</p>
+<p style="margin:0;font-size:13px;font-weight:600;color:#64748B;">${statusLabels[oldStatus]?.label || oldStatus}</p>
+</div>
+</td>
+<td width="52%" style="padding-left:8px;">
+<div style="background:${s.bg};border:1px solid ${s.color}30;border-radius:10px;padding:14px;">
+<p style="margin:0 0 4px;font-size:10px;font-weight:700;color:${s.color};letter-spacing:1px;text-transform:uppercase;">Új állapot</p>
+<p style="margin:0;font-size:13px;font-weight:700;color:${s.color};">${s.label}</p>
+</div>
+</td>
+</tr>
+</table>
+${pickupDate ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;margin-bottom:20px;">
+<tr><td style="padding:18px 20px;">
+<p style="margin:0 0 12px;font-size:10px;font-weight:700;color:#64748B;letter-spacing:1.5px;text-transform:uppercase;">Utazás részletei</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+<tr><td width="50%" valign="top" style="padding-right:12px;">
+<p style="margin:0 0 3px;font-size:10px;color:#94A3B8;text-transform:uppercase;letter-spacing:1px;">Dátum</p>
+<p style="margin:0 0 12px;font-size:14px;font-weight:700;color:#0F172A;">${pickupDate}</p>
+<p style="margin:0 0 3px;font-size:10px;color:#94A3B8;text-transform:uppercase;letter-spacing:1px;">Időpont</p>
+<p style="margin:0;font-size:16px;font-weight:800;color:#C9A962;">${pickupTime || ''}</p>
+</td>
+<td width="50%" valign="top" style="padding-left:12px;border-left:1px solid #E2E8F0;">
+<p style="margin:0 0 3px;font-size:10px;color:#94A3B8;text-transform:uppercase;letter-spacing:1px;">Indulás</p>
+<p style="margin:0 0 10px;font-size:13px;font-weight:600;color:#0F172A;line-height:1.4;">${fromAddress || ''}</p>
+<p style="margin:0 0 3px;font-size:10px;color:#94A3B8;text-transform:uppercase;letter-spacing:1px;">Érkezés</p>
+<p style="margin:0;font-size:13px;font-weight:600;color:#0F172A;line-height:1.4;">${toAddress || ''}</p>
+</td>
+</tr>
+</table>
+${driverName ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid #E2E8F0;"><p style="margin:0 0 3px;font-size:10px;color:#94A3B8;text-transform:uppercase;letter-spacing:1px;">Hozzárendelt sofőr</p><p style="margin:0;font-size:13px;font-weight:700;color:#0F172A;">${driverName}${vehicleName ? ` – ${vehicleName}` : ''}</p></div>` : ''}
+</td></tr></table>` : ''}
+${details ? `<div style="border-left:3px solid #C9A962;background:#FEFCE8;border-radius:0 10px 10px 0;padding:14px 18px;margin-bottom:20px;"><p style="margin:0 0 5px;font-size:10px;font-weight:700;color:#A16207;letter-spacing:1px;text-transform:uppercase;">Megjegyzés a diszpécsertől</p><p style="margin:0;font-size:13px;line-height:1.6;color:#713F12;">${details}</p></div>` : ''}
+${trackUrl ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#EFF6FF;border:1px solid #93C5FD;border-radius:12px;margin-bottom:20px;">
+<tr><td style="padding:18px 20px;">
+<p style="margin:0 0 6px;font-size:10px;font-weight:700;color:#1D4ED8;letter-spacing:1.5px;text-transform:uppercase;">Foglalás követése és módosítása</p>
+<p style="margin:0 0 14px;font-size:13px;color:#1E3A8A;line-height:1.5;">Az egyedi linkjére kattintva bármikor megtekintheti foglalása aktuális állapotát és szükség esetén módosítást kérhet:</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#1D4ED8" style="border-radius:8px;"><a href="${trackUrl}" style="display:inline-block;padding:11px 22px;font-size:12px;font-weight:800;color:#FFFFFF;text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;border-radius:8px;">Foglalás követése →</a></td></tr></table>
+</td></tr></table>` : ''}
+</td></tr>
+<tr><td bgcolor="#F8FAFC" style="padding:20px 32px;border-top:1px solid #E2E8F0;text-align:center;">
+<p style="margin:0;font-size:11px;line-height:1.6;color:#94A3B8;">Ezt az üzenetet a Pannon Transfer automatikus rendszere küldte.<br>© ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</td></tr></table>
 </body></html>`;
 }

@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import {
-  getCurrentPartnerSession,
-  getCurrentPartnerSessionForPortal,
-  type PartnerPortal,
-} from "@/lib/partner-session";
+  getActiveCompanyBookingToken,
+  incrementCompanyBookingTokenUsage,
+} from "@/lib/company-booking-tokens";
 import {
   createBooking,
-  listUserBookings,
   validateTravelConditions,
   type CreateBookingData,
 } from "@/lib/bookings";
@@ -24,26 +22,6 @@ interface StaffEmailRecord {
   email?: string;
 }
 
-const DEFAULT_COMPANY_BY_PORTAL: Record<PartnerPortal, string> = {
-  catl: "CATL Hungary Kft.",
-  ecopro: "EcoPro BM Hungary",
-  eccoino: "Eccoino",
-  vitesco: "Vitesco Technologies",
-  schaeffler: "Schaeffler",
-  krones: "Krones AG",
-  enterair: "Enter Air",
-  tama: "Tama",
-  ni: "National Instruments",
-};
-
-function getRequestedPortal(request: Request): PartnerPortal | null {
-  const portal = request.headers.get("x-partner-portal");
-  return portal &&
-    ["catl", "ecopro", "eccoino", "vitesco", "schaeffler", "krones", "enterair", "tama", "ni"].includes(portal)
-    ? (portal as PartnerPortal)
-    : null;
-}
-
 function getRequestOrigin(request: Request): string {
   const originHeader = request.headers.get("origin");
   if (originHeader) return originHeader.replace(/\/$/, "");
@@ -53,57 +31,32 @@ function getRequestOrigin(request: Request): string {
   return process.env.NEXT_PUBLIC_APP_URL || "";
 }
 
-export async function GET(request: Request) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ token: string }> }
+) {
   try {
-    const requestedPortal = getRequestedPortal(request);
-    const session = requestedPortal
-      ? await getCurrentPartnerSessionForPortal(requestedPortal)
-      : await getCurrentPartnerSession();
-    if (!session) {
+    const { token } = await params;
+    const linkRecord = await getActiveCompanyBookingToken(token);
+    if (!linkRecord) {
       return NextResponse.json(
-        { success: false, message: "Nincs aktív munkamenet." },
-        { status: 401 }
-      );
-    }
-
-    const bookings = await listUserBookings(session.email, session.portal);
-    return NextResponse.json({ success: true, bookings });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Ismeretlen hiba történt.";
-    return NextResponse.json(
-      { success: false, message },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    const requestedPortal = getRequestedPortal(request);
-    const session = requestedPortal
-      ? await getCurrentPartnerSessionForPortal(requestedPortal)
-      : await getCurrentPartnerSession();
-    if (!session) {
-      return NextResponse.json(
-        { success: false, message: "Nincs aktív munkamenet." },
-        { status: 401 }
+        { success: false, message: "Érvénytelen vagy inaktív foglalási link." },
+        { status: 404 }
       );
     }
 
     const body = await request.json();
-    const companyName = body.companyName || DEFAULT_COMPANY_BY_PORTAL[session.portal];
 
     const bookingData: CreateBookingData = {
-      portal: session.portal,
-      userEmail: session.email,
+      portal: linkRecord.portal,
+      userEmail: body.travelerEmail,
       travelerEmail: body.travelerEmail,
       travelerName: body.travelerName,
       travelerPhone: body.travelerPhone,
       secondTravelerEmail: body.secondTravelerEmail,
       secondTravelerPhone: body.secondTravelerPhone,
-      companyName,
-      paymentMethod: body.paymentMethod,
+      companyName: linkRecord.companyName,
+      paymentMethod: "card",
       transferType: body.transferType,
       fromType: body.fromType,
       fromAddress: body.fromAddress,
@@ -115,6 +68,7 @@ export async function POST(request: Request) {
       travelers: body.travelers,
       luggage: body.luggage,
       comment: body.comment,
+      sharedLinkToken: token,
     };
 
     const validation = await validateTravelConditions(bookingData);
@@ -126,6 +80,7 @@ export async function POST(request: Request) {
     }
 
     const createdBooking = await createBooking(bookingData);
+    await incrementCompanyBookingTokenUsage(token);
 
     const trackUrl = createdBooking.bookingTrackToken
       ? `${getRequestOrigin(request)}/track/${createdBooking.bookingTrackToken}`
@@ -134,7 +89,7 @@ export async function POST(request: Request) {
     const emailParams = {
       bookingCode: createdBooking.bookingCode,
       travelerName: createdBooking.travelerName,
-      userEmail: session.email,
+      userEmail: createdBooking.userEmail,
       travelerEmail: createdBooking.travelerEmail,
       pickupDate: createdBooking.pickupDate,
       pickupTime: createdBooking.pickupTime,
@@ -150,35 +105,32 @@ export async function POST(request: Request) {
       trackUrl,
     };
 
-    const customerHtml = session.portal === "ni"
-      ? buildNiCustomerConfirmationEmail(emailParams)
-      : buildCustomerConfirmationEmail(emailParams);
+    const customerHtml =
+      linkRecord.portal === "ni"
+        ? buildNiCustomerConfirmationEmail(emailParams)
+        : buildCustomerConfirmationEmail(emailParams);
 
-    await sendEmail({
-      to: session.email,
-      subject: `Foglalás visszaigazolása - #${createdBooking.bookingCode}`,
-      html: customerHtml,
-    });
+    if (createdBooking.travelerEmail) {
+      await sendEmail({
+        to: createdBooking.travelerEmail,
+        subject: `Foglalás visszaigazolása - #${createdBooking.bookingCode}`,
+        html: customerHtml,
+      });
+    }
 
     const db = await getDb();
     const staffUsers = await db
       .collection("staff_users")
-      .find({
-        role: { $in: ["dispatcher", "admin"] },
-        status: "active",
-      })
+      .find({ role: { $in: ["dispatcher", "admin"] }, status: "active" })
       .project({ email: 1, _id: 0 })
       .toArray();
     const dispatcherEmails = (staffUsers as StaffEmailRecord[])
       .map((user) => user.email)
       .filter((email): email is string => typeof email === "string" && email.includes("@"));
-
-    // Ha a DB-ben nincs aktív dispatcher, használjuk a fallback env emailt
     const uniqueDispatcherTargets: string[] =
       dispatcherEmails.length > 0
         ? Array.from(new Set(dispatcherEmails))
         : [process.env.DISPATCHER_EMAIL || "balogh.sebastian@pannonguard.hu"];
-
 
     const dispatcherHtml = buildDispatcherNotificationEmail({
       bookingCode: createdBooking.bookingCode,
@@ -200,11 +152,11 @@ export async function POST(request: Request) {
       try {
         await sendEmail({
           to: targetEmail,
-          subject: `ÚJ FOGLALÁS ÉRKEZETT - #${createdBooking.bookingCode}`,
+          subject: `ÚJ FOGLALÁS ÉRKEZETT (Céges link) - #${createdBooking.bookingCode}`,
           html: dispatcherHtml,
         });
       } catch (err) {
-        console.error(`[booking] Dispatcher email failed for ${targetEmail}`, err);
+        console.error(`[book/submit] Dispatcher email failed for ${targetEmail}`, err);
       }
     }
 
@@ -212,22 +164,24 @@ export async function POST(request: Request) {
       type: "notification_created",
       bookingId: createdBooking._id,
       bookingCode: createdBooking.bookingCode,
-      userEmail: session.email,
+      userEmail: createdBooking.userEmail,
       createdAt: Date.now(),
       sentTo: uniqueDispatcherTargets,
-      details: "Diszpécser értesítés létrehozva új foglalásról",
+      details: "Diszpécser értesítés létrehozva céges (shared-link) foglalásról",
     });
 
     return NextResponse.json(
-      { success: true, booking: createdBooking },
+      {
+        success: true,
+        booking: {
+          bookingCode: createdBooking.bookingCode,
+          bookingTrackToken: createdBooking.bookingTrackToken,
+        },
+      },
       { status: 201 }
     );
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Ismeretlen hiba történt.";
-    return NextResponse.json(
-      { success: false, message },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Ismeretlen hiba történt.";
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }

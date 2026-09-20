@@ -620,6 +620,18 @@ export default function NiLandingPage() {
                 >
                   Foglalásaim
                 </Link>
+                {authedUser.role === "admin-ni" && (
+                  <Link
+                    href="/ni/company"
+                    className={`px-6 py-2 rounded-full text-[13px] font-semibold tracking-wide transition-all duration-300 ${
+                      pathname === "/ni/company"
+                        ? "bg-white/10 text-white shadow-sm"
+                        : "text-slate-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    Céges foglalások
+                  </Link>
+                )}
               </div>
             </div>
 
