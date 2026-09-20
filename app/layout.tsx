@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Pannon Transfer Komplexx - Partnerceg",
-  description: "CATL Mobilitási Portál",
+  description: "Pannon Transfer Komplexx - Partnercégek foglalási elosztó portálja",
   icons: {
     icon: "/pannon_transfer_logo-2.jpg",
     shortcut: "/pannon_transfer_logo-2.jpg",
