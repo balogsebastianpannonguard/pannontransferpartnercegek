@@ -88,6 +88,78 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Lemondott",
 };
 
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  created: "Foglalás létrehozva",
+  modified: "Foglalás módosítva",
+  assigned: "Sofőr és jármű hozzárendelve",
+  cancelled: "Foglalás lemondva",
+};
+
+const AUDIT_FIELD_LABELS: Record<string, string> = {
+  pickupDate: "Felvétel dátuma",
+  pickupTime: "Felvételi időpont",
+  fromAddress: "Felvételi cím",
+  toAddress: "Érkezési cím",
+  flightNumber: "Járatszám",
+  travelers: "Utasok száma",
+  luggage: "Csomagok száma",
+  comment: "Megjegyzés",
+  assignedDriverName: "Sofőr",
+  assignedVehicleName: "Jármű",
+  status: "Foglalás állapota",
+  price: "Ár",
+  companyName: "Cégnév",
+  travelerName: "Utas neve",
+  travelerEmail: "Utas email címe",
+  travelerPhone: "Utas telefonszáma",
+};
+
+function formatAuditEntry(entry: AuditTrailEntry): { label: string; lines: string[] } {
+  const statusChangeMatch = /^status:(.+)->(.+)$/.exec(entry.action);
+  if (statusChangeMatch) {
+    const [, oldStatus, newStatus] = statusChangeMatch;
+    const lines: string[] = [
+      `Állapot: ${STATUS_LABELS[oldStatus] || oldStatus} → ${STATUS_LABELS[newStatus] || newStatus}`,
+    ];
+    if (entry.details) lines.push(entry.details);
+    return { label: "Állapotváltás", lines };
+  }
+
+  const label = AUDIT_ACTION_LABELS[entry.action] || entry.action;
+
+  if (!entry.details) return { label, lines: [] };
+
+  const trimmed = entry.details.trim();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const lines: string[] = [];
+      if (parsed && typeof parsed === "object") {
+        if (typeof parsed.message === "string") lines.push(parsed.message);
+        if (Array.isArray(parsed.changes)) {
+          (parsed.changes as Array<{ field?: string; oldValue?: unknown; newValue?: unknown }>).forEach((change) => {
+            const field = change.field || "Adat";
+            const oldVal = change.oldValue === undefined || change.oldValue === "" ? "—" : String(change.oldValue);
+            const newVal = change.newValue === undefined || change.newValue === "" ? "—" : String(change.newValue);
+            lines.push(`${field}: ${oldVal} → ${newVal}`);
+          });
+        }
+        if (lines.length === 0) {
+          Object.entries(parsed).forEach(([key, value]) => {
+            if (value === undefined || value === null || value === "") return;
+            lines.push(`${AUDIT_FIELD_LABELS[key] || key}: ${String(value)}`);
+          });
+        }
+      }
+      return { label, lines: lines.length > 0 ? lines : [trimmed] };
+    } catch {
+      // Nem valós JSON — sima szövegként jelenítjük meg.
+    }
+  }
+
+  return { label, lines: [entry.details] };
+}
+
 export default function CompanyClient() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authedUser, setAuthedUser] = useState<NiPortalUser | null>(null);
@@ -536,15 +608,24 @@ export default function CompanyClient() {
                                   {(b.auditTrail || []).length === 0 ? (
                                     <p className="text-[12px] text-slate-500">Nincs rögzített esemény.</p>
                                   ) : (
-                                    (b.auditTrail || []).map((entry, idx) => (
-                                      <div key={idx} className="text-[12px] text-slate-400">
-                                        <span className="text-slate-300 font-semibold">{entry.action}</span>{" "}
-                                        <span className="text-slate-500">
-                                          · {entry.actor} · {new Date(entry.timestamp).toLocaleString("hu-HU")}
-                                        </span>
-                                        {entry.details && <div className="text-slate-500 mt-0.5">{entry.details}</div>}
-                                      </div>
-                                    ))
+                                    (b.auditTrail || []).map((entry, idx) => {
+                                      const formatted = formatAuditEntry(entry);
+                                      return (
+                                        <div key={idx} className="text-[12px] text-slate-400">
+                                          <span className="text-slate-300 font-semibold">{formatted.label}</span>{" "}
+                                          <span className="text-slate-500">
+                                            · {entry.actor} · {new Date(entry.timestamp).toLocaleString("hu-HU")}
+                                          </span>
+                                          {formatted.lines.length > 0 && (
+                                            <div className="text-slate-500 mt-0.5 space-y-0.5">
+                                              {formatted.lines.map((line, lineIdx) => (
+                                                <div key={lineIdx}>{line}</div>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })
                                   )}
                                 </div>
                               )}
