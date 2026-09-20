@@ -160,6 +160,42 @@ function formatAuditEntry(entry: AuditTrailEntry): { label: string; lines: strin
   return { label, lines: [entry.details] };
 }
 
+// A "sofőr/jármű kiküldés" és a "felvételi időpont módosítása" bejegyzések csak
+// akkor jelenjenek meg az NI-nak, ha a diszpécser már véglegesítette a fuvart.
+const FINALIZED_STATUSES = ["confirmed", "in-progress", "completed"];
+
+function filterAuditTrailForNi(entries: AuditTrailEntry[], bookingStatus: string): AuditTrailEntry[] {
+  if (FINALIZED_STATUSES.includes(bookingStatus)) return entries;
+
+  const visible: AuditTrailEntry[] = [];
+  for (const entry of entries) {
+    if (entry.action === "assigned") continue;
+
+    if (entry.action === "modified" && entry.details) {
+      const trimmed = entry.details.trim();
+      if (trimmed.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(trimmed) as {
+            message?: string;
+            changes?: Array<{ field?: string; oldValue?: unknown; newValue?: unknown }>;
+          };
+          if (Array.isArray(parsed.changes)) {
+            const filteredChanges = parsed.changes.filter((c) => c.field !== "Felvételi időpont");
+            if (filteredChanges.length === 0) continue;
+            visible.push({ ...entry, details: JSON.stringify({ ...parsed, changes: filteredChanges }) });
+            continue;
+          }
+        } catch {
+          // Nem valós JSON — változatlanul megjelenítjük.
+        }
+      }
+    }
+
+    visible.push(entry);
+  }
+  return visible;
+}
+
 export default function CompanyClient() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authedUser, setAuthedUser] = useState<NiPortalUser | null>(null);
@@ -605,28 +641,31 @@ export default function CompanyClient() {
                                     <History className="w-3.5 h-3.5" />
                                     Audit napló
                                   </div>
-                                  {(b.auditTrail || []).length === 0 ? (
-                                    <p className="text-[12px] text-slate-500">Nincs rögzített esemény.</p>
-                                  ) : (
-                                    (b.auditTrail || []).map((entry, idx) => {
-                                      const formatted = formatAuditEntry(entry);
-                                      return (
-                                        <div key={idx} className="text-[12px] text-slate-400">
-                                          <span className="text-slate-300 font-semibold">{formatted.label}</span>{" "}
-                                          <span className="text-slate-500">
-                                            · {entry.actor} · {new Date(entry.timestamp).toLocaleString("hu-HU")}
-                                          </span>
-                                          {formatted.lines.length > 0 && (
-                                            <div className="text-slate-500 mt-0.5 space-y-0.5">
-                                              {formatted.lines.map((line, lineIdx) => (
-                                                <div key={lineIdx}>{line}</div>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })
-                                  )}
+                                  {(() => {
+                                    const visibleAuditTrail = filterAuditTrailForNi(b.auditTrail || [], b.status);
+                                    return visibleAuditTrail.length === 0 ? (
+                                      <p className="text-[12px] text-slate-500">Nincs rögzített esemény.</p>
+                                    ) : (
+                                      visibleAuditTrail.map((entry, idx) => {
+                                        const formatted = formatAuditEntry(entry);
+                                        return (
+                                          <div key={idx} className="text-[12px] text-slate-400">
+                                            <span className="text-slate-300 font-semibold">{formatted.label}</span>{" "}
+                                            <span className="text-slate-500">
+                                              · {entry.actor} · {new Date(entry.timestamp).toLocaleString("hu-HU")}
+                                            </span>
+                                            {formatted.lines.length > 0 && (
+                                              <div className="text-slate-500 mt-0.5 space-y-0.5">
+                                                {formatted.lines.map((line, lineIdx) => (
+                                                  <div key={lineIdx}>{line}</div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })
+                                    );
+                                  })()}
                                 </div>
                               )}
                             </div>

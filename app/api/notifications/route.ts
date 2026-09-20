@@ -13,6 +13,10 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// A "sofőr/jármű kiküldés" és a "felvételi időpont" módosítások csak akkor
+// jelenjenek meg értesítésként, ha a diszpécser már véglegesítette a fuvart.
+const FINALIZED_STATUSES = ["confirmed", "in-progress", "completed"];
+
 function getRequestedPortal(request: Request): PartnerPortal | null {
   const portal = request.headers.get("x-partner-portal");
   return portal &&
@@ -82,7 +86,19 @@ export async function GET(request: Request) {
                 message?: string;
                 changes?: Array<{ field?: string; oldValue?: unknown; newValue?: unknown }>;
               };
-              const changes = (parsed.changes || [])
+              const allChanges = parsed.changes || [];
+              const isFinalized = FINALIZED_STATUSES.includes(doc.status);
+              const visibleChanges = isFinalized
+                ? allChanges
+                : allChanges.filter((change) => change.field !== "Felvételi időpont");
+
+              // Ha a módosítás kizárólag a felvételi időpontot érintette és a
+              // fuvar még nincs véglegesítve, ne értesítsük róla az NI-t.
+              if (!isFinalized && allChanges.length > 0 && visibleChanges.length === 0) {
+                return null;
+              }
+
+              const changes = visibleChanges
                 .map((change) => `${change.field || "Adat"}: ${change.oldValue ?? "—"} → ${change.newValue ?? "—"}`)
                 .join("; ");
               details = changes ? `${parsed.message || "A diszpécser módosította a foglalást."} ${changes}` : (parsed.message || details);
@@ -119,7 +135,8 @@ export async function GET(request: Request) {
             updatedAt: entry.timestamp,
             details: entry.details,
           };
-        });
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null);
     });
 
     return NextResponse.json({ success: true, pendingCount, statusChanges });
