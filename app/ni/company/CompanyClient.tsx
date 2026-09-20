@@ -21,6 +21,9 @@ import {
   Clock,
   Luggage,
   MessageSquare,
+  Bug,
+  X,
+  Send,
 } from "lucide-react";
 import Link from "next/link";
 import NiPremiumLogin from "../components/NiPremiumLogin";
@@ -100,6 +103,12 @@ export default function CompanyClient() {
   const [groupsLoading, setGroupsLoading] = useState(true);
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
+
+  const [bugModalOpen, setBugModalOpen] = useState(false);
+  const [bugSubject, setBugSubject] = useState("");
+  const [bugDescription, setBugDescription] = useState("");
+  const [bugSubmitting, setBugSubmitting] = useState(false);
+  const [bugStatus, setBugStatus] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -201,6 +210,37 @@ export default function CompanyClient() {
     setAuthedUser(user);
   };
 
+  const handleBugSubmit = async () => {
+    if (!bugSubject.trim() || !bugDescription.trim()) {
+      setBugStatus("A tárgy és a leírás megadása kötelező.");
+      return;
+    }
+    setBugSubmitting(true);
+    setBugStatus(null);
+    try {
+      const res = await fetch("/api/ni/bug-reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject: bugSubject.trim(), description: bugDescription.trim() }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.message || "Nem sikerült elküldeni a hibabejelentést.");
+      }
+      setBugSubject("");
+      setBugDescription("");
+      setBugStatus("success");
+      window.setTimeout(() => {
+        setBugModalOpen(false);
+        setBugStatus(null);
+      }, 1500);
+    } catch (e) {
+      setBugStatus(e instanceof Error ? e.message : "Hiba történt a küldés során.");
+    } finally {
+      setBugSubmitting(false);
+    }
+  };
+
   if (!authChecked) {
     return (
       <div className="min-h-screen bg-[#030816] flex items-center justify-center">
@@ -252,15 +292,24 @@ export default function CompanyClient() {
               <span className="text-[11px] text-slate-400 mt-0.5 tracking-wide">National Instruments · Admin</span>
             </div>
           </div>
-          <button
-            onClick={() => {
-              fetchTokens();
-              fetchGroups();
-            }}
-            className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setBugModalOpen(true)}
+              className="flex items-center gap-2 h-9 px-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition text-xs font-bold tracking-wide uppercase"
+            >
+              <Bug className="w-4 h-4" />
+              Hibabejelentés
+            </button>
+            <button
+              onClick={() => {
+                fetchTokens();
+                fetchGroups();
+              }}
+              className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -511,6 +560,92 @@ export default function CompanyClient() {
           )}
         </section>
       </div>
+
+      <AnimatePresence>
+        {bugModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-4"
+            onClick={() => !bugSubmitting && setBugModalOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.97 }}
+              className="w-full max-w-lg bg-[#040E1B] border border-slate-800/80 rounded-3xl p-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center border border-amber-500/30">
+                    <Bug className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <h2 className="text-lg font-bold text-white tracking-wide">Hibabejelentés</h2>
+                </div>
+                <button
+                  onClick={() => setBugModalOpen(false)}
+                  disabled={bugSubmitting}
+                  className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition disabled:opacity-50"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-[13px] text-slate-400 mb-5 leading-relaxed">
+                Írja le a hibát vagy problémát, amit a portálon tapasztalt. A bejelentés azonnal
+                továbbításra kerül a fejlesztőnek.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                    Tárgy
+                  </label>
+                  <input
+                    type="text"
+                    value={bugSubject}
+                    onChange={(e) => setBugSubject(e.target.value)}
+                    placeholder="Pl. Nem menti el a foglalás módosítását"
+                    className="w-full bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-amber-500/60"
+                    disabled={bugSubmitting}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                    Leírás
+                  </label>
+                  <textarea
+                    value={bugDescription}
+                    onChange={(e) => setBugDescription(e.target.value)}
+                    placeholder="Mit csinált, mit várt volna, mi történt helyette..."
+                    rows={5}
+                    className="w-full bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-amber-500/60 resize-none"
+                    disabled={bugSubmitting}
+                  />
+                </div>
+
+                {bugStatus && bugStatus !== "success" && (
+                  <p className="text-[12px] text-red-400">{bugStatus}</p>
+                )}
+                {bugStatus === "success" && (
+                  <p className="text-[12px] text-[#41B679]">Hibabejelentés elküldve, köszönjük!</p>
+                )}
+
+                <button
+                  onClick={handleBugSubmit}
+                  disabled={bugSubmitting}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-[#0a1628] font-bold text-sm tracking-wide transition-all"
+                >
+                  {bugSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  Küldés
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
