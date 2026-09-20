@@ -11,7 +11,6 @@ import {
   Phone,
   Mail,
   CreditCard,
-  Building,
   Plane,
   Map,
   Plus,
@@ -65,7 +64,7 @@ export default function NiLandingPage() {
   const [pickupTime, setPickupTime] = useState("");
   const [commentText, setCommentText] = useState("");
 
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "bank">("card");
+  const [paymentMethod] = useState<"card" | "bank">("card");
   const [fromType, setFromType] = useState<"airport" | "other">("airport");
   const [toType, setToType] = useState<"airport" | "other">("other");
   const [travelers, setTravelers] = useState(1);
@@ -132,8 +131,8 @@ export default function NiLandingPage() {
     travelerPhone: { value: travelerPhone, label: "Telefonszám" },
     fromAddress: { value: fromAddress, label: "Felvételi cím" },
     toAddress: { value: toAddress, label: "Érkezési cím" },
-    ...(toType === "airport"
-      ? { flightNumber: { value: flightNumber, label: "Járatszám" } }
+    ...(fromType === "airport" || toType === "airport"
+      ? { flightNumber: { value: flightNumber, label: "Flight number / Járatszám" } }
       : {}),
     pickupDate: { value: pickupDate, label: "Dátum" },
     pickupTime: { value: pickupTime, label: "Időpont" },
@@ -206,7 +205,6 @@ export default function NiLandingPage() {
     setPickupDate("");
     setPickupTime("");
     setCommentText("");
-    setPaymentMethod("card");
     setFromType("airport");
     setToType("other");
     setTravelers(1);
@@ -249,7 +247,7 @@ export default function NiLandingPage() {
         fromAddress,
         toType,
         toAddress,
-        flightNumber: toType === "airport" ? flightNumber : undefined,
+        flightNumber: (fromType === "airport" || toType === "airport") ? flightNumber : undefined,
         pickupDate,
         pickupTime,
         travelers,
@@ -965,42 +963,15 @@ export default function NiLandingPage() {
                       Payment Method <span className="text-[#41B679]">*</span>
                     </label>
                     <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
-                      <button
-                        onClick={() => setPaymentMethod("card")}
-                        className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all relative z-10 ${
-                          paymentMethod === "card"
-                            ? "text-white"
-                            : "text-slate-400 hover:text-white"
-                        }`}
+                      <div
+                        className="flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 relative z-10 text-white"
                       >
-                        {paymentMethod === "card" && (
-                          <motion.div layoutId="paymentMethod" className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
-                        )}
-                        <CreditCard
-                          className={`w-4 h-4 ${paymentMethod === "card" ? "text-[#41B679]" : ""}`}
-                        />
+                        <motion.div layoutId="paymentMethod" className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
+                        <CreditCard className="w-4 h-4 text-[#41B679]" />
                         <span className="text-sm font-bold">
                           Credit Card
                         </span>
-                      </button>
-                      <button
-                        onClick={() => setPaymentMethod("bank")}
-                        className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all relative z-10 ${
-                          paymentMethod === "bank"
-                            ? "text-white"
-                            : "text-slate-400 hover:text-white"
-                        }`}
-                      >
-                        {paymentMethod === "bank" && (
-                          <motion.div layoutId="paymentMethod" className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
-                        )}
-                        <Building
-                          className={`w-4 h-4 ${paymentMethod === "bank" ? "text-[#41B679]" : ""}`}
-                        />
-                        <span className="text-sm font-bold">
-                          Bank Transfer
-                        </span>
-                      </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1080,7 +1051,10 @@ export default function NiLandingPage() {
                           <span className="text-sm font-bold">Airport</span>
                         </button>
                         <button
-                          onClick={() => setFromType("other")}
+                          onClick={() => {
+                            setFromType("other");
+                            if (toType !== "airport") setFlightNumber("");
+                          }}
                           className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all relative z-10 ${
                             fromType === "other"
                               ? "text-white"
@@ -1124,6 +1098,36 @@ export default function NiLandingPage() {
                           {getFieldError("fromAddress")}
                         </p>
                       )}
+                      {fromType === "airport" && (
+                        <div className="space-y-2 pt-3">
+                          <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
+                            Flight number / Járatszám <span className="text-[#10B981]">*</span>
+                          </label>
+                          <div
+                            className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${
+                              isFieldInvalid("flightNumber")
+                                ? "border-red-500/70 ring-1 ring-red-500/20"
+                                : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"
+                            }`}
+                          >
+                            <Plane className="w-4 h-4 text-slate-500" />
+                            <input
+                              type="text"
+                              value={flightNumber}
+                              onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
+                              onBlur={() => handleBlur("flightNumber")}
+                              placeholder="pl. LH1234"
+                              className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                            />
+                          </div>
+                          {getFieldError("flightNumber") && (
+                            <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
+                              <XCircle className="w-3 h-3" />
+                              {getFieldError("flightNumber")}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1151,7 +1155,7 @@ export default function NiLandingPage() {
                         <button
                           onClick={() => {
                             setToType("other");
-                            setFlightNumber("");
+                            if (fromType !== "airport") setFlightNumber("");
                           }}
                           className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all relative z-10 ${
                             toType === "other"

@@ -303,8 +303,8 @@ export async function validateTravelConditions(
   if (!toAddress || toAddress.trim() === '') {
     errors.push('A célállomás címe kötelező');
   }
-  if (toType === 'airport' && (!flightNumber || flightNumber.trim() === '')) {
-    errors.push('Reptéri érkezésnél a járatszám megadása kötelező');
+  if ((toType === 'airport' || fromType === 'airport') && (!flightNumber || flightNumber.trim() === '')) {
+    errors.push('Reptéri transzfernél a járatszám megadása kötelező');
   }
   if (!pickupDate || pickupDate.trim() === '') {
     errors.push('Az átvétel dátuma kötelező');

@@ -1182,6 +1182,11 @@ export default function NiBookingsClient() {
                                 <p className="text-sm font-semibold text-white truncate">
                                   {booking.fromAddress}
                                 </p>
+                                {booking.flightNumber && (
+                                  <p className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#41B679]/10 border border-[#41B679]/30 text-[#41B679] text-[10px] font-black tracking-wider uppercase">
+                                    Flight Number / Járatszám: <span className="font-mono">{booking.flightNumber}</span>
+                                  </p>
+                                )}
                               </div>
                               <div className="min-w-0">
                                 <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-0.5">
@@ -1597,10 +1602,10 @@ export default function NiBookingsClient() {
                   )}
                 </div>
 
-                {editModal.toType === "airport" && (
+                {(editModal.toType === "airport" || editModal.fromType === "airport") && (
                   <div className="space-y-2">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Járatszám <span className="text-[#41B679]">*</span>
+                      Flight Number / Járatszám <span className="text-[#41B679]">*</span>
                     </label>
                     <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
                       <Plane className="w-4 h-4 text-slate-500 shrink-0" />
