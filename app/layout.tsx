@@ -15,8 +15,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pannon Transfer - CATL",
+  title: "Pannon Transfer Komplexx - Partnerceg",
   description: "CATL Mobilitási Portál",
+  icons: {
+    icon: "/pannon_transfer_logo-2.jpg",
+    shortcut: "/pannon_transfer_logo-2.jpg",
+    apple: "/pannon_transfer_logo-2.jpg",
+  },
 };
 
 export default function RootLayout({

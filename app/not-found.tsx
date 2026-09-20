@@ -7,7 +7,7 @@ import { AlertTriangle, Phone, Mail, ShieldOff } from "lucide-react";
 // see which companies use this system. All individual partner routes
 // (/catl, /ni, /schaeffler, ...) keep working exactly as before.
 export const metadata: Metadata = {
-  title: "404 - Az oldal nem található",
+  title: "Pannon Transfer Komplexx - Partnerceg",
   description: "Az oldal nem található.",
   robots: {
     index: false,
