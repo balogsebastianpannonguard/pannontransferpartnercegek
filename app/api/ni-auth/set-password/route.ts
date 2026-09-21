@@ -152,7 +152,7 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
                 <td bgcolor="#F8FAFC" style="padding:24px 32px; border-top:1px solid #E2E8F0; text-align:center;">
                   <p style="margin:0; font-size:11px; line-height:1.6; color:#94A3B8;">
                     Ezt az üzenetet a Pannon Transfer NI Portál rendszere küldte.<br>
-                    Kérdés esetén: Ügyvezető - Balog Sebastian Máté<br>
+                    Kérdés esetén: Vezető fejlesztő - Balog Sebastian Máté (balogh.sebastian@pannonguard.hu, +36 30 665 4135)<br>
                     © ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.
                   </p>
                 </td>
