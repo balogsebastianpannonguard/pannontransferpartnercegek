@@ -798,9 +798,9 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                   <!-- Tags -->
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
                     <tr>
-                      <td bgcolor="#FDF5D3" style="padding:8px 16px; border-radius:12px;">
-                        <span style="font-size:16px; font-weight:900; color:#8A6B00;">NI</span>
-                        <span style="font-size:13px; font-weight:700; color:#8A6B00; margin-left:6px;">Booking Confirmation</span>
+                      <td bgcolor="#DCFCE7" style="padding:8px 16px; border-radius:12px;">
+                        <span style="font-size:16px; font-weight:900; color:#166534;">NI</span>
+                        <span style="font-size:13px; font-weight:700; color:#166534; margin-left:6px;">Booking Confirmation</span>
                       </td>
                     </tr>
                   </table>
@@ -858,7 +858,7 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                           <div style="font-size:15px; font-weight:700; color:#0F172A; margin-bottom:16px;">${pickupDate}</div>
                           
                           <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Időpont</div>
-                          <div style="font-size:18px; font-weight:800; color:#EAB308;">${pickupTime}</div>
+                          <div style="font-size:18px; font-weight:800; color:#16A34A;">${pickupTime}</div>
                         </td>
                         <td width="50%" valign="top" style="padding-left:16px; border-left:1px solid #E2E8F0;">
                           <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Indulás</div>
@@ -898,9 +898,9 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                   </table>
                   
                   ${comment ? `
-                  <div style="border-left:3px solid #EAB308; background:#FEFCE8; border-radius:0 12px 12px 0; padding:16px; margin-bottom:24px;">
-                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#A16207; margin-bottom:6px;">Megjegyzés</div>
-                    <div style="font-size:13px; line-height:1.6; font-style:italic; color:#713F12;">
+                  <div style="border-left:3px solid #22C55E; background:#F0FDF4; border-radius:0 12px 12px 0; padding:16px; margin-bottom:24px;">
+                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#166534; margin-bottom:6px;">Megjegyzés</div>
+                    <div style="font-size:13px; line-height:1.6; font-style:italic; color:#14532D;">
                       "${comment}"
                     </div>
                   </div>
@@ -927,7 +927,7 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
 
                   <!-- Support box -->
                   <div style="background:#0F172A; border-radius:16px; padding:20px; color:#F8FAFC;">
-                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#EAB308; margin-bottom:8px;">
+                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#4ADE80; margin-bottom:8px;">
                       További teendők
                     </div>
                     <div style="font-size:13px; line-height:1.6;">

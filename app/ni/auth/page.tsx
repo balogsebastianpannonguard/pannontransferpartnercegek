@@ -118,7 +118,7 @@ export default function NiAuthPage() {
       <div className="w-full border-b border-zinc-200/70 bg-white/60 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F5D000] to-[#D9B800] flex items-center justify-center shadow-sm">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#22C55E] to-[#16A34A] flex items-center justify-center shadow-sm">
               <span className="text-white font-black text-sm tracking-tighter">C</span>
             </div>
             <div className="flex flex-col">
@@ -148,7 +148,7 @@ export default function NiAuthPage() {
                 transition={{ duration: 0.25 }}
                 className="flex flex-col items-center py-20 gap-5"
               >
-                <Loader2 className="w-8 h-8 text-[#F5D000] animate-spin" />
+                <Loader2 className="w-8 h-8 text-[#22C55E] animate-spin" />
                 <p className="text-sm text-zinc-500 font-medium">
                   {state === "redirecting" ? "Átirányítás..." : "Belépési link ellenőrzése..."}
                 </p>
@@ -183,7 +183,7 @@ export default function NiAuthPage() {
                   </div>
                   <a
                     href="mailto:balog.sebastian@pannonguard.hu"
-                    className="inline-flex items-center gap-2 text-[15px] font-semibold text-[#F5D000] hover:text-[#003A99] transition-colors"
+                    className="inline-flex items-center gap-2 text-[15px] font-semibold text-[#22C55E] hover:text-[#003A99] transition-colors"
                   >
                     <Mail className="w-4 h-4" />
                     balog.sebastian@pannonguard.hu
@@ -237,13 +237,13 @@ export default function NiAuthPage() {
                     animate={{ scaleX: 1, opacity: 1 }}
                     transition={{ delay: 0.8, duration: 0.6 }}
                     style={{ transformOrigin: "left center" }}
-                    className="flex-1 mx-4 h-[2px] bg-gradient-to-r from-zinc-200 via-[#F5D000]/50 to-[#F5D000] relative mt-[-24px]"
+                    className="flex-1 mx-4 h-[2px] bg-gradient-to-r from-zinc-200 via-[#22C55E]/50 to-[#22C55E] relative mt-[-24px]"
                   >
                     <motion.div 
                       initial={{ left: "0%", opacity: 0, scale: 0 }}
                       animate={{ left: "100%", opacity: 1, scale: 1 }}
                       transition={{ delay: 1.4, duration: 0.8, ease: "easeInOut" }}
-                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#F5D000] shadow-[0_0_12px_4px_rgba(0,180,216,0.4)]"
+                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#22C55E] shadow-[0_0_12px_4px_rgba(0,180,216,0.4)]"
                     />
                   </motion.div>
 
@@ -254,10 +254,10 @@ export default function NiAuthPage() {
                     transition={{ delay: 0.5, duration: 0.6 }}
                     className="flex flex-col items-center"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#F5D000] to-[#D9B800] flex items-center justify-center shadow-xl shadow-[#F5D000]/20 mb-4">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#22C55E] to-[#16A34A] flex items-center justify-center shadow-xl shadow-[#22C55E]/20 mb-4">
                       <span className="text-white font-black text-xl tracking-tighter">C</span>
                     </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#F5D000] uppercase text-center w-24">NI Portál</span>
+                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#22C55E] uppercase text-center w-24">NI Portál</span>
                   </motion.div>
                 </div>
 
@@ -274,7 +274,7 @@ export default function NiAuthPage() {
                     </h1>
                   </div>
                   <div className="flex items-center gap-2.5 px-4 py-2 bg-zinc-100 rounded-full">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#F5D000]" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#22C55E]" />
                     <p className="text-[13px] text-zinc-600 font-medium">
                       Biztonságos kapcsolat felépítése...
                     </p>
@@ -294,8 +294,8 @@ export default function NiAuthPage() {
                 className="flex flex-col"
               >
                 <div className="mb-7">
-                  <div className="mx-auto w-14 h-14 rounded-2xl bg-[#F5D000]/[0.08] border border-[#F5D000]/10 flex items-center justify-center mb-5">
-                    <ShieldCheck className="w-7 h-7 text-[#F5D000]" />
+                  <div className="mx-auto w-14 h-14 rounded-2xl bg-[#22C55E]/[0.08] border border-[#22C55E]/10 flex items-center justify-center mb-5">
+                    <ShieldCheck className="w-7 h-7 text-[#22C55E]" />
                   </div>
                   <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
                     Kétfaktoros hitelesítés
@@ -308,8 +308,8 @@ export default function NiAuthPage() {
                 </div>
 
                 <div className="bg-white border border-zinc-200 rounded-2xl p-4 mb-6 flex items-center gap-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="w-11 h-11 rounded-xl bg-[#F5D000]/[0.06] border border-[#F5D000]/10 flex items-center justify-center shrink-0">
-                    <Mail className="w-5 h-5 text-[#F5D000]" />
+                  <div className="w-11 h-11 rounded-xl bg-[#22C55E]/[0.06] border border-[#22C55E]/10 flex items-center justify-center shrink-0">
+                    <Mail className="w-5 h-5 text-[#22C55E]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 mb-0.5">
@@ -319,7 +319,7 @@ export default function NiAuthPage() {
                       {email || "Betöltés..."}
                     </div>
                   </div>
-                  <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#F5D000]/[0.07] border border-[#F5D000]/10 text-[#F5D000] text-[11px] font-bold tracking-wide">
+                  <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#22C55E]/[0.07] border border-[#22C55E]/10 text-[#22C55E] text-[11px] font-bold tracking-wide">
                     <KeyRound className="w-3.5 h-3.5" /> 2FA
                   </span>
                 </div>
@@ -340,7 +340,7 @@ export default function NiAuthPage() {
                       setCode(v);
                     }}
                     placeholder={useBackup ? "pl. A1B2-C3D4-E5" : "000000"}
-                    className="w-full h-[52px] px-4 bg-white border border-zinc-200 rounded-xl text-[18px] text-center tracking-[0.45em] text-zinc-900 placeholder:text-zinc-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#F5D000]/20 focus:border-[#F5D000]/50 transition-all"
+                    className="w-full h-[52px] px-4 bg-white border border-zinc-200 rounded-xl text-[18px] text-center tracking-[0.45em] text-zinc-900 placeholder:text-zinc-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E]/50 transition-all"
                   />
                 </div>
 
@@ -353,7 +353,7 @@ export default function NiAuthPage() {
                       setUseBackup(e.target.checked);
                       setCode("");
                     }}
-                    className="w-4 h-4 rounded border-zinc-300 text-[#F5D000] focus:ring-[#F5D000]/30"
+                    className="w-4 h-4 rounded border-zinc-300 text-[#22C55E] focus:ring-[#22C55E]/30"
                   />
                   <label htmlFor="2fa-backup" className="text-[13px] font-medium text-zinc-600">
                     Biztonsági kód használata (ha nincs hozzáférés az Authenticator apphoz)
@@ -380,7 +380,7 @@ export default function NiAuthPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full h-[54px] rounded-xl bg-[#F5D000] hover:bg-[#0B1F47] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(0,180,216,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(0,180,216,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  className="w-full h-[54px] rounded-xl bg-[#22C55E] hover:bg-[#0B1F47] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(0,180,216,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(0,180,216,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <>

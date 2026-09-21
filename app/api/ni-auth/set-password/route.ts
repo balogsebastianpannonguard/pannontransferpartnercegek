@@ -40,9 +40,9 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
                   <!-- Tags -->
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
                     <tr>
-                      <td bgcolor="#FDF5D3" style="padding:8px 16px; border-radius:12px;">
-                        <span style="font-size:16px; font-weight:900; color:#8A6B00;">NI</span>
-                        <span style="font-size:13px; font-weight:700; color:#8A6B00; margin-left:6px;">Portal Access</span>
+                      <td bgcolor="#DCFCE7" style="padding:8px 16px; border-radius:12px;">
+                        <span style="font-size:16px; font-weight:900; color:#166534;">NI</span>
+                        <span style="font-size:13px; font-weight:700; color:#166534; margin-left:6px;">Portal Access</span>
                       </td>
                     </tr>
                   </table>
@@ -101,8 +101,8 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
                       <td align="center">
                         <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                           <tr>
-                            <td align="center" bgcolor="#EAB308" style="border-radius:999px; box-shadow:0 8px 20px rgba(234,179,8,0.3);">
-                              <a href="${loginLink}" style="display:inline-block; padding:16px 32px; font-size:14px; font-weight:700; color:#422006; text-decoration:none; letter-spacing:1px; text-transform:uppercase; border-radius:999px;">
+                            <td align="center" bgcolor="#22C55E" style="border-radius:999px; box-shadow:0 8px 20px rgba(34,197,94,0.3);">
+                              <a href="${loginLink}" style="display:inline-block; padding:16px 32px; font-size:14px; font-weight:700; color:#0B2B1B; text-decoration:none; letter-spacing:1px; text-transform:uppercase; border-radius:999px;">
                                 Egyedi belépés az NI Portálra
                               </a>
                             </td>
@@ -136,7 +136,7 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
                   
                   <!-- Support box -->
                   <div style="background:#0F172A; border-radius:16px; padding:20px; color:#F8FAFC;">
-                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#EAB308; margin-bottom:8px;">
+                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#4ADE80; margin-bottom:8px;">
                       Támogatás
                     </div>
                     <div style="font-size:13px; line-height:1.6;">

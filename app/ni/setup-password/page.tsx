@@ -77,7 +77,7 @@ function InfoTile({
 }) {
   return (
     <div className="rounded-[24px] border border-white/70 bg-white/85 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-xl">
-      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F5D000]/15 text-[#9B7B00]">
+      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#22C55E]/15 text-[#15803D]">
         {icon}
       </div>
       <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">{label}</div>
@@ -304,9 +304,9 @@ export default function NiSetupPasswordPage() {
   ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#fffef7_0%,#f7f7f5_35%,#f4f5f7_100%)] text-zinc-900">
+    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#f6fdf9_0%,#f7f7f5_35%,#f4f5f7_100%)] text-zinc-900">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-[-10%] top-[-6%] h-[28rem] w-[28rem] rounded-full bg-[#F5D000]/18 blur-[130px]" />
+        <div className="absolute left-[-10%] top-[-6%] h-[28rem] w-[28rem] rounded-full bg-[#22C55E]/18 blur-[130px]" />
         <div className="absolute right-[-8%] top-[14%] h-[26rem] w-[26rem] rounded-full bg-[#0B1F47]/10 blur-[140px]" />
         <div className="absolute bottom-[-16%] left-[24%] h-[24rem] w-[24rem] rounded-full bg-white/80 blur-[110px]" />
       </div>
@@ -314,8 +314,8 @@ export default function NiSetupPasswordPage() {
       <div className="relative z-10 border-b border-white/60 bg-white/65 backdrop-blur-xl">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#F5D000,#D9B800)] shadow-[0_18px_34px_rgba(245,208,0,0.28)]">
-              <span className="text-sm font-black uppercase tracking-tight text-[#2B2410]">ni</span>
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#22C55E,#16A34A)] shadow-[0_18px_34px_rgba(34,197,94,0.28)]">
+              <span className="text-sm font-black uppercase tracking-tight text-[#0B2B1B]">ni</span>
             </div>
             <div className="flex flex-col">
               <span className="text-[15px] font-bold leading-none text-zinc-950">NI Portál</span>
@@ -333,7 +333,7 @@ export default function NiSetupPasswordPage() {
       <div className="relative z-10 mx-auto grid min-h-[calc(100vh-80px)] max-w-7xl items-center gap-8 px-4 py-8 sm:px-8 sm:py-12 lg:grid-cols-[1.1fr_560px]">
         <div className="hidden lg:block">
           <div className="max-w-2xl">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#F5D000]/30 bg-white/70 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#9B7B00] shadow-[0_16px_34px_rgba(15,23,42,0.05)] backdrop-blur-xl">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#22C55E]/30 bg-white/70 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#15803D] shadow-[0_16px_34px_rgba(15,23,42,0.05)] backdrop-blur-xl">
                 <ShieldCheck className="h-4 w-4" />
                 NI Partner Portál Hozzáférés
               </div>
@@ -382,7 +382,7 @@ export default function NiSetupPasswordPage() {
                   </div>
                 </div>
                 <div className="grid gap-3 text-[14px] leading-7 text-zinc-600">
-                  <div className="rounded-2xl border border-zinc-200/70 bg-[#fffdf1] px-4 py-3">
+                  <div className="rounded-2xl border border-zinc-200/70 bg-[#f0fdf4] px-4 py-3">
                     Aktiválja fiókját egy erős jelszó megadásával az űrlapon.
                   </div>
                   <div className="rounded-2xl border border-zinc-200/70 bg-white px-4 py-3">
@@ -407,7 +407,7 @@ export default function NiSetupPasswordPage() {
                 transition={{ duration: 0.25 }}
                 className="rounded-[34px] border border-white/70 bg-white/82 p-10 text-center shadow-[0_30px_80px_rgba(15,23,42,0.10)] backdrop-blur-2xl"
               >
-                <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-[28px] bg-[#F5D000]/14 text-[#9B7B00] shadow-[0_20px_40px_rgba(245,208,0,0.18)]">
+                <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-[28px] bg-[#22C55E]/14 text-[#15803D] shadow-[0_20px_40px_rgba(34,197,94,0.18)]">
                   <Loader2 className="h-9 w-9 animate-spin" />
                 </div>
                 <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-zinc-950">
@@ -481,8 +481,8 @@ export default function NiSetupPasswordPage() {
                 onSubmit={submitForm}
                 className="rounded-[34px] border border-white/70 bg-white/84 p-5 shadow-[0_30px_80px_rgba(15,23,42,0.10)] backdrop-blur-2xl sm:p-7"
               >
-                <div className="rounded-[30px] border border-white/70 bg-[linear-gradient(135deg,rgba(245,208,0,0.20),rgba(255,255,255,0.95))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#9B7B00]">
+                <div className="rounded-[30px] border border-white/70 bg-[linear-gradient(135deg,rgba(34,197,94,0.20),rgba(255,255,255,0.95))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#15803D]">
                     <KeyRound className="h-4 w-4" />
                     1. lépés · Jelszó beállítása
                   </div>
@@ -498,7 +498,7 @@ export default function NiSetupPasswordPage() {
 
                 <div className="mt-5 rounded-[28px] border border-zinc-200/70 bg-white/92 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F5D000]/14 text-[#9B7B00]">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#22C55E]/14 text-[#15803D]">
                       <Mail className="h-6 w-6" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -515,7 +515,7 @@ export default function NiSetupPasswordPage() {
                         Egyszeri aktiválás
                       </span>
                       {require2FA && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F5D000]/35 bg-[#F5D000]/10 px-3 py-1.5 text-[11px] font-semibold text-[#8A6B00]">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#22C55E]/35 bg-[#22C55E]/10 px-3 py-1.5 text-[11px] font-semibold text-[#166534]">
                           <ShieldCheck className="h-3.5 w-3.5" />
                           2FA kötelező
                         </span>
@@ -537,7 +537,7 @@ export default function NiSetupPasswordPage() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Minimum 8 karakter · kisbetű · nagybetű · szám"
-                            className="h-[58px] w-full rounded-2xl border border-zinc-200 bg-white px-4 pr-12 text-[15px] font-medium text-zinc-900 placeholder:text-zinc-400 shadow-[0_10px_28px_rgba(15,23,42,0.04)] transition-all focus:border-[#F5D000]/50 focus:outline-none focus:ring-2 focus:ring-[#F5D000]/20"
+                            className="h-[58px] w-full rounded-2xl border border-zinc-200 bg-white px-4 pr-12 text-[15px] font-medium text-zinc-900 placeholder:text-zinc-400 shadow-[0_10px_28px_rgba(15,23,42,0.04)] transition-all focus:border-[#22C55E]/50 focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20"
                             autoComplete="new-password"
                           />
                           <button
@@ -595,7 +595,7 @@ export default function NiSetupPasswordPage() {
                           value={confirm}
                           onChange={(e) => setConfirm(e.target.value)}
                           placeholder="Írd be újra a fenti jelszót"
-                          className="h-[58px] w-full rounded-2xl border border-zinc-200 bg-white px-4 text-[15px] font-medium text-zinc-900 placeholder:text-zinc-400 shadow-[0_10px_28px_rgba(15,23,42,0.04)] transition-all focus:border-[#F5D000]/50 focus:outline-none focus:ring-2 focus:ring-[#F5D000]/20"
+                          className="h-[58px] w-full rounded-2xl border border-zinc-200 bg-white px-4 text-[15px] font-medium text-zinc-900 placeholder:text-zinc-400 shadow-[0_10px_28px_rgba(15,23,42,0.04)] transition-all focus:border-[#22C55E]/50 focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20"
                           autoComplete="new-password"
                         />
                       </div>
@@ -627,7 +627,7 @@ export default function NiSetupPasswordPage() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="mt-5 inline-flex h-[58px] w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#F5D000,#D8AE00)] px-5 text-[14px] font-semibold text-[#2B2410] shadow-[0_18px_40px_rgba(245,208,0,0.30)] transition-transform duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="mt-5 inline-flex h-[58px] w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#22C55E,#16A34A)] px-5 text-[14px] font-semibold text-[#0B2B1B] shadow-[0_18px_40px_rgba(34,197,94,0.30)] transition-transform duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {submitting ? (
                         <>
@@ -651,7 +651,7 @@ export default function NiSetupPasswordPage() {
                       A jelszó beállításával megerősíted a céges hozzáférési feltételek elfogadását.{" "}
                       <a
                         href="mailto:balog.sebastian@pannonguard.hu"
-                        className="font-semibold text-[#9B7B00] hover:underline"
+                        className="font-semibold text-[#15803D] hover:underline"
                       >
                         Támogatás
                       </a>
@@ -662,7 +662,7 @@ export default function NiSetupPasswordPage() {
                 {alreadyActivated && (
                   <div className="mt-5 rounded-[28px] border border-zinc-200/70 bg-white/90 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
                     <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F5D000]/14 text-[#9B7B00]">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#22C55E]/14 text-[#15803D]">
                         <Mail className="h-5 w-5" />
                       </div>
                       <div className="flex-1">
@@ -674,7 +674,7 @@ export default function NiSetupPasswordPage() {
                         </p>
                         <a
                           href="mailto:balog.sebastian@pannonguard.hu?subject=NI%20Port%C3%A1l%20-%20%C3%9Aj%20egyedi%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
-                          className="mt-3 inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2 text-[13px] font-semibold text-[#9B7B00] transition-colors hover:bg-[#fff9d6]"
+                          className="mt-3 inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2 text-[13px] font-semibold text-[#15803D] transition-colors hover:bg-[#dcfce7]"
                         >
                           balog.sebastian@pannonguard.hu
                         </a>
@@ -695,8 +695,8 @@ export default function NiSetupPasswordPage() {
                 onSubmit={submitTfaVerify}
                 className="rounded-[34px] border border-white/70 bg-white/84 p-5 shadow-[0_30px_80px_rgba(15,23,42,0.10)] backdrop-blur-2xl sm:p-7"
               >
-                <div className="rounded-[30px] border border-[#F5D000]/20 bg-[linear-gradient(135deg,rgba(245,208,0,0.18),rgba(255,255,255,0.95))] p-6">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/85 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#9B7B00]">
+                <div className="rounded-[30px] border border-[#22C55E]/20 bg-[linear-gradient(135deg,rgba(34,197,94,0.18),rgba(255,255,255,0.95))] p-6">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/85 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#15803D]">
                     <ShieldCheck className="h-4 w-4" />
                     2. lépés · Kétfaktoros hitelesítés
                   </div>
@@ -729,7 +729,7 @@ export default function NiSetupPasswordPage() {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="rounded-[24px] border border-zinc-200/70 bg-[#fffdf2] p-4 text-[14px] leading-7 text-zinc-600">
+                        <div className="rounded-[24px] border border-zinc-200/70 bg-[#f0fdf4] p-4 text-[14px] leading-7 text-zinc-600">
                           Nyisd meg a telefonodon az Authenticator alkalmazást, válaszd a <strong className="text-zinc-900">&quot;+&quot;</strong> ikont, majd olvasd be a bal oldali QR-kódot.
                         </div>
                         <div className="mt-4 rounded-[24px] border border-zinc-200/70 bg-white p-4">
@@ -825,7 +825,7 @@ export default function NiSetupPasswordPage() {
                           setTfaCode(v);
                         }}
                         placeholder={tfaUseBackup ? "A1B2-C3D4-E5" : "000000"}
-                        className="h-[62px] w-full rounded-2xl border border-zinc-200 bg-white px-4 text-center font-mono text-[20px] font-bold tracking-[0.45em] text-zinc-900 placeholder:text-zinc-400 shadow-[0_10px_28px_rgba(15,23,42,0.04)] transition-all focus:border-[#F5D000]/50 focus:outline-none focus:ring-2 focus:ring-[#F5D000]/20"
+                        className="h-[62px] w-full rounded-2xl border border-zinc-200 bg-white px-4 text-center font-mono text-[20px] font-bold tracking-[0.45em] text-zinc-900 placeholder:text-zinc-400 shadow-[0_10px_28px_rgba(15,23,42,0.04)] transition-all focus:border-[#22C55E]/50 focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20"
                       />
                     </div>
 
@@ -838,7 +838,7 @@ export default function NiSetupPasswordPage() {
                           setTfaUseBackup(e.target.checked);
                           setTfaCode("");
                         }}
-                        className="h-4 w-4 rounded border-zinc-300 text-[#D8AE00] focus:ring-[#F5D000]/30"
+                        className="h-4 w-4 rounded border-zinc-300 text-[#16A34A] focus:ring-[#22C55E]/30"
                       />
                       Biztonsági kódot használok most az Authenticator helyett
                     </label>
@@ -867,7 +867,7 @@ export default function NiSetupPasswordPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="mt-5 inline-flex h-[58px] w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#F5D000,#D8AE00)] px-5 text-[14px] font-semibold text-[#2B2410] shadow-[0_18px_40px_rgba(245,208,0,0.30)] transition-transform duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-5 inline-flex h-[58px] w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#22C55E,#16A34A)] px-5 text-[14px] font-semibold text-[#0B2B1B] shadow-[0_18px_40px_rgba(34,197,94,0.30)] transition-transform duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {submitting ? (
                     <>
@@ -925,7 +925,7 @@ export default function NiSetupPasswordPage() {
 
                 <div className="mt-5 rounded-[28px] border border-zinc-200/70 bg-white/92 p-5 text-left shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
                   <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F5D000]/14 text-[#9B7B00]">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#22C55E]/14 text-[#15803D]">
                       <Mail className="h-5 w-5" />
                     </div>
                     <div>
@@ -952,7 +952,7 @@ export default function NiSetupPasswordPage() {
                       "mailto:balog.sebastian@pannonguard.hu?subject=NI%20Port%C3%A1l%20-%20Welcome%20email%20nem%20%C3%A9rkezett%20meg&body=K%C3%A9rek%20egy%20%C3%BAj%20egyedi%20bel%C3%A9p%C3%A9si%20linket%20a%20NI%20Port%C3%A1lhoz%20ezen%20c%C3%ADmen:%20" +
                       encodeURIComponent(email)
                     }
-                    className="font-semibold text-[#9B7B00] hover:underline"
+                    className="font-semibold text-[#15803D] hover:underline"
                   >
                     balog.sebastian@pannonguard.hu
                   </a>
