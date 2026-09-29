@@ -57,7 +57,16 @@ export default function NiLandingPage() {
   const [portalBooting, setPortalBooting] = useState(true);
 
   const [formLoading, setFormLoading] = useState(false);
-  const [submitErrors, setSubmitErrors] = useState<string[]>([]);
+  // A hibaüzenetek a beküldéskori nyelven készülnek el; nyelvváltáskor nem maradhatnak
+  // az előző nyelven a képernyőn, ezért csak az aktuális nyelvhez tartozó lista látszik.
+  const [submitErrorState, setSubmitErrorState] = useState<{
+    list: string[];
+    language: string;
+  }>({ list: [], language: "" });
+  const submitErrors =
+    submitErrorState.language === language ? submitErrorState.list : [];
+  const setSubmitErrors = (list: string[]) =>
+    setSubmitErrorState({ list, language });
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [lastBookingCode, setLastBookingCode] = useState<string | null>(null);
   const [showValidationInline, setShowValidationInline] = useState(false);

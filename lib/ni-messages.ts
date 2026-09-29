@@ -61,6 +61,8 @@ const EXACT: Record<string, string> = {
     "This account has not been activated yet — please use the password setup link.",
   "A fiókodhoz kétfaktoros hitelesítés be van kérve, de még nincs aktiválva. Kérj új meghívót és vedd fel újra a 2FA beállítását.":
     "Two-factor authentication is required for your account but has not been activated yet. Please request a new invitation and set up 2FA again.",
+  "A link lejárt, de a fiókod már aktív. Lépj be a NI Portálon keresztül.":
+    "The link has expired, but your account is already active. Please sign in through the NI Portal.",
   "Hiányzó token vagy jelszó.": "Missing token or password.",
   "Jelszó beállítás sikertelen.": "Failed to set the password.",
   "Hiányzó meghívó token.": "Missing invitation token.",
@@ -155,10 +157,10 @@ const PATTERNS: Pattern[] = [
   [/^Az átvételnek legalább (\d+) órával a jövőben kell lennie$/, (h) => `The pick-up must be at least ${h} hours in the future`],
   [/^Az átvétel nem lehet több mint (\d+) nap a jövőben$/, (d) => `The pick-up cannot be more than ${d} days in the future`],
   [/^Városi transzferek csak (.+) és (.+) között engedélyezettek$/, (a, b) => `City transfers are only allowed between ${a} and ${b}`],
-  [/^(Standard|Executive) transzferen maximálisan (\d+) utas utazhat$/, (t, n) => `A maximum of ${n} passengers may travel on a ${t} transfer`],
+  [/^(Standard|Executive) transzferen maximálisan (\d+) utas utazhat$/, (t, n) => `A maximum of ${n} passengers may travel on ${t === "Executive" ? "an" : "a"} ${t} transfer`],
   [
     /^(Standard|Executive) transzferen maximálisan (\d+) csomag\/utas engedélyezett \(összesen (\d+)\)$/,
-    (t, per, total) => `A ${t} transfer allows a maximum of ${per} luggage items per passenger (${total} in total)`,
+    (t, per, total) => `${t === "Executive" ? "An" : "A"} ${t} transfer allows a maximum of ${per} luggage items per passenger (${total} in total)`,
   ],
   [/^Executive transzfer: (.+) kategória lesz használva$/, (v) => `Executive transfer: the ${v} category will be used`],
   [/^Executive transzfer: VIP kategória lesz használva$/, () => "Executive transfer: the VIP category will be used"],

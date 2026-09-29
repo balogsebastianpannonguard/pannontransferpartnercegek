@@ -450,7 +450,10 @@ export default function NiBookingsClient() {
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        if (json?.errors) {
+        if (Array.isArray(json?.errors)) {
+          // A szerver a feltételek megsértését hibalistaként adja vissza (nem mezőnként).
+          setEditErrors({ general: msgList((json.errors as unknown[]).map((item) => String(item))).join("\n") });
+        } else if (json?.errors) {
           const errMap: Record<string, string> = {};
           Object.entries(json.errors as Record<string, string | string[]>).forEach(([k, v]) => {
             const messages = Array.isArray(v)
@@ -1856,9 +1859,24 @@ export default function NiBookingsClient() {
                   !editErrors.toAddress && (
                     <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-rose-500/10 border border-rose-500/20">
                       <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                      <p className="text-[12px] text-rose-400 font-medium">
-                        {tr("Kérjük, javítsa a fenti hibákat.", "Please correct the errors above.")}
-                      </p>
+                      {editErrors.general ? (
+                        <div className="space-y-1.5">
+                          <p className="text-[12px] text-rose-300 font-bold">
+                            {tr("Kérjük javítsa a következő hibákat:", "Please correct the following errors:")}
+                          </p>
+                          <ul className="space-y-1">
+                            {editErrors.general.split("\n").map((line, idx) => (
+                              <li key={idx} className="text-[12px] text-rose-400 font-medium">
+                                {line}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p className="text-[12px] text-rose-400 font-medium">
+                          {tr("Kérjük, javítsa a fenti hibákat.", "Please correct the errors above.")}
+                        </p>
+                      )}
                     </div>
                   )}
 
