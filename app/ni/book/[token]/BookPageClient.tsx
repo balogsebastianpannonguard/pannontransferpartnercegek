@@ -61,7 +61,7 @@ export default function BookPageClient({ token }: Props) {
   const [toType, setToType] = useState<"airport" | "other">("other");
   const [travelers, setTravelers] = useState(1);
   const [luggage, setLuggage] = useState(1);
-  const [transferType, setTransferType] = useState<"standard" | "executive">("executive");
+  const [transferType, setTransferType] = useState<"standard" | "executive">("standard");
 
   useEffect(() => {
     let active = true;
@@ -127,7 +127,7 @@ export default function BookPageClient({ token }: Props) {
       ? {
           flightNumber: {
             value: flightNumber,
-            requiredMessage: tr("Flight number / Járatszám megadása kötelező", "Flight number is required"),
+            requiredMessage: tr("Járatszám megadása kötelező", "Flight number is required"),
             matchers: ["flight", "járatszám"],
           },
         }
@@ -196,7 +196,7 @@ export default function BookPageClient({ token }: Props) {
     setToType("other");
     setTravelers(1);
     setLuggage(1);
-    setTransferType("executive");
+    setTransferType("standard");
     setSubmitErrors([]);
     setSubmitSuccess(false);
     setLastBookingCode(null);
@@ -412,7 +412,7 @@ export default function BookPageClient({ token }: Props) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          {tr("Email address of the Traveler", "Passenger email address")} <span className="text-[#10B981]">*</span>
+                          {tr("Az utas e-mail címe", "Passenger email address")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("travelerEmail") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -423,7 +423,7 @@ export default function BookPageClient({ token }: Props) {
                             value={travelerEmail}
                             onChange={(e) => setTravelerEmail(e.target.value)}
                             onBlur={() => handleBlur("travelerEmail")}
-                            placeholder={tr("Email", "Email address")}
+                            placeholder={tr("E-mail cím", "Email address")}
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
                         </div>
@@ -437,7 +437,7 @@ export default function BookPageClient({ token }: Props) {
 
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          {tr("Name of the Traveler", "Passenger name")} <span className="text-[#10B981]">*</span>
+                          {tr("Az utas neve", "Passenger name")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("travelerName") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -448,7 +448,7 @@ export default function BookPageClient({ token }: Props) {
                             value={travelerName}
                             onChange={(e) => setTravelerName(e.target.value)}
                             onBlur={() => handleBlur("travelerName")}
-                            placeholder={tr("Full Name", "Full name")}
+                            placeholder={tr("Teljes név", "Full name")}
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
                         </div>
@@ -463,7 +463,7 @@ export default function BookPageClient({ token }: Props) {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("Company Name", "Company name")}</label>
+                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("Cégnév", "Company name")}</label>
                         <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-3.5 flex items-center gap-3 text-slate-300">
                           <Briefcase className="w-4 h-4 text-slate-500" />
                           <input
@@ -477,7 +477,7 @@ export default function BookPageClient({ token }: Props) {
 
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          {tr("Phone number (only digit / 0123456789)", "Phone number (digits only / 0123456789)")} <span className="text-[#10B981]">*</span>
+                          {tr("Telefonszám (csak számjegyek / 0123456789)", "Phone number (digits only / 0123456789)")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("travelerPhone") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -503,27 +503,27 @@ export default function BookPageClient({ token }: Props) {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-800/50">
                       <div className="space-y-2">
-                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("2nd Traveler's email (optional)", "Second passenger's email (optional)")}</label>
+                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("2. utas e-mail címe (opcionális)", "Second passenger's email (optional)")}</label>
                         <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
                           <Mail className="w-4 h-4 text-slate-500" />
                           <input
                             type="email"
                             value={secondTravelerEmail}
                             onChange={(e) => setSecondTravelerEmail(e.target.value)}
-                            placeholder={tr("Optional", "Optional")}
+                            placeholder={tr("Opcionális", "Optional")}
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("2nd Traveler's phone (optional)", "Second passenger's phone (optional)")}</label>
+                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("2. utas telefonszáma (opcionális)", "Second passenger's phone (optional)")}</label>
                         <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
                           <Phone className="w-4 h-4 text-slate-500" />
                           <input
                             type="tel"
                             value={secondTravelerPhone}
                             onChange={(e) => setSecondTravelerPhone(e.target.value)}
-                            placeholder={tr("Optional", "Optional")}
+                            placeholder={tr("Opcionális", "Optional")}
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
                         </div>
@@ -539,20 +539,20 @@ export default function BookPageClient({ token }: Props) {
 
                     <div className="space-y-3">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        {tr("Payment Method", "Payment method")} <span className="text-[#41B679]">*</span>
+                        {tr("Fizetési mód", "Payment method")} <span className="text-[#41B679]">*</span>
                       </label>
                       <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
                         <div className="flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 relative z-10 text-white">
                           <div className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
                           <CreditCard className="w-4 h-4 text-[#41B679]" />
-                          <span className="text-sm font-bold">{tr("Credit Card", "Credit card")}</span>
+                          <span className="text-sm font-bold">{tr("Bankkártya", "Credit card")}</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="space-y-3">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        {tr("Transfer Type", "Transfer type")} <span className="text-[#41B679]">*</span>
+                        {tr("Transzfer típusa", "Transfer type")} <span className="text-[#41B679]">*</span>
                       </label>
                       <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
                         <button
@@ -563,7 +563,7 @@ export default function BookPageClient({ token }: Props) {
                             <div className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
                           )}
                           <span className="text-sm font-bold">Standard</span>
-                          <span className="text-[10px] opacity-70">{tr("Economy Class", "Economy class")}</span>
+                          <span className="text-[10px] opacity-70">{tr("Economy osztály", "Economy class")}</span>
                         </button>
                         <button
                           onClick={() => setTransferType("executive")}
@@ -573,14 +573,14 @@ export default function BookPageClient({ token }: Props) {
                             <div className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
                           )}
                           <span className={`text-sm font-bold ${transferType === "executive" ? "text-[#41B679]" : ""}`}>Executive</span>
-                          <span className="text-[10px] opacity-70">{tr("Business Class", "Business class")}</span>
+                          <span className="text-[10px] opacity-70">{tr("Business osztály", "Business class")}</span>
                         </button>
                       </div>
                     </div>
 
                     <div className="space-y-4 bg-[#0F172A]/50 p-6 rounded-3xl border border-white/5">
                       <div className="space-y-3">
-                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("From (Honnan?)", "From")}</label>
+                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("Felvétel helye", "From")}</label>
                         <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
                           <button
                             onClick={() => setFromType("airport")}
@@ -588,7 +588,7 @@ export default function BookPageClient({ token }: Props) {
                           >
                             {fromType === "airport" && <div className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />}
                             <Plane className="w-4 h-4" />
-                            <span className="text-sm font-bold">Airport</span>
+                            <span className="text-sm font-bold">{tr("Repülőtér", "Airport")}</span>
                           </button>
                           <button
                             onClick={() => {
@@ -599,13 +599,13 @@ export default function BookPageClient({ token }: Props) {
                           >
                             {fromType === "other" && <div className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />}
                             <Map className="w-4 h-4" />
-                            <span className="text-sm font-bold">Other</span>
+                            <span className="text-sm font-bold">{tr("Egyéb", "Other")}</span>
                           </button>
                         </div>
                       </div>
                       <div className="space-y-2 pt-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          {tr("From Address", "Pick-up address")} <span className="text-[#10B981]">*</span>
+                          {tr("Felvételi cím", "Pick-up address")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("fromAddress") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -618,8 +618,8 @@ export default function BookPageClient({ token }: Props) {
                             onBlur={() => handleBlur("fromAddress")}
                             placeholder={
                               fromType === "airport"
-                                ? tr("e.g. Budapest Airport (BUD)", "e.g. Budapest Airport (BUD)")
-                                : tr("e.g. NI Debrecen Gyár...", "e.g. NI Debrecen Plant...")
+                                ? tr("pl. Budapest Liszt Ferenc repülőtér (BUD)", "e.g. Budapest Airport (BUD)")
+                                : tr("pl. NI Debrecen Gyár...", "e.g. NI Debrecen Plant...")
                             }
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
@@ -633,7 +633,7 @@ export default function BookPageClient({ token }: Props) {
                         {fromType === "airport" && (
                           <div className="space-y-2 pt-3">
                             <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                              {tr("Flight number / Járatszám", "Flight number")} <span className="text-[#10B981]">*</span>
+                              {tr("Járatszám", "Flight number")} <span className="text-[#10B981]">*</span>
                             </label>
                             <div
                               className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("flightNumber") ? "border-red-500/70 ring-1 ring-red-500/20" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -661,7 +661,7 @@ export default function BookPageClient({ token }: Props) {
 
                     <div className="space-y-4 bg-[#0F172A]/50 p-6 rounded-3xl border border-white/5">
                       <div className="space-y-3">
-                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("To (Hova?)", "To")}</label>
+                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("Úti cél", "To")}</label>
                         <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
                           <button
                             onClick={() => setToType("airport")}
@@ -669,7 +669,7 @@ export default function BookPageClient({ token }: Props) {
                           >
                             {toType === "airport" && <div className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />}
                             <Plane className="w-4 h-4" />
-                            <span className="text-sm font-bold">Airport</span>
+                            <span className="text-sm font-bold">{tr("Repülőtér", "Airport")}</span>
                           </button>
                           <button
                             onClick={() => {
@@ -680,13 +680,13 @@ export default function BookPageClient({ token }: Props) {
                           >
                             {toType === "other" && <div className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />}
                             <Map className="w-4 h-4" />
-                            <span className="text-sm font-bold">Other</span>
+                            <span className="text-sm font-bold">{tr("Egyéb", "Other")}</span>
                           </button>
                         </div>
                       </div>
                       <div className="space-y-2 pt-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          {tr("To Address", "Destination address")} <span className="text-[#10B981]">*</span>
+                          {tr("Érkezési cím", "Destination address")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("toAddress") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -699,8 +699,8 @@ export default function BookPageClient({ token }: Props) {
                             onBlur={() => handleBlur("toAddress")}
                             placeholder={
                               toType === "airport"
-                                ? tr("e.g. Budapest Airport (BUD)", "e.g. Budapest Airport (BUD)")
-                                : tr("e.g. NI Debrecen Gyár...", "e.g. NI Debrecen Plant...")
+                                ? tr("pl. Budapest Liszt Ferenc repülőtér (BUD)", "e.g. Budapest Airport (BUD)")
+                                : tr("pl. NI Debrecen Gyár...", "e.g. NI Debrecen Plant...")
                             }
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
@@ -714,7 +714,7 @@ export default function BookPageClient({ token }: Props) {
                         {toType === "airport" && (
                           <div className="space-y-2 pt-3">
                             <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                              {tr("Flight number / Járatszám", "Flight number")} <span className="text-[#10B981]">*</span>
+                              {tr("Járatszám", "Flight number")} <span className="text-[#10B981]">*</span>
                             </label>
                             <div
                               className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("flightNumber") ? "border-red-500/70 ring-1 ring-red-500/20" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -743,7 +743,7 @@ export default function BookPageClient({ token }: Props) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          {tr("When (Date)", "Pick-up date")} <span className="text-[#10B981]">*</span>
+                          {tr("Felvétel dátuma", "Pick-up date")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center justify-between text-slate-300 transition-all border ${isFieldInvalid("pickupDate") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -765,7 +765,7 @@ export default function BookPageClient({ token }: Props) {
                       </div>
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          {tr("Time", "Pick-up time")} <span className="text-[#10B981]">*</span>
+                          {tr("Felvétel ideje", "Pick-up time")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center justify-between text-slate-300 transition-all border ${isFieldInvalid("pickupTime") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -790,7 +790,7 @@ export default function BookPageClient({ token }: Props) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          {tr("Number of the Travelers", "Number of passengers")} <span className="text-[#10B981]">*</span>
+                          {tr("Utasok száma", "Number of passengers")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-2.5 flex justify-between items-center text-white">
                           <div className="flex items-center gap-3 px-2">
@@ -820,7 +820,7 @@ export default function BookPageClient({ token }: Props) {
 
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          {tr("Number of the luggage", "Number of luggage items")} <span className="text-[#10B981]">*</span>
+                          {tr("Csomagok száma", "Number of luggage items")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-2.5 flex justify-between items-center text-white">
                           <div className="flex items-center gap-3 px-2">
@@ -850,13 +850,13 @@ export default function BookPageClient({ token }: Props) {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">Comment</label>
+                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("Megjegyzés", "Comment")}</label>
                       <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-3.5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
                         <textarea
                           rows={3}
                           value={commentText}
                           onChange={(e) => setCommentText(e.target.value)}
-                          placeholder={tr("Any special requests or instructions...", "Any special requests or instructions...")}
+                          placeholder={tr("Bármilyen különleges kérés vagy utasítás...", "Any special requests or instructions...")}
                           className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white resize-none"
                         />
                       </div>

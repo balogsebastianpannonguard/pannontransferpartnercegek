@@ -83,7 +83,7 @@ export default function NiLandingPage() {
   const [travelers, setTravelers] = useState(1);
   const [luggage, setLuggage] = useState(1);
   const [transferType, setTransferType] = useState<"standard" | "executive">(
-    "executive",
+    "standard",
   );
 
   const [bugModalOpen, setBugModalOpen] = useState(false);
@@ -247,9 +247,9 @@ export default function NiLandingPage() {
       ? {
           flightNumber: {
             value: flightNumber,
-            label: tr("Flight number / Járatszám", "Flight number"),
+            label: tr("Járatszám", "Flight number"),
             requiredMessage: tr(
-              "Flight number / Járatszám megadása kötelező",
+              "Járatszám megadása kötelező",
               "The flight number is required",
             ),
             matchTerms: ["járatszám", "flight number", "flight"],
@@ -321,7 +321,7 @@ export default function NiLandingPage() {
     setToType("other");
     setTravelers(1);
     setLuggage(1);
-    setTransferType("executive");
+    setTransferType("standard");
     setSubmitErrors([]);
     setSubmitSuccess(false);
     setLastBookingCode(null);
@@ -487,7 +487,7 @@ export default function NiLandingPage() {
                   </span>
                 </div>
                 <p className="text-[10px] tracking-[0.42em] uppercase text-slate-500 font-medium">
-                  Corporate Mobility Access
+                  {tr("Céges mobilitási hozzáférés", "Corporate Mobility Access")}
                 </p>
               </div>
               <div className="flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2">
@@ -648,7 +648,7 @@ export default function NiLandingPage() {
               </span>
             </div>
             <h2 className="text-[32px] font-bold tracking-tight text-white/90">
-              Corporate Portal
+              {tr("Céges portál", "Corporate Portal")}
             </h2>
           </motion.div>
 
@@ -675,7 +675,7 @@ export default function NiLandingPage() {
               transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut" }}
               className="mt-5 text-center text-[11px] tracking-[0.4em] text-[#41B679] uppercase font-black"
             >
-              System Initializing
+              {tr("Rendszer indítása", "System Initializing")}
             </motion.div>
           </motion.div>
         </div>
@@ -735,7 +735,7 @@ export default function NiLandingPage() {
                   Emerson Portal
                 </span>
                 <span className="text-[10px] font-medium tracking-[0.24em] text-slate-400 uppercase mt-1">
-                  NI Corporate Access
+                  {tr("NI céges hozzáférés", "NI Corporate Access")}
                 </span>
               </div>
             </div>
@@ -805,7 +805,7 @@ export default function NiLandingPage() {
                   {authedUser.email}
                 </span>
                 <span className="text-[10px] font-medium text-[#41B679] mt-1">
-                  NI / Emerson Access
+                  {tr("NI / Emerson hozzáférés", "NI / Emerson Access")}
                 </span>
               </div>
               {authedUser.role === "admin-ni" && (
@@ -981,7 +981,7 @@ export default function NiLandingPage() {
                     <div className="space-y-2">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
                         {tr(
-                          "Email address of the Traveler",
+                          "Az utas e-mail címe",
                           "Passenger email address",
                         )}{" "}
                         <span className="text-[#10B981]">*</span>
@@ -997,7 +997,7 @@ export default function NiLandingPage() {
                           value={travelerEmail}
                           onChange={(e) => setTravelerEmail(e.target.value)}
                           onBlur={() => handleBlur("travelerEmail")}
-                          placeholder={tr("Email", "Email address")}
+                          placeholder={tr("E-mail cím", "Email address")}
                           className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                         />
                       </div>
@@ -1012,7 +1012,7 @@ export default function NiLandingPage() {
                     {/* Name */}
                     <div className="space-y-2">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        {tr("Name of the Traveler", "Passenger name")}{" "}
+                        {tr("Az utas neve", "Passenger name")}{" "}
                         <span className="text-[#10B981]">*</span>
                       </label>
                       <div
@@ -1026,7 +1026,7 @@ export default function NiLandingPage() {
                           value={travelerName}
                           onChange={(e) => setTravelerName(e.target.value)}
                           onBlur={() => handleBlur("travelerName")}
-                          placeholder={tr("Full Name", "Full name")}
+                          placeholder={tr("Teljes név", "Full name")}
                           className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                         />
                       </div>
@@ -1043,7 +1043,7 @@ export default function NiLandingPage() {
                     {/* Company Name */}
                     <div className="space-y-2">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
-                        {tr("Company Name", "Company name")}
+                        {tr("Cégnév", "Company name")}
                       </label>
                       <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
                         <Briefcase className="w-4 h-4 text-slate-500" />
@@ -1060,7 +1060,7 @@ export default function NiLandingPage() {
                     <div className="space-y-2">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
                         {tr(
-                          "Phone number (only digit / 0123456789)",
+                          "Telefonszám (csak számjegyek / 0123456789)",
                           "Phone number (digits only / 0123456789)",
                         )}{" "}
                         <span className="text-[#10B981]">*</span>
@@ -1094,7 +1094,7 @@ export default function NiLandingPage() {
                     <div className="space-y-2">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
                         {tr(
-                          "2nd Traveler's email (optional)",
+                          "2. utas e-mail címe (opcionális)",
                           "Second passenger email (optional)",
                         )}
                       </label>
@@ -1106,7 +1106,7 @@ export default function NiLandingPage() {
                           onChange={(e) =>
                             setSecondTravelerEmail(e.target.value)
                           }
-                          placeholder="Optional"
+                          placeholder={tr("Opcionális", "Optional")}
                           className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                         />
                       </div>
@@ -1114,7 +1114,7 @@ export default function NiLandingPage() {
                     <div className="space-y-2">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
                         {tr(
-                          "2nd Traveler's phone (optional)",
+                          "2. utas telefonszáma (opcionális)",
                           "Second passenger phone number (optional)",
                         )}
                       </label>
@@ -1126,7 +1126,7 @@ export default function NiLandingPage() {
                           onChange={(e) =>
                             setSecondTravelerPhone(e.target.value)
                           }
-                          placeholder="Optional"
+                          placeholder={tr("Opcionális", "Optional")}
                           className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                         />
                       </div>
@@ -1147,7 +1147,7 @@ export default function NiLandingPage() {
 
                   <div className="space-y-3">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Payment Method <span className="text-[#41B679]">*</span>
+                      {tr("Fizetési mód", "Payment method")} <span className="text-[#41B679]">*</span>
                     </label>
                     <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
                       <div
@@ -1156,7 +1156,7 @@ export default function NiLandingPage() {
                         <motion.div layoutId="paymentMethod" className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
                         <CreditCard className="w-4 h-4 text-[#41B679]" />
                         <span className="text-sm font-bold">
-                          Credit Card
+                          {tr("Bankkártya", "Credit Card")}
                         </span>
                       </div>
                     </div>
@@ -1164,7 +1164,7 @@ export default function NiLandingPage() {
 
                   <div className="space-y-3">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Transfer Type <span className="text-[#41B679]">*</span>
+                      {tr("Transzfer típusa", "Transfer type")} <span className="text-[#41B679]">*</span>
                     </label>
                     <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
                       <button
@@ -1180,7 +1180,7 @@ export default function NiLandingPage() {
                         )}
                         <span className="text-sm font-bold">Standard</span>
                         <span className="text-[10px] opacity-70">
-                          Economy Class
+                          {tr("Economy osztály", "Economy Class")}
                         </span>
                       </button>
                       <button
@@ -1198,7 +1198,7 @@ export default function NiLandingPage() {
                           Executive
                         </span>
                         <span className="text-[10px] opacity-70">
-                          Business Class
+                          {tr("Business osztály", "Business Class")}
                         </span>
                       </button>
                     </div>
@@ -1220,7 +1220,7 @@ export default function NiLandingPage() {
                   <div className="space-y-4 bg-[#0F172A]/50 p-6 rounded-3xl border border-white/5">
                     <div className="space-y-3">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
-                        {tr("From (Honnan?)", "Pick-up location")}
+                        {tr("Felvétel helye", "Pick-up location")}
                       </label>
                       <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
                         <button
@@ -1235,7 +1235,7 @@ export default function NiLandingPage() {
                             <motion.div layoutId="fromType" className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
                           )}
                           <Plane className="w-4 h-4" />
-                          <span className="text-sm font-bold">Airport</span>
+                          <span className="text-sm font-bold">{tr("Repülőtér", "Airport")}</span>
                         </button>
                         <button
                           onClick={() => {
@@ -1252,13 +1252,13 @@ export default function NiLandingPage() {
                             <motion.div layoutId="fromType" className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
                           )}
                           <Map className="w-4 h-4" />
-                          <span className="text-sm font-bold">Other</span>
+                          <span className="text-sm font-bold">{tr("Egyéb", "Other")}</span>
                         </button>
                       </div>
                     </div>
                     <div className="space-y-2 pt-2">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        {tr("From Address", "Pick-up address")}{" "}
+                        {tr("Felvételi cím", "Pick-up address")}{" "}
                         <span className="text-[#10B981]">*</span>
                       </label>
                       <div
@@ -1274,9 +1274,9 @@ export default function NiLandingPage() {
                           onBlur={() => handleBlur("fromAddress")}
                           placeholder={
                             fromType === "airport"
-                              ? "e.g. Budapest Airport (BUD)"
+                              ? tr("pl. Budapest Liszt Ferenc repülőtér (BUD)", "e.g. Budapest Airport (BUD)")
                               : tr(
-                                  "e.g. NI Debrecen Gyár...",
+                                  "pl. NI Debrecen Gyár...",
                                   "e.g. NI Debrecen Plant...",
                                 )
                           }
@@ -1292,7 +1292,7 @@ export default function NiLandingPage() {
                       {fromType === "airport" && (
                         <div className="space-y-2 pt-3">
                           <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                            {tr("Flight number / Járatszám", "Flight number")}{" "}
+                            {tr("Járatszám", "Flight number")}{" "}
                             <span className="text-[#10B981]">*</span>
                           </label>
                           <div
@@ -1327,7 +1327,7 @@ export default function NiLandingPage() {
                   <div className="space-y-4 bg-[#0F172A]/50 p-6 rounded-3xl border border-white/5">
                     <div className="space-y-3">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
-                        {tr("To (Hova?)", "Destination")}
+                        {tr("Úti cél", "Destination")}
                       </label>
                       <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
                         <button
@@ -1342,7 +1342,7 @@ export default function NiLandingPage() {
                             <motion.div layoutId="toType" className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
                           )}
                           <Plane className="w-4 h-4" />
-                          <span className="text-sm font-bold">Airport</span>
+                          <span className="text-sm font-bold">{tr("Repülőtér", "Airport")}</span>
                         </button>
                         <button
                           onClick={() => {
@@ -1359,13 +1359,13 @@ export default function NiLandingPage() {
                             <motion.div layoutId="toType" className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
                           )}
                           <Map className="w-4 h-4" />
-                          <span className="text-sm font-bold">Other</span>
+                          <span className="text-sm font-bold">{tr("Egyéb", "Other")}</span>
                         </button>
                       </div>
                     </div>
                     <div className="space-y-2 pt-2">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        {tr("To Address", "Destination address")}{" "}
+                        {tr("Érkezési cím", "Destination address")}{" "}
                         <span className="text-[#10B981]">*</span>
                       </label>
                       <div
@@ -1381,8 +1381,8 @@ export default function NiLandingPage() {
                           onBlur={() => handleBlur("toAddress")}
                           placeholder={
                             toType === "airport"
-                              ? "e.g. Budapest Airport (BUD)"
-                              : "e.g. 4031 Debrecen, ..."
+                              ? tr("pl. Budapest Liszt Ferenc repülőtér (BUD)", "e.g. Budapest Airport (BUD)")
+                              : tr("pl. 4031 Debrecen, ...", "e.g. 4031 Debrecen, ...")
                           }
                           className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                         />
@@ -1396,7 +1396,7 @@ export default function NiLandingPage() {
                       {toType === "airport" && (
                         <div className="space-y-2 pt-3">
                           <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                            {tr("Flight number / Járatszám", "Flight number")}{" "}
+                            {tr("Járatszám", "Flight number")}{" "}
                             <span className="text-[#10B981]">*</span>
                           </label>
                           <div
@@ -1431,7 +1431,7 @@ export default function NiLandingPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        {tr("When (Date)", "Pick-up date")}{" "}
+                        {tr("Felvétel dátuma", "Pick-up date")}{" "}
                         <span className="text-[#10B981]">*</span>
                       </label>
                       <div
@@ -1454,7 +1454,7 @@ export default function NiLandingPage() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        {tr("Time", "Pick-up time")}{" "}
+                        {tr("Felvétel ideje", "Pick-up time")}{" "}
                         <span className="text-[#10B981]">*</span>
                       </label>
                       <div
@@ -1482,7 +1482,7 @@ export default function NiLandingPage() {
                     {/* Travelers Counter */}
                     <div className="space-y-2">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        {tr("Number of the Travelers", "Passengers")}{" "}
+                        {tr("Utasok száma", "Passengers")}{" "}
                         <span className="text-[#10B981]">*</span>
                       </label>
                       <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-2.5 flex justify-between items-center text-white">
@@ -1516,7 +1516,7 @@ export default function NiLandingPage() {
                     {/* Luggage Counter */}
                     <div className="space-y-2">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        {tr("Number of the luggage", "Luggage items")}{" "}
+                        {tr("Csomagok száma", "Luggage items")}{" "}
                         <span className="text-[#10B981]">*</span>
                       </label>
                       <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-2.5 flex justify-between items-center text-white">
@@ -1549,14 +1549,14 @@ export default function NiLandingPage() {
                   {/* Comment */}
                   <div className="space-y-2">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
-                      Comment
+                      {tr("Megjegyzés", "Comment")}
                     </label>
                     <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-3.5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
                       <textarea
                         rows={3}
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
-                        placeholder="Any special requests or instructions..."
+                        placeholder={tr("Bármilyen különleges kérés vagy utasítás...", "Any special requests or instructions...")}
                         className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white resize-none"
                       />
                     </div>

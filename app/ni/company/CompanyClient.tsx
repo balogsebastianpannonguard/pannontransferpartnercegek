@@ -621,7 +621,7 @@ export default function CompanyClient() {
                                   <p className="text-sm font-semibold text-white font-mono">#{b.bookingCode}</p>
                                   <p className="text-[12px] text-slate-500">
                                     {b.pickupDate} {b.pickupTime} · {b.fromAddress} → {b.toAddress}
-                                    {b.flightNumber ? ` · ${tr("Flight number / Járatszám", "Flight number")}: ${b.flightNumber}` : ""}
+                                    {b.flightNumber ? ` · ${tr("Járatszám", "Flight number")}: ${b.flightNumber}` : ""}
                                   </p>
                                 </div>
                                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-300 shrink-0">

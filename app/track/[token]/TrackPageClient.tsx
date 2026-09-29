@@ -370,7 +370,7 @@ export default function TrackPageClient({ token }: Props) {
                 <div className="flex items-start gap-3 bg-white/[0.03] border border-white/5 rounded-xl p-4 sm:col-span-2">
                   <Plane className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[11px] text-slate-500 font-bold tracking-widest uppercase mb-1">{tr("Flight number / Járatszám", "Flight number")}</p>
+                    <p className="text-[11px] text-slate-500 font-bold tracking-widest uppercase mb-1">{tr("Járatszám", "Flight number")}</p>
                     <p className="text-sm text-white font-medium">{booking.flightNumber}</p>
                   </div>
                 </div>
@@ -523,7 +523,7 @@ export default function TrackPageClient({ token }: Props) {
                   </div>
                   {(booking.fromType === "airport" || booking.toType === "airport") && (
                     <div className="space-y-1.5">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase">{tr("Flight number / Járatszám", "Flight number")}</label>
+                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase">{tr("Járatszám", "Flight number")}</label>
                       <input
                         type="text"
                         value={editForm.flightNumber}

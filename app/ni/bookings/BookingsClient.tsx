@@ -587,7 +587,7 @@ export default function NiBookingsClient() {
                   </span>
                 </div>
                 <p className="text-[10px] tracking-[0.42em] uppercase text-slate-500 font-medium">
-                  Corporate Mobility Access
+                  {tr("Céges mobilitási hozzáférés", "Corporate Mobility Access")}
                 </p>
               </div>
               <div className="flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2">
@@ -716,10 +716,10 @@ export default function NiBookingsClient() {
               <span className="font-sans font-black text-2xl tracking-[0.2em] text-[#41B679]">NI</span>
             </div>
             <h2 className="text-[42px] font-semibold tracking-[-0.05em] text-white sm:text-[56px]">
-              Executive Mobility Portal
+              {tr("Executive mobilitási portál", "Executive Mobility Portal")}
             </h2>
             <p className="mt-4 text-[10px] tracking-[0.4em] uppercase text-slate-500 font-medium">
-              NI | Emerson Corporate Transfer Experience
+              {tr("NI | Emerson céges transzfer élmény", "NI | Emerson Corporate Transfer Experience")}
             </p>
           </motion.div>
           <motion.div
@@ -801,7 +801,7 @@ export default function NiBookingsClient() {
                   Emerson
                 </span>
                 <span className="text-[10px] font-medium tracking-[0.24em] text-slate-400 uppercase mt-1">
-                  NI Corporate Access
+                  {tr("NI céges hozzáférés", "NI Corporate Access")}
                 </span>
               </div>
             </div>
@@ -1554,7 +1554,7 @@ export default function NiBookingsClient() {
                 PANNON <span className="text-[#41B679]/80">TRANSFER</span>
               </span>
               <span className="text-[9px] text-slate-500 font-medium tracking-[0.2em] mt-1">
-                NI CORPORATE TRAVEL
+                {tr("NI CÉGES UTAZÁS", "NI CORPORATE TRAVEL")}
               </span>
             </div>
             <div className="hidden md:block w-px h-6 bg-white/10"></div>
