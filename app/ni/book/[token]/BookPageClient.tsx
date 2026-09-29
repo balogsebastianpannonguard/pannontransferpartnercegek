@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin,
@@ -21,12 +21,17 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
+import NiLanguageSwitcher from "../../components/NiLanguageSwitcher";
+import { useNiLanguage } from "../../useNiLanguage";
 
 interface Props {
   token: string;
 }
 
 export default function BookPageClient({ token }: Props) {
+  const { tr, msg, msgList, portalLanguage } = useNiLanguage();
+  const languageSwitcherRef = useRef<HTMLDivElement>(null);
+
   const [checking, setChecking] = useState(true);
   const [companyName, setCompanyName] = useState<string | null>(null);
   const [invalidLink, setInvalidLink] = useState(false);
@@ -37,6 +42,7 @@ export default function BookPageClient({ token }: Props) {
   const [lastBookingCode, setLastBookingCode] = useState<string | null>(null);
   const [lastTrackToken, setLastTrackToken] = useState<string | null>(null);
   const [showValidationInline, setShowValidationInline] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [blurredFields, setBlurredFields] = useState<Record<string, boolean>>({});
 
   const [travelerEmail, setTravelerEmail] = useState("");
@@ -80,43 +86,85 @@ export default function BookPageClient({ token }: Props) {
     };
   }, [token]);
 
-  const requiredFields: Record<string, { value: string; label: string }> = {
-    travelerEmail: { value: travelerEmail, label: "Email" },
-    travelerName: { value: travelerName, label: "Név" },
-    travelerPhone: { value: travelerPhone, label: "Telefonszám" },
-    fromAddress: { value: fromAddress, label: "Felvételi cím" },
-    toAddress: { value: toAddress, label: "Érkezési cím" },
+  useEffect(() => {
+    const buttons = languageSwitcherRef.current?.querySelectorAll("button");
+    if (!buttons?.length) return;
+
+    buttons.forEach((button) => {
+      const label = button.textContent === "HU" ? tr("Magyar", "Hungarian") : "English";
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+    });
+  }, [tr]);
+
+  const requiredFields: Record<string, { value: string; requiredMessage: string; matchers: string[] }> = {
+    travelerEmail: {
+      value: travelerEmail,
+      requiredMessage: tr("Email megadása kötelező", "Passenger email address is required"),
+      matchers: ["email", "e-mail"],
+    },
+    travelerName: {
+      value: travelerName,
+      requiredMessage: tr("Név megadása kötelező", "Passenger name is required"),
+      matchers: ["utas", "traveler", "traveller", "passenger", "név", "name"],
+    },
+    travelerPhone: {
+      value: travelerPhone,
+      requiredMessage: tr("Telefonszám megadása kötelező", "Passenger phone number is required"),
+      matchers: ["telefonszám", "phone", "telephone"],
+    },
+    fromAddress: {
+      value: fromAddress,
+      requiredMessage: tr("Felvételi cím megadása kötelező", "Pick-up address is required"),
+      matchers: ["from", "honnan", "kiindulási", "felvételi", "pick-up", "pickup"],
+    },
+    toAddress: {
+      value: toAddress,
+      requiredMessage: tr("Érkezési cím megadása kötelező", "Destination address is required"),
+      matchers: ["to", "hova", "érkezési", "destination", "célállomás"],
+    },
     ...(fromType === "airport" || toType === "airport"
-      ? { flightNumber: { value: flightNumber, label: "Flight number / Járatszám" } }
+      ? {
+          flightNumber: {
+            value: flightNumber,
+            requiredMessage: tr("Flight number / Járatszám megadása kötelező", "Flight number is required"),
+            matchers: ["flight", "járatszám"],
+          },
+        }
       : {}),
-    pickupDate: { value: pickupDate, label: "Dátum" },
-    pickupTime: { value: pickupTime, label: "Időpont" },
+    pickupDate: {
+      value: pickupDate,
+      requiredMessage: tr("Dátum megadása kötelező", "Pick-up date is required"),
+      matchers: ["date", "dátum"],
+    },
+    pickupTime: {
+      value: pickupTime,
+      requiredMessage: tr("Időpont megadása kötelező", "Pick-up time is required"),
+      matchers: ["time", "idő", "időpont"],
+    },
   };
+
+  const missingRequiredErrors = Object.entries(requiredFields)
+    .filter(([, field]) => !field.value.trim())
+    .map(([, field]) => field.requiredMessage);
+  const visibleSubmitErrors = submitErrors.length > 0 ? msgList(submitErrors) : hasAttemptedSubmit ? missingRequiredErrors : [];
 
   const getFieldError = (fieldKey: string): string | null => {
     if (!submitErrors.length && !showValidationInline) return null;
     const field = requiredFields[fieldKey];
     if (!field) return null;
-    if (showValidationInline || submitErrors.length > 0) {
-      if (!field.value.trim()) {
-        return `${field.label} megadása kötelező`;
-      }
+
+    if ((showValidationInline || submitErrors.length > 0) && !field.value.trim()) {
+      return field.requiredMessage;
     }
+
     for (const err of submitErrors) {
       const lowerErr = err.toLowerCase();
-      const lowerLabel = field.label.toLowerCase();
-      if (
-        lowerErr.includes(lowerLabel) ||
-        (fieldKey === "travelerEmail" && (lowerErr.includes("email") || lowerErr.includes("e-mail"))) ||
-        (fieldKey === "travelerPhone" && (lowerErr.includes("phone") || lowerErr.includes("telefonszám"))) ||
-        (fieldKey === "fromAddress" && (lowerErr.includes("from") || lowerErr.includes("honnan") || lowerErr.includes("indulási"))) ||
-        (fieldKey === "toAddress" && (lowerErr.includes("to") || lowerErr.includes("hova") || lowerErr.includes("érkezési"))) ||
-        (fieldKey === "pickupDate" && (lowerErr.includes("date") || lowerErr.includes("dátum"))) ||
-        (fieldKey === "pickupTime" && (lowerErr.includes("time") || lowerErr.includes("idő") || lowerErr.includes("időpont")))
-      ) {
-        return err;
+      if (field.matchers.some((matcher) => lowerErr.includes(matcher))) {
+        return msg(err) || err;
       }
     }
+
     return null;
   };
 
@@ -154,22 +202,24 @@ export default function BookPageClient({ token }: Props) {
     setLastBookingCode(null);
     setLastTrackToken(null);
     setShowValidationInline(false);
+    setHasAttemptedSubmit(false);
     setBlurredFields({});
   };
 
   const handleSubmit = async () => {
     setSubmitErrors([]);
     setShowValidationInline(true);
-    Object.keys(requiredFields).forEach((key) => {
-      setBlurredFields((prev) => ({ ...prev, [key]: true }));
-    });
-    const missing = Object.entries(requiredFields).filter(([, v]) => !v.value.trim());
-    if (missing.length > 0) {
-      const errs = missing.map(([, v]) => `${v.label} megadása kötelező`);
-      setSubmitErrors(errs);
+    setHasAttemptedSubmit(true);
+    setBlurredFields((prev) => ({
+      ...prev,
+      ...Object.fromEntries(Object.keys(requiredFields).map((key) => [key, true])),
+    }));
+
+    if (missingRequiredErrors.length > 0) {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+
     setFormLoading(true);
     try {
       const payload = {
@@ -189,6 +239,7 @@ export default function BookPageClient({ token }: Props) {
         travelers,
         luggage,
         comment: commentText || undefined,
+        language: portalLanguage,
       };
       const res = await fetch(`/api/book/${encodeURIComponent(token)}/submit`, {
         method: "POST",
@@ -202,16 +253,19 @@ export default function BookPageClient({ token }: Props) {
         setLastTrackToken(data.booking.bookingTrackToken || null);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else if (res.status === 400) {
-        const errs: string[] = data?.errors && Array.isArray(data.errors) ? data.errors : ["Érvénytelen adatok, kérjük ellenőrizze az űrlapot"];
-        setSubmitErrors(errs);
+        if (data?.errors && Array.isArray(data.errors)) {
+          setSubmitErrors(data.errors);
+        } else {
+          setSubmitErrors([data?.message || tr("Érvénytelen adatok, kérjük ellenőrizze az űrlapot", "Invalid data. Please review the form.")]);
+        }
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else if (res.status === 404) {
         setInvalidLink(true);
       } else {
-        setSubmitErrors([data?.message || "Váratlan hiba történt, kérjük próbálja újra"]);
+        setSubmitErrors([data?.message || tr("Váratlan hiba történt, kérjük próbálja újra", "An unexpected error occurred. Please try again.")]);
       }
     } catch {
-      setSubmitErrors(["Hálózati hiba történt, kérjük próbálja újra"]);
+      setSubmitErrors([tr("Hálózati hiba történt, kérjük próbálja újra", "A network error occurred. Please try again.")]);
     } finally {
       setFormLoading(false);
     }
@@ -225,13 +279,23 @@ export default function BookPageClient({ token }: Props) {
     </div>
   );
 
+  const languageSwitcher = (
+    <div
+      ref={languageSwitcherRef}
+      className="rounded-xl border border-white/10 bg-[#040E1B]/70 px-2 py-1 backdrop-blur-xl"
+    >
+      <NiLanguageSwitcher />
+    </div>
+  );
+
   if (checking) {
     return (
       <div className="relative min-h-screen bg-[#030816] text-white flex items-center justify-center overflow-hidden">
         {bgShell}
+        <div className="absolute right-6 top-6 z-20">{languageSwitcher}</div>
         <div className="relative z-10 flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-[#41B679]" />
-          <p className="text-slate-400 text-sm font-medium tracking-wide">Foglalási link ellenőrzése...</p>
+          <p className="text-slate-400 text-sm font-medium tracking-wide">{tr("Foglalási link ellenőrzése...", "Checking booking link...")}</p>
         </div>
       </div>
     );
@@ -241,13 +305,17 @@ export default function BookPageClient({ token }: Props) {
     return (
       <div className="relative min-h-screen bg-[#030816] text-white flex items-center justify-center overflow-hidden px-6">
         {bgShell}
+        <div className="absolute right-6 top-6 z-20">{languageSwitcher}</div>
         <div className="relative z-10 max-w-md w-full bg-[#040E1B] border border-slate-800/80 rounded-3xl p-10 text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
           <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-6">
             <AlertTriangle className="w-8 h-8 text-red-400" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">Érvénytelen link</h1>
+          <h1 className="text-xl font-bold text-white mb-2">{tr("Érvénytelen link", "Invalid link")}</h1>
           <p className="text-slate-400 text-sm leading-relaxed">
-            Ez a foglalási link érvénytelen, lejárt vagy inaktiválva lett. Kérjük, forduljon a céges kapcsolattartójához egy új link igényléséhez.
+            {tr(
+              "Ez a foglalási link érvénytelen, lejárt vagy inaktiválva lett. Kérjük, forduljon a céges kapcsolattartójához egy új link igényléséhez.",
+              "This booking link is invalid, has expired, or has been deactivated. Please contact your company coordinator to request a new link."
+            )}
           </p>
         </div>
       </div>
@@ -258,12 +326,15 @@ export default function BookPageClient({ token }: Props) {
     <div className="relative min-h-screen bg-[#030816] text-white overflow-hidden">
       {bgShell}
       <div className="w-full border-b border-white/10 bg-[#030816]/72 backdrop-blur-xl relative z-10">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex flex-col">
             <span className="text-[15px] font-bold text-white leading-none">Pannon Transfer</span>
-            <span className="text-[11px] text-slate-400 mt-0.5 tracking-wide">Céges foglalási link · {companyName}</span>
+            <span className="text-[11px] text-slate-400 mt-0.5 tracking-wide">{tr("Céges foglalási link", "Company booking link")} · {companyName}</span>
           </div>
-          <ShieldCheck className="w-5 h-5 text-[#41B679]" />
+          <div className="flex items-center gap-3">
+            {languageSwitcher}
+            <ShieldCheck className="w-5 h-5 text-[#41B679] shrink-0" />
+          </div>
         </div>
       </div>
 
@@ -281,10 +352,10 @@ export default function BookPageClient({ token }: Props) {
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#41B679]/20 to-[#10B981]/10 flex items-center justify-center border-2 border-[#41B679]/30 shadow-[0_0_40px_rgba(65,182,121,0.25)] mb-8">
                   <CheckCircle2 className="w-14 h-14 text-[#41B679]" strokeWidth={2.5} />
                 </div>
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 tracking-tight">Foglalása sikeresen elküldve!</h2>
-                <p className="text-slate-400 text-sm md:text-base mb-6">Visszaigazoló e-mail elküldve az Ön email címére</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 tracking-tight">{tr("Foglalása sikeresen elküldve!", "Your booking has been submitted successfully!")}</h2>
+                <p className="text-slate-400 text-sm md:text-base mb-6">{tr("Visszaigazoló e-mail elküldve az Ön email címére", "A confirmation email has been sent to your email address")}</p>
                 <div className="mb-8">
-                  <span className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-2 block">Foglalási kód</span>
+                  <span className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-2 block">{tr("Foglalási kód", "Booking code")}</span>
                   <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-gradient-to-r from-[#003E7E]/20 to-[#002A54]/15 border border-[#003E7E]/30 shadow-[0_0_25px_rgba(0,62,126,0.2)]">
                     <span className="text-3xl md:text-4xl font-black text-white tracking-wider font-mono">#{lastBookingCode}</span>
                   </div>
@@ -292,7 +363,10 @@ export default function BookPageClient({ token }: Props) {
                 <div className="flex items-start gap-2 max-w-md mb-10 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                   <ShieldCheck className="w-4 h-4 text-[#41B679] shrink-0 mt-0.5" />
                   <p className="text-[13px] text-slate-400 text-left leading-relaxed">
-                    Amint a diszpécserünk jóváhagyja, email értesítést küldünk Önnek. Az egyedi linkjén bármikor nyomon követheti a foglalás állapotát.
+                    {tr(
+                      "Amint a diszpécserünk jóváhagyja, email értesítést küldünk Önnek. Az egyedi linkjén bármikor nyomon követheti a foglalás állapotát.",
+                      "Once our dispatcher approves it, we will send you an email notification. You can track the status of your booking at any time using your unique link."
+                    )}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md">
@@ -301,7 +375,7 @@ export default function BookPageClient({ token }: Props) {
                       href={`/track/${lastTrackToken}`}
                       className="py-4 px-5 rounded-xl bg-[#003E7E] hover:bg-[#002A54] text-white font-bold text-sm tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,62,126,0.3)] hover:shadow-[0_0_30px_rgba(0,62,126,0.5)]"
                     >
-                      Foglalás követése
+                      {tr("Foglalás követése", "Track booking")}
                     </a>
                   )}
                   <button
@@ -312,7 +386,7 @@ export default function BookPageClient({ token }: Props) {
                     className="py-4 px-5 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:border-white/20 text-white font-bold text-sm tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
-                    Új foglalás
+                    {tr("Új foglalás", "New booking")}
                   </button>
                 </div>
               </div>
@@ -329,17 +403,16 @@ export default function BookPageClient({ token }: Props) {
               >
                 <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#41B679] to-[#0A5CCB]" />
                 <div className="relative p-8 md:p-12 space-y-10">
-                  {/* SECTION 1 */}
                   <div className="space-y-6">
                     <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-800">
                       <div className="w-8 h-8 rounded-full bg-[#41B679]/20 flex items-center justify-center text-[#10B981] font-bold text-sm border border-[#41B679]/30">1</div>
-                      <h3 className="text-white font-semibold text-lg tracking-wide">Utas és Céges adatok</h3>
+                      <h3 className="text-white font-semibold text-lg tracking-wide">{tr("Utas és Céges adatok", "Passenger and company details")}</h3>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          Email address of the Traveler <span className="text-[#10B981]">*</span>
+                          {tr("Email address of the Traveler", "Passenger email address")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("travelerEmail") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -350,7 +423,7 @@ export default function BookPageClient({ token }: Props) {
                             value={travelerEmail}
                             onChange={(e) => setTravelerEmail(e.target.value)}
                             onBlur={() => handleBlur("travelerEmail")}
-                            placeholder="Email"
+                            placeholder={tr("Email", "Email address")}
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
                         </div>
@@ -364,7 +437,7 @@ export default function BookPageClient({ token }: Props) {
 
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          Name of the Traveler <span className="text-[#10B981]">*</span>
+                          {tr("Name of the Traveler", "Passenger name")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("travelerName") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -375,7 +448,7 @@ export default function BookPageClient({ token }: Props) {
                             value={travelerName}
                             onChange={(e) => setTravelerName(e.target.value)}
                             onBlur={() => handleBlur("travelerName")}
-                            placeholder="Full Name"
+                            placeholder={tr("Full Name", "Full name")}
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
                         </div>
@@ -390,7 +463,7 @@ export default function BookPageClient({ token }: Props) {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">Company Name</label>
+                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("Company Name", "Company name")}</label>
                         <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-3.5 flex items-center gap-3 text-slate-300">
                           <Briefcase className="w-4 h-4 text-slate-500" />
                           <input
@@ -404,7 +477,7 @@ export default function BookPageClient({ token }: Props) {
 
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          Phone number (only digit / 0123456789) <span className="text-[#10B981]">*</span>
+                          {tr("Phone number (only digit / 0123456789)", "Phone number (digits only / 0123456789)")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("travelerPhone") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -430,27 +503,27 @@ export default function BookPageClient({ token }: Props) {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-800/50">
                       <div className="space-y-2">
-                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">2nd Traveler&apos;s email (optional)</label>
+                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("2nd Traveler's email (optional)", "Second passenger's email (optional)")}</label>
                         <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
                           <Mail className="w-4 h-4 text-slate-500" />
                           <input
                             type="email"
                             value={secondTravelerEmail}
                             onChange={(e) => setSecondTravelerEmail(e.target.value)}
-                            placeholder="Optional"
+                            placeholder={tr("Optional", "Optional")}
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">2nd Traveler&apos;s phone (optional)</label>
+                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("2nd Traveler's phone (optional)", "Second passenger's phone (optional)")}</label>
                         <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
                           <Phone className="w-4 h-4 text-slate-500" />
                           <input
                             type="tel"
                             value={secondTravelerPhone}
                             onChange={(e) => setSecondTravelerPhone(e.target.value)}
-                            placeholder="Optional"
+                            placeholder={tr("Optional", "Optional")}
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
                         </div>
@@ -458,29 +531,28 @@ export default function BookPageClient({ token }: Props) {
                     </div>
                   </div>
 
-                  {/* SECTION 2: Payment + Type */}
                   <div className="space-y-6">
                     <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-800">
                       <div className="w-8 h-8 rounded-full bg-[#41B679]/20 flex items-center justify-center text-[#10B981] font-bold text-sm border border-[#41B679]/30">2</div>
-                      <h3 className="text-white font-semibold text-lg tracking-wide">Fizetés és Típus</h3>
+                      <h3 className="text-white font-semibold text-lg tracking-wide">{tr("Fizetés és Típus", "Payment and transfer type")}</h3>
                     </div>
 
                     <div className="space-y-3">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        Payment Method <span className="text-[#41B679]">*</span>
+                        {tr("Payment Method", "Payment method")} <span className="text-[#41B679]">*</span>
                       </label>
                       <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
                         <div className="flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 relative z-10 text-white">
                           <div className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
                           <CreditCard className="w-4 h-4 text-[#41B679]" />
-                          <span className="text-sm font-bold">Credit Card</span>
+                          <span className="text-sm font-bold">{tr("Credit Card", "Credit card")}</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="space-y-3">
                       <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        Transfer Type <span className="text-[#41B679]">*</span>
+                        {tr("Transfer Type", "Transfer type")} <span className="text-[#41B679]">*</span>
                       </label>
                       <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
                         <button
@@ -491,7 +563,7 @@ export default function BookPageClient({ token }: Props) {
                             <div className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
                           )}
                           <span className="text-sm font-bold">Standard</span>
-                          <span className="text-[10px] opacity-70">Economy Class</span>
+                          <span className="text-[10px] opacity-70">{tr("Economy Class", "Economy class")}</span>
                         </button>
                         <button
                           onClick={() => setTransferType("executive")}
@@ -501,15 +573,14 @@ export default function BookPageClient({ token }: Props) {
                             <div className="absolute inset-0 bg-[#003E7E]/40 border border-[#003E7E]/50 rounded-xl -z-10 shadow-[0_2px_10px_rgba(0,62,126,0.2)]" />
                           )}
                           <span className={`text-sm font-bold ${transferType === "executive" ? "text-[#41B679]" : ""}`}>Executive</span>
-                          <span className="text-[10px] opacity-70">Business Class</span>
+                          <span className="text-[10px] opacity-70">{tr("Business Class", "Business class")}</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* FROM */}
                     <div className="space-y-4 bg-[#0F172A]/50 p-6 rounded-3xl border border-white/5">
                       <div className="space-y-3">
-                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">From (Honnan?)</label>
+                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("From (Honnan?)", "From")}</label>
                         <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
                           <button
                             onClick={() => setFromType("airport")}
@@ -534,7 +605,7 @@ export default function BookPageClient({ token }: Props) {
                       </div>
                       <div className="space-y-2 pt-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          From Address <span className="text-[#10B981]">*</span>
+                          {tr("From Address", "Pick-up address")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("fromAddress") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -545,7 +616,11 @@ export default function BookPageClient({ token }: Props) {
                             value={fromAddress}
                             onChange={(e) => setFromAddress(e.target.value)}
                             onBlur={() => handleBlur("fromAddress")}
-                            placeholder={fromType === "airport" ? "e.g. Budapest Airport (BUD)" : "e.g. NI Debrecen Gyár..."}
+                            placeholder={
+                              fromType === "airport"
+                                ? tr("e.g. Budapest Airport (BUD)", "e.g. Budapest Airport (BUD)")
+                                : tr("e.g. NI Debrecen Gyár...", "e.g. NI Debrecen Plant...")
+                            }
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
                         </div>
@@ -558,7 +633,7 @@ export default function BookPageClient({ token }: Props) {
                         {fromType === "airport" && (
                           <div className="space-y-2 pt-3">
                             <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                              Flight number / Járatszám <span className="text-[#10B981]">*</span>
+                              {tr("Flight number / Járatszám", "Flight number")} <span className="text-[#10B981]">*</span>
                             </label>
                             <div
                               className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("flightNumber") ? "border-red-500/70 ring-1 ring-red-500/20" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -569,7 +644,7 @@ export default function BookPageClient({ token }: Props) {
                                 value={flightNumber}
                                 onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
                                 onBlur={() => handleBlur("flightNumber")}
-                                placeholder="pl. LH1234"
+                                placeholder={tr("pl. LH1234", "e.g. LH1234")}
                                 className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                               />
                             </div>
@@ -584,10 +659,9 @@ export default function BookPageClient({ token }: Props) {
                       </div>
                     </div>
 
-                    {/* TO */}
                     <div className="space-y-4 bg-[#0F172A]/50 p-6 rounded-3xl border border-white/5">
                       <div className="space-y-3">
-                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">To (Hova?)</label>
+                        <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("To (Hova?)", "To")}</label>
                         <div className="flex bg-white/[0.02] p-1.5 rounded-2xl border border-white/5 relative">
                           <button
                             onClick={() => setToType("airport")}
@@ -612,7 +686,7 @@ export default function BookPageClient({ token }: Props) {
                       </div>
                       <div className="space-y-2 pt-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          To Address <span className="text-[#10B981]">*</span>
+                          {tr("To Address", "Destination address")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("toAddress") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -623,7 +697,11 @@ export default function BookPageClient({ token }: Props) {
                             value={toAddress}
                             onChange={(e) => setToAddress(e.target.value)}
                             onBlur={() => handleBlur("toAddress")}
-                            placeholder={toType === "airport" ? "e.g. Budapest Airport (BUD)" : "e.g. NI Debrecen Gyár..."}
+                            placeholder={
+                              toType === "airport"
+                                ? tr("e.g. Budapest Airport (BUD)", "e.g. Budapest Airport (BUD)")
+                                : tr("e.g. NI Debrecen Gyár...", "e.g. NI Debrecen Plant...")
+                            }
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
                         </div>
@@ -636,7 +714,7 @@ export default function BookPageClient({ token }: Props) {
                         {toType === "airport" && (
                           <div className="space-y-2 pt-3">
                             <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                              Flight number / Járatszám <span className="text-[#10B981]">*</span>
+                              {tr("Flight number / Járatszám", "Flight number")} <span className="text-[#10B981]">*</span>
                             </label>
                             <div
                               className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("flightNumber") ? "border-red-500/70 ring-1 ring-red-500/20" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -647,7 +725,7 @@ export default function BookPageClient({ token }: Props) {
                                 value={flightNumber}
                                 onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
                                 onBlur={() => handleBlur("flightNumber")}
-                                placeholder="pl. LH1234"
+                                placeholder={tr("pl. LH1234", "e.g. LH1234")}
                                 className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                               />
                             </div>
@@ -662,11 +740,10 @@ export default function BookPageClient({ token }: Props) {
                       </div>
                     </div>
 
-                    {/* Date & Time */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          When (Date) <span className="text-[#10B981]">*</span>
+                          {tr("When (Date)", "Pick-up date")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center justify-between text-slate-300 transition-all border ${isFieldInvalid("pickupDate") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -688,7 +765,7 @@ export default function BookPageClient({ token }: Props) {
                       </div>
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          Time <span className="text-[#10B981]">*</span>
+                          {tr("Time", "Pick-up time")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div
                           className={`w-full bg-white/[0.03] rounded-lg p-3.5 flex items-center justify-between text-slate-300 transition-all border ${isFieldInvalid("pickupTime") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-white/5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30"}`}
@@ -710,11 +787,10 @@ export default function BookPageClient({ token }: Props) {
                       </div>
                     </div>
 
-                    {/* Counters */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          Number of the Travelers <span className="text-[#10B981]">*</span>
+                          {tr("Number of the Travelers", "Number of passengers")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-2.5 flex justify-between items-center text-white">
                           <div className="flex items-center gap-3 px-2">
@@ -726,6 +802,7 @@ export default function BookPageClient({ token }: Props) {
                               onClick={() => setTravelers(Math.max(1, travelers - 1))}
                               type="button"
                               className="w-9 h-9 rounded-lg bg-white/5 hover:bg-[#41B679]/20 hover:text-[#41B679] flex items-center justify-center transition-colors"
+                              aria-label={tr("Utasok számának csökkentése", "Decrease passenger count")}
                             >
                               <Minus className="w-4 h-4" />
                             </button>
@@ -733,6 +810,7 @@ export default function BookPageClient({ token }: Props) {
                               onClick={() => setTravelers(travelers + 1)}
                               type="button"
                               className="w-9 h-9 rounded-lg bg-white/5 hover:bg-[#41B679]/20 hover:text-[#41B679] flex items-center justify-center transition-colors"
+                              aria-label={tr("Utasok számának növelése", "Increase passenger count")}
                             >
                               <Plus className="w-4 h-4" />
                             </button>
@@ -742,7 +820,7 @@ export default function BookPageClient({ token }: Props) {
 
                       <div className="space-y-2">
                         <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                          Number of the luggage <span className="text-[#10B981]">*</span>
+                          {tr("Number of the luggage", "Number of luggage items")} <span className="text-[#10B981]">*</span>
                         </label>
                         <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-2.5 flex justify-between items-center text-white">
                           <div className="flex items-center gap-3 px-2">
@@ -754,6 +832,7 @@ export default function BookPageClient({ token }: Props) {
                               onClick={() => setLuggage(Math.max(0, luggage - 1))}
                               type="button"
                               className="w-9 h-9 rounded-lg bg-white/5 hover:bg-[#41B679]/20 hover:text-[#41B679] flex items-center justify-center transition-colors"
+                              aria-label={tr("Csomagok számának csökkentése", "Decrease luggage count")}
                             >
                               <Minus className="w-4 h-4" />
                             </button>
@@ -761,6 +840,7 @@ export default function BookPageClient({ token }: Props) {
                               onClick={() => setLuggage(luggage + 1)}
                               type="button"
                               className="w-9 h-9 rounded-lg bg-white/5 hover:bg-[#41B679]/20 hover:text-[#41B679] flex items-center justify-center transition-colors"
+                              aria-label={tr("Csomagok számának növelése", "Increase luggage count")}
                             >
                               <Plus className="w-4 h-4" />
                             </button>
@@ -776,7 +856,7 @@ export default function BookPageClient({ token }: Props) {
                           rows={3}
                           value={commentText}
                           onChange={(e) => setCommentText(e.target.value)}
-                          placeholder="Any special requests or instructions..."
+                          placeholder={tr("Any special requests or instructions...", "Any special requests or instructions...")}
                           className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white resize-none"
                         />
                       </div>
@@ -784,7 +864,7 @@ export default function BookPageClient({ token }: Props) {
                   </div>
 
                   <AnimatePresence>
-                    {submitErrors.length > 0 && (
+                    {visibleSubmitErrors.length > 0 && (
                       <motion.div
                         initial={{ opacity: 0, y: -8, height: 0 }}
                         animate={{ opacity: 1, y: 0, height: "auto" }}
@@ -797,10 +877,10 @@ export default function BookPageClient({ token }: Props) {
                             <div className="w-8 h-8 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
                               <XCircle className="w-4 h-4 text-red-400" />
                             </div>
-                            <p className="text-[13px] font-bold text-red-300 tracking-wide">Kérjük javítsa a következő hibákat:</p>
+                            <p className="text-[13px] font-bold text-red-300 tracking-wide">{tr("Kérjük javítsa a következő hibákat:", "Please correct the following errors:")}</p>
                           </div>
                           <ul className="space-y-1.5 pl-11">
-                            {submitErrors.map((err, idx) => (
+                            {visibleSubmitErrors.map((err, idx) => (
                               <li key={idx} className="text-[12px] text-red-300/90 flex items-start gap-2 leading-relaxed">
                                 <span className="w-1.5 h-1.5 rounded-full bg-red-400/60 mt-1.5 shrink-0" />
                                 <span>{err}</span>
@@ -819,17 +899,17 @@ export default function BookPageClient({ token }: Props) {
                       className={`w-full rounded-xl font-bold text-sm tracking-widest uppercase transition-all duration-300 flex justify-center items-center gap-3 py-4.5 ${
                         formLoading
                           ? "bg-[#41B679]/60 text-white/80 cursor-not-allowed shadow-[0_0_15px_rgba(65,182,121,0.15)]"
-                          : "bg-[#41B679] hover:bg-[#10B981] text-white shadow-[0_0_20px_rgba(65,182,121,0.3)] hover:shadow-[0_0_30px_rgba(65,182,121,0.5)]"
+                          : "bg-[#41B679] hover:bg-[#10B981] text-white shadow-[0_0_20px_rgba(65,182,121,0.2)] hover:shadow-[0_0_30px_rgba(65,182,121,0.35)]"
                       }`}
                     >
                       {formLoading ? (
                         <>
                           <Loader2 className="w-5 h-5 animate-spin" />
-                          Foglalás küldése folyamatban...
+                          {tr("Foglalás küldése folyamatban...", "Submitting booking...")}
                         </>
                       ) : (
                         <>
-                          Foglalás
+                          {tr("Foglalás", "Submit booking")}
                           <ArrowRight className="w-5 h-5" />
                         </>
                       )}

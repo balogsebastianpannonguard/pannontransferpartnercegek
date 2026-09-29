@@ -27,6 +27,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import NiPremiumLogin from "../components/NiPremiumLogin";
+import NiLanguageSwitcher from "../components/NiLanguageSwitcher";
+import { useNiLanguage } from "../useNiLanguage";
+import { translateNiFieldLabel, translateNiServerMessage } from "@/lib/ni-messages";
 
 interface NiPortalUser {
   email: string;
@@ -88,11 +91,27 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Lemondott",
 };
 
+const STATUS_LABELS_EN: Record<string, string> = {
+  pending: "Pending",
+  modified: "Modified",
+  confirmed: "Confirmed",
+  "in-progress": "In progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
 const AUDIT_ACTION_LABELS: Record<string, string> = {
   created: "Foglalás létrehozva",
   modified: "Foglalás módosítva",
   assigned: "Sofőr és jármű hozzárendelve",
   cancelled: "Foglalás lemondva",
+};
+
+const AUDIT_ACTION_LABELS_EN: Record<string, string> = {
+  created: "Booking created",
+  modified: "Booking modified",
+  assigned: "Driver and vehicle assigned",
+  cancelled: "Booking cancelled",
 };
 
 const AUDIT_FIELD_LABELS: Record<string, string> = {
@@ -114,18 +133,42 @@ const AUDIT_FIELD_LABELS: Record<string, string> = {
   travelerPhone: "Utas telefonszáma",
 };
 
-function formatAuditEntry(entry: AuditTrailEntry): { label: string; lines: string[] } {
+const AUDIT_FIELD_LABELS_EN: Record<string, string> = {
+  pickupDate: "Pick-up date",
+  pickupTime: "Pick-up time",
+  fromAddress: "Pick-up address",
+  toAddress: "Destination address",
+  flightNumber: "Flight number",
+  travelers: "Number of passengers",
+  luggage: "Number of luggage items",
+  comment: "Comment",
+  assignedDriverName: "Driver",
+  assignedVehicleName: "Vehicle",
+  status: "Booking status",
+  price: "Price",
+  companyName: "Company name",
+  travelerName: "Passenger name",
+  travelerEmail: "Passenger email",
+  travelerPhone: "Passenger phone",
+};
+
+function formatAuditEntry(entry: AuditTrailEntry, english: boolean): { label: string; lines: string[] } {
+  const statusLabels = english ? STATUS_LABELS_EN : STATUS_LABELS;
+  const actionLabels = english ? AUDIT_ACTION_LABELS_EN : AUDIT_ACTION_LABELS;
+  const fieldLabels = english ? AUDIT_FIELD_LABELS_EN : AUDIT_FIELD_LABELS;
+  const toText = (text: string) => translateNiServerMessage(text, english);
+
   const statusChangeMatch = /^status:(.+)->(.+)$/.exec(entry.action);
   if (statusChangeMatch) {
     const [, oldStatus, newStatus] = statusChangeMatch;
     const lines: string[] = [
-      `Állapot: ${STATUS_LABELS[oldStatus] || oldStatus} → ${STATUS_LABELS[newStatus] || newStatus}`,
+      `${english ? "Status" : "Állapot"}: ${statusLabels[oldStatus] || oldStatus} → ${statusLabels[newStatus] || newStatus}`,
     ];
-    if (entry.details) lines.push(entry.details);
-    return { label: "Állapotváltás", lines };
+    if (entry.details) lines.push(toText(entry.details));
+    return { label: english ? "Status change" : "Állapotváltás", lines };
   }
 
-  const label = AUDIT_ACTION_LABELS[entry.action] || entry.action;
+  const label = actionLabels[entry.action] || entry.action;
 
   if (!entry.details) return { label, lines: [] };
 
@@ -135,10 +178,10 @@ function formatAuditEntry(entry: AuditTrailEntry): { label: string; lines: strin
       const parsed = JSON.parse(trimmed);
       const lines: string[] = [];
       if (parsed && typeof parsed === "object") {
-        if (typeof parsed.message === "string") lines.push(parsed.message);
+        if (typeof parsed.message === "string") lines.push(toText(parsed.message));
         if (Array.isArray(parsed.changes)) {
           (parsed.changes as Array<{ field?: string; oldValue?: unknown; newValue?: unknown }>).forEach((change) => {
-            const field = change.field || "Adat";
+            const field = translateNiFieldLabel(change.field || "Adat", english);
             const oldVal = change.oldValue === undefined || change.oldValue === "" ? "—" : String(change.oldValue);
             const newVal = change.newValue === undefined || change.newValue === "" ? "—" : String(change.newValue);
             lines.push(`${field}: ${oldVal} → ${newVal}`);
@@ -147,17 +190,17 @@ function formatAuditEntry(entry: AuditTrailEntry): { label: string; lines: strin
         if (lines.length === 0) {
           Object.entries(parsed).forEach(([key, value]) => {
             if (value === undefined || value === null || value === "") return;
-            lines.push(`${AUDIT_FIELD_LABELS[key] || key}: ${String(value)}`);
+            lines.push(`${fieldLabels[key] || key}: ${String(value)}`);
           });
         }
       }
-      return { label, lines: lines.length > 0 ? lines : [trimmed] };
+      return { label, lines: lines.length > 0 ? lines : [toText(trimmed)] };
     } catch {
       // Nem valós JSON — sima szövegként jelenítjük meg.
     }
   }
 
-  return { label, lines: [entry.details] };
+  return { label, lines: [toText(entry.details)] };
 }
 
 // A "sofőr/jármű kiküldés" és a "felvételi időpont módosítása" bejegyzések csak
@@ -197,6 +240,7 @@ function filterAuditTrailForNi(entries: AuditTrailEntry[], bookingStatus: string
 }
 
 export default function CompanyClient() {
+  const { english, locale, tr, msg } = useNiLanguage();
   const [authChecked, setAuthChecked] = useState(false);
   const [authedUser, setAuthedUser] = useState<NiPortalUser | null>(null);
 
@@ -368,16 +412,19 @@ export default function CompanyClient() {
           <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto mb-6">
             <ShieldAlert className="w-8 h-8 text-amber-400" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">Nincs jogosultsága</h1>
+          <h1 className="text-xl font-bold text-white mb-2">{tr("Nincs jogosultsága", "You do not have permission")}</h1>
           <p className="text-slate-400 text-sm leading-relaxed mb-6">
-            Ez az oldal csak Admin NI foglaló jogosultsággal rendelkező felhasználók számára érhető el.
+            {tr(
+              "Ez az oldal csak Admin NI foglaló jogosultsággal rendelkező felhasználók számára érhető el.",
+              "This page is only available to users with NI admin booking permission."
+            )}
           </p>
           <Link
             href="/ni/bookings"
             className="inline-flex items-center gap-2 py-3 px-5 rounded-xl bg-[#003E7E] hover:bg-[#002A54] text-white font-bold text-sm tracking-wider uppercase transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
-            Vissza a foglalásaimhoz
+            {tr("Vissza a foglalásaimhoz", "Back to my bookings")}
           </Link>
         </div>
       </div>
@@ -396,23 +443,26 @@ export default function CompanyClient() {
               <ArrowLeft className="w-4 h-4" />
             </Link>
             <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-white leading-none">Céges foglalások</span>
+              <span className="text-[15px] font-bold text-white leading-none">{tr("Céges foglalások", "Company bookings")}</span>
               <span className="text-[11px] text-slate-400 mt-0.5 tracking-wide">National Instruments · Admin</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <NiLanguageSwitcher />
             <button
               onClick={() => setBugModalOpen(true)}
               className="flex items-center gap-2 h-9 px-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition text-xs font-bold tracking-wide uppercase"
             >
               <Bug className="w-4 h-4" />
-              Hibabejelentés
+              {tr("Hibabejelentés", "Report a bug")}
             </button>
             <button
               onClick={() => {
                 fetchTokens();
                 fetchGroups();
               }}
+              title={tr("Frissítés", "Refresh")}
+              aria-label={tr("Frissítés", "Refresh")}
               className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition"
             >
               <RefreshCw className="w-4 h-4" />
@@ -428,7 +478,7 @@ export default function CompanyClient() {
             <div className="w-9 h-9 rounded-full bg-[#41B679]/20 flex items-center justify-center border border-[#41B679]/30">
               <Link2 className="w-4 h-4 text-[#41B679]" />
             </div>
-            <h2 className="text-lg font-bold text-white tracking-wide">Céges foglalási linkek</h2>
+            <h2 className="text-lg font-bold text-white tracking-wide">{tr("Céges foglalási linkek", "Company booking links")}</h2>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -436,7 +486,7 @@ export default function CompanyClient() {
               type="text"
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
-              placeholder="Megjegyzés / címke (opcionális, pl. 'HR csapat')"
+              placeholder={tr("Megjegyzés / címke (opcionális, pl. 'HR csapat')", "Note / label (optional, e.g. 'HR team')")}
               className="flex-1 bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-[#41B679]"
             />
             <button
@@ -445,7 +495,7 @@ export default function CompanyClient() {
               className="shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#41B679] hover:bg-[#10B981] disabled:opacity-60 text-white font-bold text-sm tracking-wide transition-all"
             >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-              Új link generálása
+              {tr("Új link generálása", "Generate new link")}
             </button>
           </div>
 
@@ -454,7 +504,7 @@ export default function CompanyClient() {
               <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
             </div>
           ) : tokens.length === 0 ? (
-            <p className="text-sm text-slate-500 text-center py-6">Még nincs generált link.</p>
+            <p className="text-sm text-slate-500 text-center py-6">{tr("Még nincs generált link.", "No links have been generated yet.")}</p>
           ) : (
             <div className="space-y-3">
               {tokens.map((t) => {
@@ -469,7 +519,7 @@ export default function CompanyClient() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-white truncate">
-                          {t.label || "Névtelen link"}
+                          {t.label || tr("Névtelen link", "Unnamed link")}
                         </span>
                         <span
                           className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
@@ -478,12 +528,14 @@ export default function CompanyClient() {
                               : "bg-red-500/15 text-red-400 border border-red-500/30"
                           }`}
                         >
-                          {t.active ? "Aktív" : "Inaktív"}
+                          {t.active ? tr("Aktív", "Active") : tr("Inaktív", "Inactive")}
                         </span>
                       </div>
                       <p className="text-[12px] text-slate-500 font-mono truncate mt-1">{url}</p>
                       <p className="text-[11px] text-slate-500 mt-1">
-                        {t.usageCount} foglalás · Létrehozva: {new Date(t.createdAt).toLocaleString("hu-HU")}
+                        {english
+                          ? `${t.usageCount} ${t.usageCount === 1 ? "booking" : "bookings"} · Created: ${new Date(t.createdAt).toLocaleString(locale)}`
+                          : `${t.usageCount} foglalás · Létrehozva: ${new Date(t.createdAt).toLocaleString(locale)}`}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -493,7 +545,7 @@ export default function CompanyClient() {
                         className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] hover:bg-white/10 disabled:opacity-40 text-xs font-bold text-white transition"
                       >
                         {copiedToken === t.token ? <Check className="w-3.5 h-3.5 text-[#41B679]" /> : <Copy className="w-3.5 h-3.5" />}
-                        {copiedToken === t.token ? "Másolva" : "Másolás"}
+                        {copiedToken === t.token ? tr("Másolva", "Copied") : tr("Másolás", "Copy")}
                       </button>
                       {t.active && (
                         <button
@@ -502,7 +554,7 @@ export default function CompanyClient() {
                           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-xs font-bold text-red-400 transition"
                         >
                           {revokingToken === t._id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                          Visszavonás
+                          {tr("Visszavonás", "Revoke")}
                         </button>
                       )}
                     </div>
@@ -520,7 +572,8 @@ export default function CompanyClient() {
               <Users className="w-4 h-4 text-[#0A5CCB]" />
             </div>
             <h2 className="text-lg font-bold text-white tracking-wide">
-              Céges foglalások (linkből érkezett) {groups.length > 0 && `· ${groups.reduce((s, g) => s + g.count, 0)} db`}
+              {tr("Céges foglalások (linkből érkezett)", "Company bookings (received via link)")}{" "}
+              {groups.length > 0 && `· ${groups.reduce((s, g) => s + g.count, 0)} ${tr("db", "pcs")}`}
             </h2>
           </div>
 
@@ -529,7 +582,7 @@ export default function CompanyClient() {
               <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
             </div>
           ) : groups.length === 0 ? (
-            <p className="text-sm text-slate-500 text-center py-6">Még nem érkezett foglalás céges linken keresztül.</p>
+            <p className="text-sm text-slate-500 text-center py-6">{tr("Még nem érkezett foglalás céges linken keresztül.", "No bookings have been received via a company link yet.")}</p>
           ) : (
             <div className="space-y-3">
               {groups.map((group) => (
@@ -540,7 +593,7 @@ export default function CompanyClient() {
                   >
                     <div className="text-left">
                       <p className="text-sm font-bold text-white">{group.travelerName || group.travelerEmail}</p>
-                      <p className="text-[12px] text-slate-500">{group.travelerEmail} · {group.count} foglalás</p>
+                      <p className="text-[12px] text-slate-500">{group.travelerEmail} · {group.count} {tr("foglalás", group.count === 1 ? "booking" : "bookings")}</p>
                     </div>
                     {expandedEmail === group.travelerEmail ? (
                       <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -568,11 +621,11 @@ export default function CompanyClient() {
                                   <p className="text-sm font-semibold text-white font-mono">#{b.bookingCode}</p>
                                   <p className="text-[12px] text-slate-500">
                                     {b.pickupDate} {b.pickupTime} · {b.fromAddress} → {b.toAddress}
-                                    {b.flightNumber ? ` · Flight number / Járatszám: ${b.flightNumber}` : ""}
+                                    {b.flightNumber ? ` · ${tr("Flight number / Járatszám", "Flight number")}: ${b.flightNumber}` : ""}
                                   </p>
                                 </div>
                                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-300 shrink-0">
-                                  {STATUS_LABELS[b.status] || b.status}
+                                  {(english ? STATUS_LABELS_EN : STATUS_LABELS)[b.status] || b.status}
                                 </span>
                               </button>
 
@@ -580,48 +633,48 @@ export default function CompanyClient() {
                                 <div className="mt-3 pl-4 border-l-2 border-white/10 space-y-4">
                                   <div>
                                     <div className="flex items-center gap-2 text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-2">
-                                      Foglalás részletei
+                                      {tr("Foglalás részletei", "Booking details")}
                                     </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                       <div className="flex items-start gap-2 bg-white/[0.03] border border-white/5 rounded-xl p-3">
                                         <Users className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                                         <div>
-                                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">Utasok</p>
-                                          <p className="text-[13px] text-white font-semibold">{b.travelers} fő</p>
+                                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">{tr("Utasok", "Passengers")}</p>
+                                          <p className="text-[13px] text-white font-semibold">{b.travelers} {tr("fő", b.travelers === 1 ? "passenger" : "passengers")}</p>
                                         </div>
                                       </div>
                                       <div className="flex items-start gap-2 bg-white/[0.03] border border-white/5 rounded-xl p-3">
                                         <Luggage className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                                         <div>
-                                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">Csomag</p>
-                                          <p className="text-[13px] text-white font-semibold">{b.luggage} db</p>
+                                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">{tr("Csomag", "Luggage")}</p>
+                                          <p className="text-[13px] text-white font-semibold">{b.luggage} {tr("db", b.luggage === 1 ? "piece" : "pieces")}</p>
                                         </div>
                                       </div>
                                       <div className="flex items-start gap-2 bg-white/[0.03] border border-white/5 rounded-xl p-3">
                                         <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                                         <div>
-                                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">Dátum</p>
+                                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">{tr("Dátum", "Date")}</p>
                                           <p className="text-[13px] text-white font-semibold">{b.pickupDate}</p>
                                         </div>
                                       </div>
                                       <div className="flex items-start gap-2 bg-white/[0.03] border border-white/5 rounded-xl p-3">
                                         <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                                         <div>
-                                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">Időpont</p>
+                                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">{tr("Időpont", "Time")}</p>
                                           <p className="text-[13px] text-white font-semibold">{b.pickupTime}</p>
                                         </div>
                                       </div>
                                       <div className="flex items-start gap-2 bg-white/[0.03] border border-white/5 rounded-xl p-3 col-span-2 sm:col-span-1">
                                         <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
                                         <div>
-                                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">Honnan</p>
+                                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">{tr("Honnan", "From")}</p>
                                           <p className="text-[13px] text-white font-semibold break-words">{b.fromAddress}</p>
                                         </div>
                                       </div>
                                       <div className="flex items-start gap-2 bg-white/[0.03] border border-white/5 rounded-xl p-3 col-span-2 sm:col-span-1">
                                         <MapPin className="w-3.5 h-3.5 text-sky-500 shrink-0 mt-0.5" />
                                         <div>
-                                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">Hova</p>
+                                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">{tr("Hova", "To")}</p>
                                           <p className="text-[13px] text-white font-semibold break-words">{b.toAddress}</p>
                                         </div>
                                       </div>
@@ -629,7 +682,7 @@ export default function CompanyClient() {
                                         <div className="flex items-start gap-2 bg-white/[0.03] border border-white/5 rounded-xl p-3 col-span-2 sm:col-span-3">
                                           <MessageSquare className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                                           <div>
-                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">Megjegyzés</p>
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">{tr("Megjegyzés", "Comment")}</p>
                                             <p className="text-[13px] text-white font-semibold break-words">{b.comment}</p>
                                           </div>
                                         </div>
@@ -639,20 +692,20 @@ export default function CompanyClient() {
 
                                   <div className="flex items-center gap-2 text-[11px] text-slate-400 font-bold uppercase tracking-wider">
                                     <History className="w-3.5 h-3.5" />
-                                    Audit napló
+                                    {tr("Audit napló", "Audit log")}
                                   </div>
                                   {(() => {
                                     const visibleAuditTrail = filterAuditTrailForNi(b.auditTrail || [], b.status);
                                     return visibleAuditTrail.length === 0 ? (
-                                      <p className="text-[12px] text-slate-500">Nincs rögzített esemény.</p>
+                                      <p className="text-[12px] text-slate-500">{tr("Nincs rögzített esemény.", "No recorded events.")}</p>
                                     ) : (
                                       visibleAuditTrail.map((entry, idx) => {
-                                        const formatted = formatAuditEntry(entry);
+                                        const formatted = formatAuditEntry(entry, english);
                                         return (
                                           <div key={idx} className="text-[12px] text-slate-400">
                                             <span className="text-slate-300 font-semibold">{formatted.label}</span>{" "}
                                             <span className="text-slate-500">
-                                              · {entry.actor} · {new Date(entry.timestamp).toLocaleString("hu-HU")}
+                                              · {entry.actor} · {new Date(entry.timestamp).toLocaleString(locale)}
                                             </span>
                                             {formatted.lines.length > 0 && (
                                               <div className="text-slate-500 mt-0.5 space-y-0.5">
@@ -702,7 +755,7 @@ export default function CompanyClient() {
                   <div className="w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center border border-amber-500/30">
                     <Bug className="w-4 h-4 text-amber-400" />
                   </div>
-                  <h2 className="text-lg font-bold text-white tracking-wide">Hibabejelentés</h2>
+                  <h2 className="text-lg font-bold text-white tracking-wide">{tr("Hibabejelentés", "Report a bug")}</h2>
                 </div>
                 <button
                   onClick={() => setBugModalOpen(false)}
@@ -714,32 +767,34 @@ export default function CompanyClient() {
               </div>
 
               <p className="text-[13px] text-slate-400 mb-5 leading-relaxed">
-                Írja le a hibát vagy problémát, amit a portálon tapasztalt. A bejelentés azonnal
-                továbbításra kerül a fejlesztőnek.
+                {tr(
+                  "Írja le a hibát vagy problémát, amit a portálon tapasztalt. A bejelentés azonnal továbbításra kerül a fejlesztőnek.",
+                  "Please describe the bug or problem you experienced on the portal. The report is forwarded to the developer immediately."
+                )}
               </p>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
-                    Tárgy
+                    {tr("Tárgy", "Subject")}
                   </label>
                   <input
                     type="text"
                     value={bugSubject}
                     onChange={(e) => setBugSubject(e.target.value)}
-                    placeholder="Pl. Nem menti el a foglalás módosítását"
+                    placeholder={tr("Pl. Nem menti el a foglalás módosítását", "E.g. The booking modification is not saved")}
                     className="w-full bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-amber-500/60"
                     disabled={bugSubmitting}
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
-                    Leírás
+                    {tr("Leírás", "Description")}
                   </label>
                   <textarea
                     value={bugDescription}
                     onChange={(e) => setBugDescription(e.target.value)}
-                    placeholder="Mit csinált, mit várt volna, mi történt helyette..."
+                    placeholder={tr("Mit csinált, mit várt volna, mi történt helyette...", "What you did, what you expected, and what happened instead...")}
                     rows={5}
                     className="w-full bg-white/[0.03] border border-white/5 rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-amber-500/60 resize-none"
                     disabled={bugSubmitting}
@@ -747,10 +802,10 @@ export default function CompanyClient() {
                 </div>
 
                 {bugStatus && bugStatus !== "success" && (
-                  <p className="text-[12px] text-red-400">{bugStatus}</p>
+                  <p className="text-[12px] text-red-400">{msg(bugStatus)}</p>
                 )}
                 {bugStatus === "success" && (
-                  <p className="text-[12px] text-[#41B679]">Hibabejelentés elküldve, köszönjük!</p>
+                  <p className="text-[12px] text-[#41B679]">{tr("Hibabejelentés elküldve, köszönjük!", "Bug report sent, thank you!")}</p>
                 )}
 
                 <button
@@ -759,7 +814,7 @@ export default function CompanyClient() {
                   className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-[#0a1628] font-bold text-sm tracking-wide transition-all"
                 >
                   {bugSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  Küldés
+                  {tr("Küldés", "Send")}
                 </button>
               </div>
             </motion.div>

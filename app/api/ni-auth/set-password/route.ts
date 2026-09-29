@@ -9,17 +9,24 @@ import {
   TWO_FACTOR_ISSUER,
 } from "@/lib/ni-portal-users";
 import { ObjectId } from "mongodb";
+import { normalizePortalLanguage, type PortalLanguage } from "@/lib/portal-language";
 
 export const dynamic = "force-dynamic";
 
-function buildWelcomeEmail(recipientEmail: string, loginLink: string, twoFactorRequired: boolean) {
+function buildWelcomeEmail(
+  recipientEmail: string,
+  loginLink: string,
+  twoFactorRequired: boolean,
+  language: PortalLanguage = "hu"
+) {
+  const en = language === "en";
   const html = `
 <!DOCTYPE html>
-<html>
+<html${en ? ' lang="en"' : ''}>
 <head><meta charset="utf-8" /></head>
 <body style="margin:0; padding:0; background:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
 <div style="display:none; max-height:0; overflow:hidden; opacity:0;">
-Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
+${en ? "Your NI Portal access is ready. You can log in using the unique link below." : "Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni."}
 </div>
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#F3F4F6">
   <tr>
@@ -27,7 +34,7 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;">
         <tr>
           <td style="padding-bottom:16px; text-align:center; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#94A3B8; font-weight:700;">
-            Pannon Transfer · NI Portál · Egyedi belépési link
+            ${en ? "Pannon Transfer · NI Portal · Unique login link" : "Pannon Transfer · NI Portál · Egyedi belépési link"}
           </td>
         </tr>
         <tr>
@@ -48,15 +55,15 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
                   </table>
                   
                   <div style="display:inline-block; padding:6px 12px; margin-bottom:16px; border-radius:999px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#E2E8F0;">
-                    Aktiválás kész · Hozzáférés engedélyezve
+                    ${en ? "Activation complete · Access granted" : "Aktiválás kész · Hozzáférés engedélyezve"}
                   </div>
                   
                   <h1 style="margin:0 0 16px 0; font-size:28px; line-height:1.2; color:#FFFFFF; font-weight:800;">
-                    Sikeres aktiválás
+                    ${en ? "Activation successful" : "Sikeres aktiválás"}
                   </h1>
                   
                   <p style="margin:0 0 32px 0; font-size:15px; line-height:1.6; color:#CBD5E1;">
-                    Jelszavát sikeresen beállította. Az NI dedikált portálhoz tartozó vállalati hozzáférése mostantól aktív.
+                    ${en ? "You have successfully set your password. Your corporate access to the dedicated NI portal is now active." : "Jelszavát sikeresen beállította. Az NI dedikált portálhoz tartozó vállalati hozzáférése mostantól aktív."}
                   </p>
                   
                   <!-- Info boxes -->
@@ -64,14 +71,14 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
                     <tr>
                       <td width="48%" style="padding-right:8px;">
                         <div style="background:rgba(255,255,255,0.08); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,0.1);">
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8; margin-bottom:6px;">Belépési fiók</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8; margin-bottom:6px;">${en ? "Login account" : "Belépési fiók"}</div>
                           <div style="font-size:14px; font-weight:600; color:#60A5FA; word-break:break-all;">${recipientEmail}</div>
                         </div>
                       </td>
                       <td width="48%" style="padding-left:8px;">
                         <div style="background:rgba(255,255,255,0.08); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,0.1);">
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8; margin-bottom:6px;">Hozzáférés típusa</div>
-                          <div style="font-size:14px; font-weight:600; color:#FFFFFF;">NI partner · ${twoFactorRequired ? "2FA kötelező" : "egyedi link"}</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8; margin-bottom:6px;">${en ? "Access type" : "Hozzáférés típusa"}</div>
+                          <div style="font-size:14px; font-weight:600; color:#FFFFFF;">${en ? `NI partner · ${twoFactorRequired ? "2FA required" : "unique link"}` : `NI partner · ${twoFactorRequired ? "2FA kötelező" : "egyedi link"}`}</div>
                         </div>
                       </td>
                     </tr>
@@ -87,11 +94,17 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
                   <!-- Rule box -->
                   <div style="border:1px solid #E2E8F0; border-radius:16px; padding:20px; margin-bottom:28px;">
                     <div style="font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#64748B; margin-bottom:12px;">
-                      Belépési szabály
+                      ${en ? "Login rule" : "Belépési szabály"}
                     </div>
                     <div style="font-size:15px; line-height:1.6; color:#334155;">
-                      <strong style="color:#0F172A;">Kizárólag az alábbi egyedi linken keresztül tud belépni</strong> a portálra. Publikus bejelentkező oldal nincs.
-                      ${twoFactorRequired ? "<br><br><strong style='color:#0F172A;'>2FA kötelező:</strong> A link megnyitása után az Authenticator alkalmazás 6 számjegyű kódját is meg kell adnia." : ""}
+                      ${en
+                        ? `<strong style="color:#0F172A;">You can only log in to the portal via the unique link below.</strong> There is no public login page.`
+                        : `<strong style="color:#0F172A;">Kizárólag az alábbi egyedi linken keresztül tud belépni</strong> a portálra. Publikus bejelentkező oldal nincs.`}
+                      ${twoFactorRequired
+                        ? (en
+                          ? "<br><br><strong style='color:#0F172A;'>2FA required:</strong> After opening the link you must also enter the 6-digit code from your Authenticator app."
+                          : "<br><br><strong style='color:#0F172A;'>2FA kötelező:</strong> A link megnyitása után az Authenticator alkalmazás 6 számjegyű kódját is meg kell adnia.")
+                        : ""}
                     </div>
                   </div>
                   
@@ -103,7 +116,7 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
                           <tr>
                             <td align="center" bgcolor="#22C55E" style="border-radius:999px; box-shadow:0 8px 20px rgba(34,197,94,0.3);">
                               <a href="${loginLink}" style="display:inline-block; padding:16px 32px; font-size:14px; font-weight:700; color:#0B2B1B; text-decoration:none; letter-spacing:1px; text-transform:uppercase; border-radius:999px;">
-                                Egyedi belépés az NI Portálra
+                                ${en ? "Log in to the NI Portal" : "Egyedi belépés az NI Portálra"}
                               </a>
                             </td>
                           </tr>
@@ -117,17 +130,17 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
                     <tr>
                       <td width="48%" style="padding-right:8px;" valign="top">
                         <div style="height:100%; border:1px solid #E2E8F0; border-radius:16px; padding:16px; background:#F8FAFC;">
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#64748B; margin-bottom:8px;">Megjegyzés</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#64748B; margin-bottom:8px;">${en ? "Note" : "Megjegyzés"}</div>
                           <div style="font-size:13px; line-height:1.6; color:#475569;">
-                            Ez az aktiválási link szigorúan személyes hozzáférés, ezért <strong style="color:#0F172A;">harmadik féllel nem osztható meg</strong>.
+                            ${en ? `This activation link is strictly for personal access, therefore it <strong style="color:#0F172A;">must not be shared with third parties</strong>.` : `Ez az aktiválási link szigorúan személyes hozzáférés, ezért <strong style="color:#0F172A;">harmadik féllel nem osztható meg</strong>.`}
                           </div>
                         </div>
                       </td>
                       <td width="48%" style="padding-left:8px;" valign="top">
                         <div style="height:100%; border:1px solid #E2E8F0; border-radius:16px; padding:16px; background:#F8FAFC;">
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#64748B; margin-bottom:8px;">Érvényesség</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#64748B; margin-bottom:8px;">${en ? "Validity" : "Érvényesség"}</div>
                           <div style="font-size:13px; line-height:1.6; color:#475569;">
-                            A belépési link 30 napig használható. Ezután új link igénylése szükséges.
+                            ${en ? "The login link can be used for 30 days. After that, a new link must be requested." : "A belépési link 30 napig használható. Ezután új link igénylése szükséges."}
                           </div>
                         </div>
                       </td>
@@ -137,10 +150,10 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
                   <!-- Support box -->
                   <div style="background:#0F172A; border-radius:16px; padding:20px; color:#F8FAFC;">
                     <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#4ADE80; margin-bottom:8px;">
-                      Támogatás
+                      ${en ? "Support" : "Támogatás"}
                     </div>
                     <div style="font-size:13px; line-height:1.6;">
-                      Amennyiben ezt a meghívót tévedésből kapta, kérjük, hagyja figyelmen kívül. Segítség vagy kérdés esetén forduljon a Pannon Transfer dedikált kapcsolattartójához.
+                      ${en ? "If you received this invitation by mistake, please ignore it. If you need help or have any questions, please contact your dedicated Pannon Transfer contact person." : "Amennyiben ezt a meghívót tévedésből kapta, kérjük, hagyja figyelmen kívül. Segítség vagy kérdés esetén forduljon a Pannon Transfer dedikált kapcsolattartójához."}
                     </div>
                   </div>
                   
@@ -151,9 +164,9 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
               <tr>
                 <td bgcolor="#F8FAFC" style="padding:24px 32px; border-top:1px solid #E2E8F0; text-align:center;">
                   <p style="margin:0; font-size:11px; line-height:1.6; color:#94A3B8;">
-                    Ezt az üzenetet a Pannon Transfer NI Portál rendszere küldte.<br>
-                    Kérdés esetén: Vezető fejlesztő - Balog Sebastian Máté (balogh.sebastian@pannonguard.hu, +36 30 665 4135)<br>
-                    © ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.
+                    ${en ? "This message was sent by the Pannon Transfer NI Portal system." : "Ezt az üzenetet a Pannon Transfer NI Portál rendszere küldte."}<br>
+                    ${en ? "For any questions: Lead Developer - Sebastian Máté Balog" : "Kérdés esetén: Vezető fejlesztő - Balog Sebastian Máté"} (balogh.sebastian@pannonguard.hu, +36 30 665 4135)<br>
+                    © ${new Date().getFullYear()} Pannon Transfer. ${en ? "All rights reserved." : "Minden jog fenntartva."}
                   </p>
                 </td>
               </tr>
@@ -165,23 +178,42 @@ Az NI Portál hozzáférése elkészült. Az alábbi egyedi linken tud belépni.
   </tr>
 </table>
 </body></html>`;
-  const text = [
-    "Sikeres aktiválás az NI Portálon!",
-    "",
-    "Jelszavát sikeresen beállította. A vállalati fiókja mostantól aktív.",
-    twoFactorRequired ? "A kétfaktoros hitelesítés (2FA) beállítása kötelező a rendszerhez." : "A 2FA hitelesítés nincs bekapcsolva.",
-    "",
-    "Kizárólag az alábbi EGYEDI linken keresztül tud belépni az NI Portálra (publikus bejelentkezési oldal nincs):",
-    loginLink,
-    "",
-    "Belépési fiók: " + recipientEmail,
-    "",
-    "A link 30 napig érvényes. Lejárta után kérjük, igényeljen új linket az ügyvezetőtől.",
-    "",
-    "Tisztelettel:",
-    "Pannon Transfer - NI dedikált portál",
-    `© ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.`,
-  ].join("\n");
+  const text = (en
+    ? [
+        "Activation successful on the NI Portal!",
+        "",
+        "You have successfully set your password. Your corporate account is now active.",
+        twoFactorRequired ? "Setting up two-factor authentication (2FA) is mandatory for this system." : "2FA authentication is not enabled.",
+        "",
+        "You can only log in to the NI Portal via the UNIQUE link below (there is no public login page):",
+        loginLink,
+        "",
+        "Login account: " + recipientEmail,
+        "",
+        "The link is valid for 30 days. After it expires, please request a new link from the managing director.",
+        "",
+        "Kind regards,",
+        "Pannon Transfer - dedicated NI portal",
+        `© ${new Date().getFullYear()} Pannon Transfer. All rights reserved.`,
+      ]
+    : [
+        "Sikeres aktiválás az NI Portálon!",
+        "",
+        "Jelszavát sikeresen beállította. A vállalati fiókja mostantól aktív.",
+        twoFactorRequired ? "A kétfaktoros hitelesítés (2FA) beállítása kötelező a rendszerhez." : "A 2FA hitelesítés nincs bekapcsolva.",
+        "",
+        "Kizárólag az alábbi EGYEDI linken keresztül tud belépni az NI Portálra (publikus bejelentkezési oldal nincs):",
+        loginLink,
+        "",
+        "Belépési fiók: " + recipientEmail,
+        "",
+        "A link 30 napig érvényes. Lejárta után kérjük, igényeljen új linket az ügyvezetőtől.",
+        "",
+        "Tisztelettel:",
+        "Pannon Transfer - NI dedikált portál",
+        `© ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.`,
+      ]
+  ).join("\n");
   return { html, text };
 }
 
@@ -190,6 +222,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const token = String(body?.token || "");
     const password = String(body?.password || "");
+    const language = normalizePortalLanguage(body?.language);
 
     if (!token || !password) {
       return NextResponse.json(
@@ -253,7 +286,7 @@ export async function POST(request: Request) {
       }
 
       const magicLink = `${loginBase}/ni/auth?token=${encodeURIComponent(magicRaw)}`;
-      const { html, text } = buildWelcomeEmail(res.user.email, magicLink, require2FA);
+      const { html, text } = buildWelcomeEmail(res.user.email, magicLink, require2FA, language);
 
       console.log("\n=========== NI WELCOME EMAIL (TEST MODE) ===========");
       console.log("Címzett:", res.user.email);
@@ -263,9 +296,14 @@ export async function POST(request: Request) {
 
       const emailRes = await sendEmail({
         to: res.user.email,
-        subject: require2FA
-          ? "NI Portál – Jelszó beállítva · 2FA kötelező · Egyedi belépési link"
-          : "NI Portál – Üdvözlünk! Jelszó beállítva · Egyedi belépési link",
+        subject:
+          language === "en"
+            ? require2FA
+              ? "NI Portal – Password set · 2FA required · Unique login link"
+              : "NI Portal – Welcome! Password set · Unique login link"
+            : require2FA
+              ? "NI Portál – Jelszó beállítva · 2FA kötelező · Egyedi belépési link"
+              : "NI Portál – Üdvözlünk! Jelszó beállítva · Egyedi belépési link",
         html,
         text,
       });

@@ -18,6 +18,8 @@ import {
   Clock3,
   Building2,
 } from "lucide-react";
+import { useNiLanguage } from "../useNiLanguage";
+import NiLanguageSwitcher from "../components/NiLanguageSwitcher";
 
 function extractTokenFromUrl(): string {
   if (typeof window === "undefined") return "";
@@ -86,7 +88,10 @@ function InfoTile({
   );
 }
 
+const SUPPORT_EMAIL = "balog.sebastian@pannonguard.hu";
+
 export default function NiSetupPasswordPage() {
+  const { portalLanguage, locale, tr, msg } = useNiLanguage();
   const [rawToken, setRawToken] = useState("");
   const [state, setState] = useState<
     "loading" | "invalid" | "form" | "tfa-setup" | "done"
@@ -107,6 +112,22 @@ export default function NiSetupPasswordPage() {
   const [tfaUseBackup, setTfaUseBackup] = useState(false);
   const [tfaCopied, setTfaCopied] = useState<string | null>(null);
   const [tfaBackupDownloaded, setTfaBackupDownloaded] = useState(false);
+  const newUniqueLinkSubject = tr("NI Portál - Új egyedi belépési link kérése", "NI Portal - Request for a new unique login link");
+  const newUniqueLinkBodyPrefix = tr(
+    "Kérek egy új egyedi belépési linket a NI Portálhoz ezen címen: ",
+    "Please send me a new unique login link for the NI Portal to this address: "
+  );
+  const newUniqueLinkHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(newUniqueLinkSubject)}&body=${encodeURIComponent(
+    `${newUniqueLinkBodyPrefix}${email || ""}`
+  )}`;
+  const welcomeEmailSubject = tr("NI Portál - Welcome email nem érkezett meg", "NI Portal - Welcome email not received");
+  const welcomeEmailBodyPrefix = tr(
+    "Kérek egy új egyedi belépési linket a NI Portálhoz ezen címen: ",
+    "Please send me a new unique login link for the NI Portal to this address: "
+  );
+  const welcomeEmailMissingHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(welcomeEmailSubject)}&body=${encodeURIComponent(
+    `${welcomeEmailBodyPrefix}${email || ""}`
+  )}`;
 
   useEffect(() => {
     const t = extractTokenFromUrl();
@@ -140,7 +161,10 @@ export default function NiSetupPasswordPage() {
           setAlreadyActivated(!!json.alreadyActivated);
           if (json.alreadyActivated) {
             setError(
-              "Ez a fiók már aktiválva lett. Továbblépéshez használd a NI Portálra küldött egyedi bejelentkezési linket, vagy lépj kapcsolatba az ügyvezetővel új meghívóért."
+              tr(
+                "Ez a fiók már aktiválva lett. Továbblépéshez használd a NI Portálra küldött egyedi bejelentkezési linket, vagy lépj kapcsolatba az ügyvezetővel új meghívóért.",
+                "This account has already been activated. To continue, use the unique sign-in link sent to the NI Portal, or contact the managing director for a new invitation."
+              )
             );
           }
           setState("form");
@@ -152,7 +176,7 @@ export default function NiSetupPasswordPage() {
     return () => {
       cancelled = true;
     };
-  }, [rawToken]);
+  }, [rawToken, tr]);
 
   const getStrength = (p: string) => {
     let s = 0;
@@ -168,22 +192,23 @@ export default function NiSetupPasswordPage() {
     e.preventDefault();
     setError(null);
     if (alreadyActivated) {
-      window.location.href =
-        "mailto:balog.sebastian@pannonguard.hu?subject=NI%20Port%C3%A1l%20-%20%C3%9Aj%20egyedi%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se&body=K%C3%A9rek%20egy%20%C3%BAj%20egyedi%20bel%C3%A9p%C3%A9si%20linket%20a%20NI%20Port%C3%A1lhoz%20ezen%20c%C3%ADmen:%20" +
-        encodeURIComponent(email || "");
+      window.location.href = newUniqueLinkHref;
       return;
     }
     if (password.length < 8) {
-      setError("A jelszónak minimum 8 karakter hosszúnak kell lennie.");
+      setError(tr("A jelszónak minimum 8 karakter hosszúnak kell lennie.", "The password must be at least 8 characters long."));
       return;
     }
     if (password !== confirm) {
-      setError("A két jelszó nem egyezik meg.");
+      setError(tr("A két jelszó nem egyezik meg.", "The two passwords do not match."));
       return;
     }
     if (getStrength(password) < 3) {
       setError(
-        "A jelszó túl gyenge. Használj kisbetűt, nagybetűt és számot a biztonságos hozzáféréshez."
+        tr(
+          "A jelszó túl gyenge. Használj kisbetűt, nagybetűt és számot a biztonságos hozzáféréshez.",
+          "The password is too weak. Use lowercase letters, uppercase letters, and numbers for secure access."
+        )
       );
       return;
     }
@@ -192,11 +217,11 @@ export default function NiSetupPasswordPage() {
       const res = await fetch("/api/ni-auth/set-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: rawToken, password }),
+        body: JSON.stringify({ token: rawToken, password, language: portalLanguage }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        setError(json?.message || "Hiba történt a jelszó beállítása közben.");
+        setError(msg(json?.message) || tr("Hiba történt a jelszó beállítása közben.", "An error occurred while setting the password."));
       } else if (json.requireTwoFactorSetup && json.twoFactorSetup) {
         setTfaQr(json.twoFactorSetup.qrDataUrl || null);
         setTfaSecret(json.twoFactorSetup.secretBase32 || null);
@@ -208,7 +233,12 @@ export default function NiSetupPasswordPage() {
         setState("done");
       }
     } catch {
-      setError("Hálózati hiba történt. Kérjük, ellenőrizd az internetkapcsolatot.");
+      setError(
+        tr(
+          "Hálózati hiba történt. Kérjük, ellenőrizd az internetkapcsolatot.",
+          "A network error occurred. Please check your internet connection."
+        )
+      );
     } finally {
       setSubmitting(false);
     }
@@ -219,11 +249,11 @@ export default function NiSetupPasswordPage() {
     setError(null);
     const clean = tfaCode.replace(/\s+/g, "");
     if (!tfaUseBackup && (clean.length !== 6 || !/^\d{6}$/.test(clean))) {
-      setError("Az Authenticator kód 6 számjegyből áll.");
+      setError(tr("Az Authenticator kód 6 számjegyből áll.", "The Authenticator code consists of 6 digits."));
       return;
     }
     if (tfaUseBackup && clean.length < 6) {
-      setError("A biztonsági kód formátuma: A1B2-C3D4-E5");
+      setError(tr("A biztonsági kód formátuma: A1B2-C3D4-E5", "Backup code format: A1B2-C3D4-E5"));
       return;
     }
     setSubmitting(true);
@@ -239,12 +269,12 @@ export default function NiSetupPasswordPage() {
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        setError(json?.message || "Helytelen kód.");
+        setError(msg(json?.message) || tr("Helytelen kód.", "Incorrect code."));
       } else {
         setState("done");
       }
     } catch {
-      setError("Hálózati hiba történt.");
+      setError(tr("Hálózati hiba történt.", "A network error occurred."));
     } finally {
       setSubmitting(false);
     }
@@ -261,21 +291,21 @@ export default function NiSetupPasswordPage() {
   const downloadBackupCodes = () => {
     if (!tfaBackupCodes) return;
     const content =
-      "NI Portál – Kétfaktoros hitelesítés – Biztonsági kódok\n\n" +
-      `Fiók: ${email || "N/A"}\n` +
-      `Dátum: ${new Date().toLocaleString("hu-HU")}\n\n` +
-      "Használj egyet-egyet, ha az Authenticator alkalmazásodhoz nincs hozzáférés.\n" +
-      "Minden kód csak egyszer használható.\n\n" +
+      `${tr("NI Portál", "NI Portal")} – ${tr("Kétfaktoros hitelesítés", "Two-factor authentication")} – ${tr("Biztonsági kódok", "Backup codes")}\n\n` +
+      `${tr("Fiók", "Account")}: ${email || "N/A"}\n` +
+      `${tr("Dátum", "Date")}: ${new Date().toLocaleString(locale)}\n\n` +
+      `${tr("Használj egyet-egyet, ha az Authenticator alkalmazásodhoz nincs hozzáférés.", "Use these one by one if you do not have access to your Authenticator app.")}\n` +
+      `${tr("Minden kód csak egyszer használható.", "Each code can only be used once.")}\n\n` +
       "-------------------------\n" +
       tfaBackupCodes.map((c, i) => `${String(i + 1).padStart(2, "0")}.  ${c}`).join("\n") +
       "\n-------------------------\n\n" +
-      "Kérjük, tárold ezeket a kódokat biztonságos helyen.\n" +
-      "© Pannon Transfer Kft. – NI Dedikált Ügyfélportál";
+      `${tr("Kérjük, tárold ezeket a kódokat biztonságos helyen.", "Please store these codes in a safe place.")}\n` +
+      `© Pannon Transfer Kft. – ${tr("NI Dedikált Ügyfélportál", "NI Dedicated Customer Portal")}`;
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `NI_Portal_Biztonsagi_Kodok_${email || "user"}.txt`;
+    a.download = `${tr("NI_Portal_Biztonsagi_Kodok", "NI_Portal_Backup_Codes")}_${email || "user"}.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -285,8 +315,8 @@ export default function NiSetupPasswordPage() {
 
   const strength = getStrength(password);
   const strengthText =
-    ["Túl gyenge", "Gyenge", "Közepes", "Erős", "Nagyon erős", "Kiváló"][strength] ||
-    "Túl gyenge";
+    [tr("Túl gyenge", "Very weak"), tr("Gyenge", "Weak"), tr("Közepes", "Medium"), tr("Erős", "Strong"), tr("Nagyon erős", "Very strong"), tr("Kiváló", "Excellent")][strength] ||
+    tr("Túl gyenge", "Very weak");
   const strengthColor = [
     "from-red-500 to-red-400",
     "from-orange-500 to-orange-400",
@@ -297,10 +327,10 @@ export default function NiSetupPasswordPage() {
   ][strength] || "from-red-500 to-red-400";
 
   const passwordRules = [
-    { label: "Minimum 8 karakter", passed: password.length >= 8 },
-    { label: "Legalább 1 nagybetű", passed: /[A-Z]/.test(password) },
-    { label: "Legalább 1 kisbetű", passed: /[a-z]/.test(password) },
-    { label: "Legalább 1 szám", passed: /[0-9]/.test(password) },
+    { label: tr("Minimum 8 karakter", "Minimum 8 characters"), passed: password.length >= 8 },
+    { label: tr("Legalább 1 nagybetű", "At least 1 uppercase letter"), passed: /[A-Z]/.test(password) },
+    { label: tr("Legalább 1 kisbetű", "At least 1 lowercase letter"), passed: /[a-z]/.test(password) },
+    { label: tr("Legalább 1 szám", "At least 1 number"), passed: /[0-9]/.test(password) },
   ];
 
   return (
@@ -318,14 +348,17 @@ export default function NiSetupPasswordPage() {
               <span className="text-sm font-black uppercase tracking-tight text-[#0B2B1B]">ni</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[15px] font-bold leading-none text-zinc-950">NI Portál</span>
+              <span className="text-[15px] font-bold leading-none text-zinc-950">{tr("NI Portál", "NI Portal")}</span>
               <span className="mt-1 text-[11px] tracking-[0.14em] text-zinc-500 uppercase">
-                Pannon Transfer · Hozzáférés aktiválása
+                {tr("Pannon Transfer · Hozzáférés aktiválása", "Pannon Transfer · Access activation")}
               </span>
             </div>
           </div>
-          <div className="hidden rounded-full border border-zinc-200/80 bg-white/90 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500 shadow-[0_12px_30px_rgba(15,23,42,0.06)] sm:inline-flex">
-            Dedikált partnerhozzáférés
+          <div className="flex items-center gap-3">
+            <NiLanguageSwitcher className="rounded-full border border-zinc-200 bg-zinc-900 px-1.5 py-1 shadow-sm" />
+            <div className="hidden rounded-full border border-zinc-200/80 bg-white/90 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500 shadow-[0_12px_30px_rgba(15,23,42,0.06)] sm:inline-flex">
+              {tr("Dedikált partnerhozzáférés", "Dedicated partner access")}
+            </div>
           </div>
         </div>
       </div>
@@ -335,35 +368,38 @@ export default function NiSetupPasswordPage() {
           <div className="max-w-2xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#22C55E]/30 bg-white/70 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#15803D] shadow-[0_16px_34px_rgba(15,23,42,0.05)] backdrop-blur-xl">
                 <ShieldCheck className="h-4 w-4" />
-                NI Partner Portál Hozzáférés
+                {tr("NI Partner Portál Hozzáférés", "NI Partner Portal Access")}
               </div>
               <h1 className="max-w-xl text-5xl font-semibold leading-[1.02] tracking-[-0.04em] text-zinc-950">
-                Biztonságos beléptetés az NI dedikált partnerportáljára.
+                {tr("Biztonságos beléptetés az NI dedikált partnerportáljára.", "Secure onboarding to the NI dedicated partner portal.")}
               </h1>
               <p className="mt-6 max-w-xl text-[17px] leading-8 text-zinc-600">
-                Kérjük, kövesse a képernyőn látható lépéseket fiókja aktiválásához. A rendszer a legmagasabb biztonsági szabványok szerint védi a vállalati foglalásokat és az egyedi árstruktúrákat.
+                {tr(
+                  "Kérjük, kövesse a képernyőn látható lépéseket fiókja aktiválásához. A rendszer a legmagasabb biztonsági szabványok szerint védi a vállalati foglalásokat és az egyedi árstruktúrákat.",
+                  "Please follow the on-screen steps to activate your account. The system protects company bookings and bespoke pricing structures in line with the highest security standards."
+                )}
               </p>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <InfoTile
                 icon={<Lock className="h-5 w-5" />}
-                label="Hozzáférés"
-                value="Egyedi, személyes aktiválási folyamat"
+                label={tr("Hozzáférés", "Access")}
+                value={tr("Egyedi, személyes aktiválási folyamat", "Unique, personal activation process")}
               />
               <InfoTile
                 icon={<ShieldCheck className="h-5 w-5" />}
-                label="Biztonság"
-                value={require2FA ? "2FA kötelező a következő lépésben" : "Erős jelszavas védelem"}
+                label={tr("Biztonság", "Security")}
+                value={require2FA ? tr("2FA kötelező a következő lépésben", "2FA required in the next step") : tr("Erős jelszavas védelem", "Strong password protection")}
               />
               <InfoTile
                 icon={<Clock3 className="h-5 w-5" />}
-                label="Belépés"
-                value="Emailben küldött egyedi linkkel"
+                label={tr("Belépés", "Sign-in")}
+                value={tr("Emailben küldött egyedi linkkel", "With a unique link sent by email")}
               />
               <InfoTile
                 icon={<Building2 className="h-5 w-5" />}
-                label="Portal"
-                value="NI dedikált árstruktúra és foglalások"
+                label={tr("Portal", "Portal")}
+                value={tr("NI dedikált árstruktúra és foglalások", "NI dedicated pricing structure and bookings")}
               />
             </div>
 
@@ -374,22 +410,22 @@ export default function NiSetupPasswordPage() {
                   </div>
                   <div>
                     <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                      Aktiválási tudnivalók
+                      {tr("Aktiválási tudnivalók", "Activation notes")}
                     </div>
                     <div className="mt-1 text-lg font-semibold text-zinc-950">
-                      Zárt rendszerű hozzáférés.
+                      {tr("Zárt rendszerű hozzáférés.", "Closed-system access.")}
                     </div>
                   </div>
                 </div>
                 <div className="grid gap-3 text-[14px] leading-7 text-zinc-600">
                   <div className="rounded-2xl border border-zinc-200/70 bg-[#f0fdf4] px-4 py-3">
-                    Aktiválja fiókját egy erős jelszó megadásával az űrlapon.
+                    {tr("Aktiválja fiókját egy erős jelszó megadásával az űrlapon.", "Activate your account by setting a strong password in the form.")}
                   </div>
                   <div className="rounded-2xl border border-zinc-200/70 bg-white px-4 py-3">
-                    A rendszer minden foglalást és árstruktúrát szigorúan elkülönítve, biztonságosan kezel.
+                    {tr("A rendszer minden foglalást és árstruktúrát szigorúan elkülönítve, biztonságosan kezel.", "The system handles all bookings and pricing structures securely and in strict separation.")}
                   </div>
                   <div className="rounded-2xl border border-zinc-200/70 bg-white px-4 py-3">
-                    A sikeres aktiválást követően a végleges belépési linket emailben küldjük el Önnek.
+                    {tr("A sikeres aktiválást követően a végleges belépési linket emailben küldjük el Önnek.", "After successful activation, we will send your final login link by email.")}
                   </div>
                 </div>
               </div>
@@ -411,10 +447,13 @@ export default function NiSetupPasswordPage() {
                   <Loader2 className="h-9 w-9 animate-spin" />
                 </div>
                 <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-zinc-950">
-                  Hozzáférés előkészítése
+                  {tr("Hozzáférés előkészítése", "Preparing access")}
                 </h2>
                 <p className="mx-auto mt-3 max-w-md text-[15px] leading-7 text-zinc-500">
-                  Ellenőrizzük a meghívó érvényességét és betöltjük a személyes aktiválási adatokat.
+                  {tr(
+                    "Ellenőrizzük a meghívó érvényességét és betöltjük a személyes aktiválási adatokat.",
+                    "We are checking the validity of your invitation and loading your personal activation details."
+                  )}
                 </p>
               </motion.div>
             )}
@@ -433,39 +472,42 @@ export default function NiSetupPasswordPage() {
                     <AlertTriangle className="h-10 w-10" />
                   </div>
                   <h1 className="text-[30px] font-semibold tracking-[-0.03em] text-zinc-950">
-                    Érvénytelen vagy lejárt link
+                    {tr("Érvénytelen vagy lejárt link", "Invalid or expired link")}
                   </h1>
                   <p className="mx-auto mt-3 max-w-md text-[15px] leading-7 text-zinc-500">
-                    Ez a hozzáférési link nem létezik, lejárt, vagy már felhasználták. Kérj új meghívót, és a rendszer új, egyedi aktiválási linket küld.
+                    {tr(
+                      "Ez a hozzáférési link nem létezik, lejárt, vagy már felhasználták. Kérj új meghívót, és a rendszer új, egyedi aktiválási linket küld.",
+                      "This access link does not exist, has expired, or has already been used. Request a new invitation and the system will send a new, unique activation link."
+                    )}
                   </p>
                 </div>
 
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <InfoTile
                     icon={<Mail className="h-5 w-5" />}
-                    label="Kapcsolat"
-                    value="balog.sebastian@pannonguard.hu"
+                    label={tr("Kapcsolat", "Contact")}
+                    value={SUPPORT_EMAIL}
                   />
                   <InfoTile
                     icon={<ShieldCheck className="h-5 w-5" />}
-                    label="Állapot"
-                    value="Új meghívó szükséges"
+                    label={tr("Állapot", "Status")}
+                    value={tr("Új meghívó szükséges", "A new invitation is required")}
                   />
                 </div>
 
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <a
-                    href="mailto:balog.sebastian@pannonguard.hu?subject=NI%20Port%C3%A1l%20-%20%C3%9Aj%20egyedi%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
+                    href={newUniqueLinkHref}
                     className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#0B1F47] px-5 text-[14px] font-semibold text-white shadow-[0_18px_40px_rgba(11,31,71,0.20)] transition-transform duration-200 hover:-translate-y-0.5"
                   >
                     <Mail className="h-4.5 w-4.5" />
-                    Új link kérése emailben
+                    {tr("Új link kérése emailben", "Request a new link by email")}
                   </a>
                   <a
-                    href="mailto:balog.sebastian@pannonguard.hu"
+                    href={`mailto:${SUPPORT_EMAIL}`}
                     className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-5 text-[14px] font-semibold text-zinc-900 shadow-[0_14px_34px_rgba(15,23,42,0.06)] transition-transform duration-200 hover:-translate-y-0.5"
                   >
-                    Ügyfélszolgálat elérése
+                    {tr("Ügyfélszolgálat elérése", "Contact customer support")}
                   </a>
                 </div>
               </motion.div>
@@ -484,15 +526,21 @@ export default function NiSetupPasswordPage() {
                 <div className="rounded-[30px] border border-white/70 bg-[linear-gradient(135deg,rgba(34,197,94,0.20),rgba(255,255,255,0.95))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
                   <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#15803D]">
                     <KeyRound className="h-4 w-4" />
-                    1. lépés · Jelszó beállítása
+                    {tr("1. lépés · Jelszó beállítása", "Step 1 · Set your password")}
                   </div>
                   <h1 className="mt-4 text-[30px] font-semibold tracking-[-0.03em] text-zinc-950">
-                    Aktiváld a NI portálhozzáférést
+                    {tr("Aktiváld a NI portálhozzáférést", "Activate your NI portal access")}
                   </h1>
                   <p className="mt-3 max-w-lg text-[15px] leading-7 text-zinc-600">
                     {alreadyActivated
-                      ? "Ez a fiók már aktív. Új egyedi belépési link kéréséhez vedd fel a kapcsolatot az ügyfélszolgálattal az alábbi elérhetőségen."
-                      : "Állíts be egy erős, kizárólag általad ismert jelszót. A működés változatlan: sikeres aktiválás után a rendszer emailben küldi az egyedi belépési linket."}
+                      ? tr(
+                          "Ez a fiók már aktív. Új egyedi belépési link kéréséhez vedd fel a kapcsolatot az ügyfélszolgálattal az alábbi elérhetőségen.",
+                          "This account is already active. To request a new unique login link, contact customer support using the details below."
+                        )
+                      : tr(
+                          "Állíts be egy erős, kizárólag általad ismert jelszót. A működés változatlan: sikeres aktiválás után a rendszer emailben küldi az egyedi belépési linket.",
+                          "Set a strong password known only to you. The process remains unchanged: after successful activation, the system will email your unique login link."
+                        )}
                   </p>
                 </div>
 
@@ -503,21 +551,21 @@ export default function NiSetupPasswordPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                        Meghívott fiók
+                        {tr("Meghívott fiók", "Invited account")}
                       </div>
                       <div className="mt-1 truncate text-[16px] font-semibold text-zinc-950">
-                        {email || "Kérés feldolgozása..."}
+                        {email || tr("Kérés feldolgozása...", "Processing request...")}
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-[11px] font-semibold text-zinc-600">
                         <Clock3 className="h-3.5 w-3.5" />
-                        Egyszeri aktiválás
+                        {tr("Egyszeri aktiválás", "One-time activation")}
                       </span>
                       {require2FA && (
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-[#22C55E]/35 bg-[#22C55E]/10 px-3 py-1.5 text-[11px] font-semibold text-[#166534]">
                           <ShieldCheck className="h-3.5 w-3.5" />
-                          2FA kötelező
+                          {tr("2FA kötelező", "2FA required")}
                         </span>
                       )}
                     </div>
@@ -529,14 +577,14 @@ export default function NiSetupPasswordPage() {
                     <div className="mt-5 rounded-[28px] border border-zinc-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(249,250,251,0.96))] p-5">
                       <div className="mb-4">
                         <label className="mb-2 block pl-0.5 text-[13px] font-semibold text-zinc-800">
-                          Új jelszó
+                          {tr("Új jelszó", "New password")}
                         </label>
                         <div className="relative">
                           <input
                             type={showPwd ? "text" : "password"}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Minimum 8 karakter · kisbetű · nagybetű · szám"
+                            placeholder={tr("Minimum 8 karakter · kisbetű · nagybetű · szám", "Minimum 8 characters · lowercase · uppercase · number")}
                             className="h-[58px] w-full rounded-2xl border border-zinc-200 bg-white px-4 pr-12 text-[15px] font-medium text-zinc-900 placeholder:text-zinc-400 shadow-[0_10px_28px_rgba(15,23,42,0.04)] transition-all focus:border-[#22C55E]/50 focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20"
                             autoComplete="new-password"
                           />
@@ -545,6 +593,8 @@ export default function NiSetupPasswordPage() {
                             onClick={() => setShowPwd((p) => !p)}
                             className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
                             tabIndex={-1}
+                            aria-label={showPwd ? tr("Jelszó elrejtése", "Hide password") : tr("Jelszó megjelenítése", "Show password")}
+                            title={showPwd ? tr("Jelszó elrejtése", "Hide password") : tr("Jelszó megjelenítése", "Show password")}
                           >
                             {showPwd ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
                           </button>
@@ -556,14 +606,14 @@ export default function NiSetupPasswordPage() {
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                                Jelszó erőssége
+                                {tr("Jelszó erőssége", "Password strength")}
                               </div>
                               <div className="mt-1 text-[14px] font-semibold text-zinc-900">
                                 {strengthText}
                               </div>
                             </div>
                             <div className="text-right text-[12px] font-medium text-zinc-500">
-                              Biztonságos, ha több feltétel teljesül
+                              {tr("Biztonságos, ha több feltétel teljesül", "Most secure when several criteria are met")}
                             </div>
                           </div>
                           <div className="mt-4 grid grid-cols-5 gap-2">
@@ -588,13 +638,13 @@ export default function NiSetupPasswordPage() {
 
                       <div>
                         <label className="mb-2 block pl-0.5 text-[13px] font-semibold text-zinc-800">
-                          Jelszó megerősítése
+                          {tr("Jelszó megerősítése", "Confirm password")}
                         </label>
                         <input
                           type={showPwd ? "text" : "password"}
                           value={confirm}
                           onChange={(e) => setConfirm(e.target.value)}
-                          placeholder="Írd be újra a fenti jelszót"
+                          placeholder={tr("Írd be újra a fenti jelszót", "Enter the password above again")}
                           className="h-[58px] w-full rounded-2xl border border-zinc-200 bg-white px-4 text-[15px] font-medium text-zinc-900 placeholder:text-zinc-400 shadow-[0_10px_28px_rgba(15,23,42,0.04)] transition-all focus:border-[#22C55E]/50 focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20"
                           autoComplete="new-password"
                         />
@@ -632,28 +682,31 @@ export default function NiSetupPasswordPage() {
                       {submitting ? (
                         <>
                           <Loader2 className="h-4.5 w-4.5 animate-spin" />
-                          Feldolgozás...
+                          {tr("Feldolgozás...", "Processing...")}
                         </>
                       ) : require2FA ? (
                         <>
-                          Jelszó beállítása és tovább a 2FA-hoz
+                          {tr("Jelszó beállítása és tovább a 2FA-hoz", "Set password and continue to 2FA")}
                           <ArrowRight className="h-4.5 w-4.5" />
                         </>
                       ) : (
                         <>
-                          Jelszó beállítása
+                          {tr("Jelszó beállítása", "Set password")}
                           <ArrowRight className="h-4.5 w-4.5" />
                         </>
                       )}
                     </button>
 
                     <p className="mt-5 text-center text-[12px] leading-6 text-zinc-500">
-                      A jelszó beállításával megerősíted a céges hozzáférési feltételek elfogadását.{" "}
+                      {tr(
+                        "A jelszó beállításával megerősíted a céges hozzáférési feltételek elfogadását.",
+                        "By setting your password, you confirm your acceptance of the corporate access terms."
+                      )}{" "}
                       <a
-                        href="mailto:balog.sebastian@pannonguard.hu"
+                        href={`mailto:${SUPPORT_EMAIL}`}
                         className="font-semibold text-[#15803D] hover:underline"
                       >
-                        Támogatás
+                        {tr("Támogatás", "Support")}
                       </a>
                     </p>
                   </>
@@ -667,16 +720,19 @@ export default function NiSetupPasswordPage() {
                       </div>
                       <div className="flex-1">
                         <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                          Új link igénylése
+                          {tr("Új link igénylése", "Request a new link")}
                         </div>
                         <p className="mt-2 text-[14px] leading-7 text-zinc-600">
-                          Vedd fel a kapcsolatot az ügyfélszolgálattal az egyedi belépési link újraküldéséhez:
+                          {tr(
+                            "Vedd fel a kapcsolatot az ügyfélszolgálattal az egyedi belépési link újraküldéséhez:",
+                            "Contact customer support to have your unique login link sent again:"
+                          )}
                         </p>
                         <a
-                          href="mailto:balog.sebastian@pannonguard.hu?subject=NI%20Port%C3%A1l%20-%20%C3%9Aj%20egyedi%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
+                          href={newUniqueLinkHref}
                           className="mt-3 inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2 text-[13px] font-semibold text-[#15803D] transition-colors hover:bg-[#dcfce7]"
                         >
-                          balog.sebastian@pannonguard.hu
+                          {SUPPORT_EMAIL}
                         </a>
                       </div>
                     </div>
@@ -698,20 +754,23 @@ export default function NiSetupPasswordPage() {
                 <div className="rounded-[30px] border border-[#22C55E]/20 bg-[linear-gradient(135deg,rgba(34,197,94,0.18),rgba(255,255,255,0.95))] p-6">
                   <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/85 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#15803D]">
                     <ShieldCheck className="h-4 w-4" />
-                    2. lépés · Kétfaktoros hitelesítés
+                    {tr("2. lépés · Kétfaktoros hitelesítés", "Step 2 · Two-factor authentication")}
                   </div>
                   <h1 className="mt-4 text-[30px] font-semibold tracking-[-0.03em] text-zinc-950">
-                    Biztonsági beállítás véglegesítése
+                    {tr("Biztonsági beállítás véglegesítése", "Complete your security setup")}
                   </h1>
                   <p className="mt-3 text-[15px] leading-7 text-zinc-600">
-                    Ez a fiók kizárólag 2FA-val érhető el. Olvasd be a QR-kódot az Authenticator alkalmazásba, mentsd el a tartalék kódokat, majd add meg az első ellenőrző kódot.
+                    {tr(
+                      "Ez a fiók kizárólag 2FA-val érhető el. Olvasd be a QR-kódot az Authenticator alkalmazásba, mentsd el a tartalék kódokat, majd add meg az első ellenőrző kódot.",
+                      "This account can only be accessed with 2FA. Scan the QR code into your Authenticator app, save the backup codes, then enter the first verification code."
+                    )}
                   </p>
                 </div>
 
                 <div className="mt-5 space-y-5">
                   <div className="rounded-[28px] border border-zinc-200/70 bg-white/92 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
                     <div className="mb-4 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                      1. lépés · QR-kód beolvasása
+                      {tr("1. lépés · QR-kód beolvasása", "Step 1 · Scan the QR code")}
                     </div>
                     <div className="flex flex-col gap-5 lg:flex-row">
                       <div className="mx-auto flex shrink-0 items-center justify-center rounded-[28px] border border-zinc-200 bg-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
@@ -719,7 +778,7 @@ export default function NiSetupPasswordPage() {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={tfaQr}
-                            alt="2FA QR kód"
+                            alt={tr("2FA QR kód", "2FA QR code")}
                             width={210}
                             height={210}
                             style={{ borderRadius: 18, display: "block" }}
@@ -730,11 +789,13 @@ export default function NiSetupPasswordPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="rounded-[24px] border border-zinc-200/70 bg-[#f0fdf4] p-4 text-[14px] leading-7 text-zinc-600">
-                          Nyisd meg a telefonodon az Authenticator alkalmazást, válaszd a <strong className="text-zinc-900">&quot;+&quot;</strong> ikont, majd olvasd be a bal oldali QR-kódot.
+                          {tr("Nyisd meg a telefonodon az Authenticator alkalmazást, válaszd a ", "Open the Authenticator app on your phone, select the ")}
+                          <strong className="text-zinc-900">&quot;+&quot;</strong>
+                          {tr(" ikont, majd olvasd be a bal oldali QR-kódot.", " icon, then scan the QR code on the left.")}
                         </div>
                         <div className="mt-4 rounded-[24px] border border-zinc-200/70 bg-white p-4">
                           <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                            Manuális kulcs, ha a QR nem olvasható
+                            {tr("Manuális kulcs, ha a QR nem olvasható", "Manual key if the QR code cannot be read")}
                           </div>
                           <div className="mt-3 flex items-center gap-2">
                             <code className="min-w-0 flex-1 break-all text-[13px] font-bold text-zinc-900">
@@ -744,7 +805,16 @@ export default function NiSetupPasswordPage() {
                               type="button"
                               onClick={() => copy(tfaSecret || "", "secret")}
                               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200"
-                              title="Kulcs másolása"
+                              title={
+                                tfaCopied === "secret"
+                                  ? tr("Kulcs kimásolva", "Key copied")
+                                  : tr("Kulcs másolása", "Copy key")
+                              }
+                              aria-label={
+                                tfaCopied === "secret"
+                                  ? tr("Kulcs kimásolva", "Key copied")
+                                  : tr("Kulcs másolása", "Copy key")
+                              }
                             >
                               {tfaCopied === "secret" ? (
                                 <Check className="h-4 w-4 text-emerald-600" />
@@ -762,10 +832,10 @@ export default function NiSetupPasswordPage() {
                     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                          2. lépés · Biztonsági kódok mentése
+                          {tr("2. lépés · Biztonsági kódok mentése", "Step 2 · Save your backup codes")}
                         </div>
                         <div className="mt-1 text-[15px] font-semibold text-zinc-950">
-                          Ezeket csak akkor használd, ha nincs nálad az Authenticator.
+                          {tr("Ezeket csak akkor használd, ha nincs nálad az Authenticator.", "Use these only if you do not have access to your Authenticator.")}
                         </div>
                       </div>
                       <button
@@ -778,7 +848,7 @@ export default function NiSetupPasswordPage() {
                         }`}
                       >
                         {tfaBackupDownloaded ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        {tfaBackupDownloaded ? "Letöltve" : "Kódok letöltése"}
+                        {tfaBackupDownloaded ? tr("Letöltve", "Downloaded") : tr("Kódok letöltése", "Download codes")}
                       </button>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -795,23 +865,26 @@ export default function NiSetupPasswordPage() {
                       ))}
                     </div>
                     <p className="mt-4 text-[12px] leading-6 text-zinc-500">
-                      Tárold ezeket a kódokat biztonságos helyen. Minden kód csak egyszer használható, és kiválthatja az Authenticator alkalmazást vészhelyzetben.
+                      {tr(
+                        "Tárold ezeket a kódokat biztonságos helyen. Minden kód csak egyszer használható, és kiválthatja az Authenticator alkalmazást vészhelyzetben.",
+                        "Store these codes in a safe place. Each code can only be used once and can replace the Authenticator app in an emergency."
+                      )}
                     </p>
                   </div>
 
                   <div className="rounded-[28px] border border-zinc-200/70 bg-white/92 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
                     <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                      3. lépés · Első ellenőrző kód
+                      {tr("3. lépés · Első ellenőrző kód", "Step 3 · First verification code")}
                     </div>
                     <div className="mt-1 text-[15px] font-semibold text-zinc-950">
-                      Add meg az alkalmazás által generált 6 számjegyű kódot.
+                      {tr("Add meg az alkalmazás által generált 6 számjegyű kódot.", "Enter the 6-digit code generated by the app.")}
                     </div>
 
                     <div className="mt-4">
                       <label className="mb-2 block pl-0.5 text-[13px] font-semibold text-zinc-800">
                         {tfaUseBackup
-                          ? "Biztonsági kód (pl. A1B2-C3D4-E5)"
-                          : "Authenticator 6 számjegyű kód"}
+                          ? tr("Biztonsági kód (pl. A1B2-C3D4-E5)", "Backup code (e.g. A1B2-C3D4-E5)")
+                          : tr("Authenticator 6 számjegyű kód", "Authenticator 6-digit code")}
                       </label>
                       <input
                         type="text"
@@ -824,7 +897,7 @@ export default function NiSetupPasswordPage() {
                           else v = v.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 16);
                           setTfaCode(v);
                         }}
-                        placeholder={tfaUseBackup ? "A1B2-C3D4-E5" : "000000"}
+                        placeholder={tfaUseBackup ? tr("A1B2-C3D4-E5", "A1B2-C3D4-E5") : "000000"}
                         className="h-[62px] w-full rounded-2xl border border-zinc-200 bg-white px-4 text-center font-mono text-[20px] font-bold tracking-[0.45em] text-zinc-900 placeholder:text-zinc-400 shadow-[0_10px_28px_rgba(15,23,42,0.04)] transition-all focus:border-[#22C55E]/50 focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20"
                       />
                     </div>
@@ -840,7 +913,7 @@ export default function NiSetupPasswordPage() {
                         }}
                         className="h-4 w-4 rounded border-zinc-300 text-[#16A34A] focus:ring-[#22C55E]/30"
                       />
-                      Biztonsági kódot használok most az Authenticator helyett
+                      {tr("Biztonsági kódot használok most az Authenticator helyett", "I am using a backup code instead of the Authenticator")}
                     </label>
                   </div>
                 </div>
@@ -872,11 +945,11 @@ export default function NiSetupPasswordPage() {
                   {submitting ? (
                     <>
                       <Loader2 className="h-4.5 w-4.5 animate-spin" />
-                      Feldolgozás...
+                      {tr("Feldolgozás...", "Processing...")}
                     </>
                   ) : (
                     <>
-                      2FA aktiválása és befejezés
+                      {tr("2FA aktiválása és befejezés", "Activate 2FA and finish")}
                       <ArrowRight className="h-4.5 w-4.5" />
                     </>
                   )}
@@ -903,23 +976,26 @@ export default function NiSetupPasswordPage() {
                     <CheckCircle2 className="h-12 w-12" />
                   </motion.div>
                   <h1 className="text-[32px] font-semibold tracking-[-0.03em] text-zinc-950">
-                    Hozzáférés sikeresen beállítva
+                    {tr("Hozzáférés sikeresen beállítva", "Access has been set up successfully")}
                   </h1>
                   <p className="mx-auto mt-3 max-w-lg text-[15px] leading-7 text-zinc-600">
-                    A NI Portál fiókod most már aktív. A következő lépés változatlan: a rendszer rövidesen emailben küldi az egyedi, személyre szabott belépési linket.
+                    {tr(
+                      "A NI Portál fiókod most már aktív. A következő lépés változatlan: a rendszer rövidesen emailben küldi az egyedi, személyre szabott belépési linket.",
+                      "Your NI Portal account is now active. The next step remains unchanged: the system will shortly email your unique, personalised login link."
+                    )}
                   </p>
                 </div>
 
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <InfoTile
                     icon={<Mail className="h-5 w-5" />}
-                    label="Belépési email"
-                    value={email || "Megadott email cím"}
+                    label={tr("Belépési email", "Login email")}
+                    value={email || tr("Megadott email cím", "Provided email address")}
                   />
                   <InfoTile
                     icon={<ShieldCheck className="h-5 w-5" />}
-                    label="Hozzáférés típusa"
-                    value={require2FA ? "Egyedi link + 2FA" : "Egyedi linkes belépés"}
+                    label={tr("Hozzáférés típusa", "Access type")}
+                    value={require2FA ? tr("Egyedi link + 2FA", "Unique link + 2FA") : tr("Egyedi linkes belépés", "Unique-link sign-in")}
                   />
                 </div>
 
@@ -930,14 +1006,16 @@ export default function NiSetupPasswordPage() {
                     </div>
                     <div>
                       <div className="text-[14px] font-semibold text-zinc-950">
-                        Ellenőrizd a postaládát és a spam mappát is
+                        {tr("Ellenőrizd a postaládát és a spam mappát is", "Check your inbox and spam folder as well")}
                       </div>
                       <p className="mt-2 text-[13px] leading-6 text-zinc-600">
-                        A belépéshez kizárólag az emailben küldött egyedi linket használd. A publikus <strong>/ni</strong> oldalon nincs ilyen belépési űrlap.
+                        {tr("A belépéshez kizárólag az emailben küldött egyedi linket használd. A publikus ", "Use only the unique link sent by email to sign in. There is no such sign-in form on the public ")}
+                        <strong>/ni</strong>
+                        {tr(" oldalon nincs ilyen belépési űrlap.", " page.")}
                         {require2FA && (
                           <>
                             {" "}
-                            A megnyitás után az Authenticator alkalmazásod 6 számjegyű kódját is kérni fogjuk.
+                            {tr("A megnyitás után az Authenticator alkalmazásod 6 számjegyű kódját is kérni fogjuk.", "After opening it, we will also ask for the 6-digit code from your Authenticator app.")}
                           </>
                         )}
                       </p>
@@ -946,15 +1024,12 @@ export default function NiSetupPasswordPage() {
                 </div>
 
                 <p className="mt-5 text-[13px] leading-7 text-zinc-500">
-                  Ez az oldal most bezárható. Ha nem érkezik meg az email, kérj új linket itt:{" "}
+                  {tr("Ez az oldal most bezárható. Ha nem érkezik meg az email, kérj új linket itt:", "You may now close this page. If the email does not arrive, request a new link here:")}{" "}
                   <a
-                    href={
-                      "mailto:balog.sebastian@pannonguard.hu?subject=NI%20Port%C3%A1l%20-%20Welcome%20email%20nem%20%C3%A9rkezett%20meg&body=K%C3%A9rek%20egy%20%C3%BAj%20egyedi%20bel%C3%A9p%C3%A9si%20linket%20a%20NI%20Port%C3%A1lhoz%20ezen%20c%C3%ADmen:%20" +
-                      encodeURIComponent(email)
-                    }
+                    href={welcomeEmailMissingHref}
                     className="font-semibold text-[#15803D] hover:underline"
                   >
-                    balog.sebastian@pannonguard.hu
+                    {SUPPORT_EMAIL}
                   </a>
                 </p>
               </motion.div>
@@ -965,9 +1040,9 @@ export default function NiSetupPasswordPage() {
 
       <div className="relative z-10 border-t border-white/60 bg-white/60 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-4 text-[11px] font-medium text-zinc-400 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
+          <span>© {new Date().getFullYear()} Pannon Transfer · {tr("Minden jog fenntartva.", "All rights reserved.")}</span>
           <span className="tracking-[0.18em] uppercase">
-            NI dedikált ügyfélportál · kizárólag linkalapú hozzáférés
+            {tr("NI dedikált ügyfélportál · kizárólag linkalapú hozzáférés", "NI dedicated customer portal · link-based access only")}
           </span>
         </div>
       </div>

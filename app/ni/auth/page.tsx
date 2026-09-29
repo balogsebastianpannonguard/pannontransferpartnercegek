@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -13,6 +14,8 @@ import {
   Mail,
   ArrowLeft,
 } from "lucide-react";
+import { useNiLanguage } from "../useNiLanguage";
+import NiLanguageSwitcher from "../components/NiLanguageSwitcher";
 
 function extractTokenFromUrl(): string {
   if (typeof window === "undefined") return "";
@@ -30,8 +33,14 @@ function extractTokenFromUrl(): string {
   }
 }
 
+const SUPPORT_EMAIL = "balog.sebastian@pannonguard.hu";
+
 export default function NiAuthPage() {
   const router = useRouter();
+  const { tr, msg } = useNiLanguage();
+  const newLoginLinkHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
+    tr("NI Portál - Új belépési link kérése", "NI Portal - Request for a new login link")
+  )}`;
   const [rawToken, setRawToken] = useState("");
   const [state, setState] = useState<
     "loading" | "invalid" | "twofactor" | "done" | "redirecting"
@@ -44,24 +53,30 @@ export default function NiAuthPage() {
 
   useEffect(() => {
     const t = extractTokenFromUrl();
-    setRawToken(t);
-    if (!t) {
-      setState("invalid");
-      return;
-    }
+    const frame = window.requestAnimationFrame(() => {
+      setRawToken(t);
+      if (!t) {
+        setState("invalid");
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    if (!rawToken) return;
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch("/api/ni-auth/magic-login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: t }),
+          body: JSON.stringify({ token: rawToken }),
         });
         if (cancelled) return;
         const json = await res.json().catch(() => null);
         if (!res.ok || !json?.success) {
           setState("invalid");
-          setError(json?.message || "Érvénytelen vagy lejárt link.");
+          setError(msg(json?.message) || tr("Érvénytelen vagy lejárt link.", "Invalid or expired link."));
         } else if (json.needTwoFactor) {
           setEmail(json.email || "");
           setState("twofactor");
@@ -72,20 +87,24 @@ export default function NiAuthPage() {
       } catch {
         if (!cancelled) {
           setState("invalid");
-          setError("Hálózati hiba történt.");
+          setError(tr("Hálózati hiba történt.", "A network error occurred."));
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [rawToken, router]);
+  }, [rawToken, router, msg, tr]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (code.replace(/\s+/g, "").length < 4) {
-      setError(useBackup ? "A biztonsági kód túl rövid." : "Az Authenticator kód 6 számjegyből áll.");
+      setError(
+        useBackup
+          ? tr("A biztonsági kód túl rövid.", "The backup code is too short.")
+          : tr("Az Authenticator kód 6 számjegyből áll.", "The Authenticator code consists of 6 digits.")
+      );
       return;
     }
     setSubmitting(true);
@@ -101,13 +120,13 @@ export default function NiAuthPage() {
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        setError(json?.message || "Helytelen kód.");
+        setError(msg(json?.message) || tr("Helytelen kód.", "Incorrect code."));
       } else {
         setState("done");
         setTimeout(() => router.push("/ni"), 2500);
       }
     } catch {
-      setError("Hálózati hiba történt.");
+      setError(tr("Hálózati hiba történt.", "A network error occurred."));
     } finally {
       setSubmitting(false);
     }
@@ -122,17 +141,22 @@ export default function NiAuthPage() {
               <span className="text-white font-black text-sm tracking-tighter">C</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-zinc-900 leading-none">NI Portál</span>
-              <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">Pannon Transfer · Egyedi bejelentkezés</span>
+              <span className="text-[15px] font-bold text-zinc-900 leading-none">{tr("NI Portál", "NI Portal")}</span>
+              <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">
+                {tr("Pannon Transfer · Egyedi bejelentkezés", "Pannon Transfer · Unique sign-in")}
+              </span>
             </div>
           </div>
-          <a
-            href="/"
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Vissza a főoldalra
-          </a>
+          <div className="flex items-center gap-3">
+            <NiLanguageSwitcher className="rounded-full border border-zinc-200 bg-zinc-900 px-1.5 py-1 shadow-sm" />
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {tr("Vissza a főoldalra", "Back to the homepage")}
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -150,7 +174,9 @@ export default function NiAuthPage() {
               >
                 <Loader2 className="w-8 h-8 text-[#22C55E] animate-spin" />
                 <p className="text-sm text-zinc-500 font-medium">
-                  {state === "redirecting" ? "Átirányítás..." : "Belépési link ellenőrzése..."}
+                  {state === "redirecting"
+                    ? tr("Átirányítás...", "Redirecting...")
+                    : tr("Belépési link ellenőrzése...", "Verifying your login link...")}
                 </p>
               </motion.div>
             ) : null}
@@ -169,41 +195,44 @@ export default function NiAuthPage() {
                     <AlertTriangle className="w-7 h-7 text-red-500" />
                   </div>
                   <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Hozzáférés megtagadva
+                    {tr("Hozzáférés megtagadva", "Access denied")}
                   </h1>
                   <p className="text-[15px] text-zinc-500 leading-relaxed max-w-sm mx-auto">
                     {error ||
-                      "Ez az egyedi link nem létezik, lejárt, vagy már felhasználták. Kérjük, használd a legújabb emailben küldött linket, vagy kérj új meghívót."}
+                      tr(
+                        "Ez az egyedi link nem létezik, lejárt, vagy már felhasználták. Kérjük, használd a legújabb emailben küldött linket, vagy kérj új meghívót.",
+                        "This unique link does not exist, has expired, or has already been used. Please use the latest link sent by email, or request a new invitation."
+                      )}
                   </p>
                 </div>
 
                 <div className="bg-white border border-zinc-200 rounded-2xl p-5 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                   <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-zinc-500 mb-2.5">
-                    Új meghívó igénylése
+                    {tr("Új meghívó igénylése", "Request a new invitation")}
                   </div>
                   <a
-                    href="mailto:balog.sebastian@pannonguard.hu"
+                    href={`mailto:${SUPPORT_EMAIL}`}
                     className="inline-flex items-center gap-2 text-[15px] font-semibold text-[#22C55E] hover:text-[#003A99] transition-colors"
                   >
                     <Mail className="w-4 h-4" />
-                    balog.sebastian@pannonguard.hu
+                    {SUPPORT_EMAIL}
                   </a>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <a
-                    href="mailto:balog.sebastian@pannonguard.hu?subject=NI%20Port%C3%A1l%20-%20%C3%9Aj%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
+                    href={newLoginLinkHref}
                     className="flex-1 h-12 rounded-xl bg-white hover:bg-zinc-50 text-zinc-900 text-[14px] font-semibold border border-zinc-200 transition-colors inline-flex items-center justify-center gap-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
                   >
                     <Mail className="w-4 h-4" />
-                    Új belépési link kérése
+                    {tr("Új belépési link kérése", "Request a new login link")}
                   </a>
-                  <a
+                  <Link
                     href="/"
                     className="flex-1 h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-[14px] font-semibold transition-colors inline-flex items-center justify-center gap-2"
                   >
-                    Vissza a főoldalra
-                  </a>
+                    {tr("Vissza a főoldalra", "Back to the homepage")}
+                  </Link>
                 </div>
               </motion.div>
             )}
@@ -257,7 +286,9 @@ export default function NiAuthPage() {
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#22C55E] to-[#16A34A] flex items-center justify-center shadow-xl shadow-[#22C55E]/20 mb-4">
                       <span className="text-white font-black text-xl tracking-tighter">C</span>
                     </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#22C55E] uppercase text-center w-24">NI Portál</span>
+                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#22C55E] uppercase text-center w-24">
+                      {tr("NI Portál", "NI Portal")}
+                    </span>
                   </motion.div>
                 </div>
 
@@ -270,13 +301,13 @@ export default function NiAuthPage() {
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                     <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">
-                      Sikeres hitelesítés
+                      {tr("Sikeres hitelesítés", "Authentication successful")}
                     </h1>
                   </div>
                   <div className="flex items-center gap-2.5 px-4 py-2 bg-zinc-100 rounded-full">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-[#22C55E]" />
                     <p className="text-[13px] text-zinc-600 font-medium">
-                      Biztonságos kapcsolat felépítése...
+                      {tr("Biztonságos kapcsolat felépítése...", "Establishing a secure connection...")}
                     </p>
                   </div>
                 </motion.div>
@@ -298,12 +329,12 @@ export default function NiAuthPage() {
                     <ShieldCheck className="w-7 h-7 text-[#22C55E]" />
                   </div>
                   <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Kétfaktoros hitelesítés
+                    {tr("Kétfaktoros hitelesítés", "Two-factor authentication")}
                   </h1>
                   <p className="text-[15px] text-zinc-500 leading-relaxed">
-                    A fiókodhoz 2FA kötelező. Írd be az Authenticator alkalmazásod által generált
-                    <strong className="font-semibold text-zinc-800"> 6 számjegyű kódot</strong>
-                    , vagy használd a biztonsági mentett kódot.
+                    {tr("A fiókodhoz 2FA kötelező. Írd be az Authenticator alkalmazásod által generált", "2FA is mandatory for your account. Enter the")}
+                    <strong className="font-semibold text-zinc-800"> {tr("6 számjegyű kódot", "6-digit code")}</strong>
+                    {tr(", vagy használd a biztonsági mentett kódot.", " generated by your Authenticator app, or use a backup code.")}
                   </p>
                 </div>
 
@@ -313,10 +344,10 @@ export default function NiAuthPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 mb-0.5">
-                      Belépő fiók
+                      {tr("Belépő fiók", "Sign-in account")}
                     </div>
                     <div className="text-[15px] font-semibold text-zinc-900 truncate">
-                      {email || "Betöltés..."}
+                      {email || tr("Betöltés...", "Loading...")}
                     </div>
                   </div>
                   <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#22C55E]/[0.07] border border-[#22C55E]/10 text-[#22C55E] text-[11px] font-bold tracking-wide">
@@ -326,7 +357,9 @@ export default function NiAuthPage() {
 
                 <div className="mb-4">
                   <label className="block text-[13px] font-semibold text-zinc-800 mb-2 pl-0.5">
-                    {useBackup ? "Biztonsági kód (Backup code)" : "Authenticator kód (6 szám)"}
+                    {useBackup
+                      ? tr("Biztonsági kód (Backup code)", "Backup code")
+                      : tr("Authenticator kód (6 szám)", "Authenticator code (6 digits)")}
                   </label>
                   <input
                     type="text"
@@ -339,7 +372,7 @@ export default function NiAuthPage() {
                       else v = v.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 16);
                       setCode(v);
                     }}
-                    placeholder={useBackup ? "pl. A1B2-C3D4-E5" : "000000"}
+                    placeholder={useBackup ? tr("pl. A1B2-C3D4-E5", "e.g. A1B2-C3D4-E5") : "000000"}
                     className="w-full h-[52px] px-4 bg-white border border-zinc-200 rounded-xl text-[18px] text-center tracking-[0.45em] text-zinc-900 placeholder:text-zinc-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E]/50 transition-all"
                   />
                 </div>
@@ -356,7 +389,10 @@ export default function NiAuthPage() {
                     className="w-4 h-4 rounded border-zinc-300 text-[#22C55E] focus:ring-[#22C55E]/30"
                   />
                   <label htmlFor="2fa-backup" className="text-[13px] font-medium text-zinc-600">
-                    Biztonsági kód használata (ha nincs hozzáférés az Authenticator apphoz)
+                    {tr(
+                      "Biztonsági kód használata (ha nincs hozzáférés az Authenticator apphoz)",
+                      "Use a backup code (if you do not have access to the Authenticator app)"
+                    )}
                   </label>
                 </div>
 
@@ -385,11 +421,11 @@ export default function NiAuthPage() {
                   {submitting ? (
                     <>
                       <Loader2 className="w-4.5 h-4.5 animate-spin" />
-                      Feldolgozás...
+                      {tr("Feldolgozás...", "Processing...")}
                     </>
                   ) : (
                     <>
-                      Ellenőrzés &amp; Belépés
+                      {tr("Ellenőrzés & Belépés", "Verify & Sign in")}
                       <ArrowRight className="w-4.5 h-4.5" />
                     </>
                   )}
@@ -402,8 +438,10 @@ export default function NiAuthPage() {
 
       <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-          <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
-          <span className="tracking-wider">NI Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
+          <span>© {new Date().getFullYear()} Pannon Transfer · {tr("Minden jog fenntartva.", "All rights reserved.")}</span>
+          <span className="tracking-wider">
+            {tr("NI Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés", "NI Dedicated Customer Portal · Exclusive link-based access")}
+          </span>
         </div>
       </div>
     </div>

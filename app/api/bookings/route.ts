@@ -17,6 +17,7 @@ import {
   buildDispatcherNotificationEmail,
 } from "@/lib/email-templates";
 import { getDb } from "@/lib/mongodb";
+import { normalizePortalLanguage } from "@/lib/portal-language";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +116,7 @@ export async function POST(request: Request) {
       travelers: body.travelers,
       luggage: body.luggage,
       comment: body.comment,
+      ...(session.portal === "ni" ? { language: normalizePortalLanguage(body.language) } : {}),
     };
 
     const validation = await validateTravelConditions(bookingData);
@@ -148,15 +150,21 @@ export async function POST(request: Request) {
       comment: createdBooking.comment,
       price: createdBooking.price,
       trackUrl,
+      language: createdBooking.language,
     };
 
     const customerHtml = session.portal === "ni"
       ? buildNiCustomerConfirmationEmail(emailParams)
       : buildCustomerConfirmationEmail(emailParams);
 
+    const customerSubject =
+      session.portal === "ni" && createdBooking.language === "en"
+        ? `Booking confirmation - #${createdBooking.bookingCode}`
+        : `Foglalás visszaigazolása - #${createdBooking.bookingCode}`;
+
     await sendEmail({
       to: session.email,
-      subject: `Foglalás visszaigazolása - #${createdBooking.bookingCode}`,
+      subject: customerSubject,
       html: customerHtml,
     });
 

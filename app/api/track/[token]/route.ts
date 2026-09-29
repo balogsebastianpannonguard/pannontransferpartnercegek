@@ -61,6 +61,7 @@ function toPublicBooking(booking: Booking) {
     assignedDriverName: booking.assignedDriverName,
     assignedVehicleName: booking.assignedVehicleName,
     trackLinkActive: booking.trackLinkActive !== false,
+    language: booking.language,
   };
 }
 

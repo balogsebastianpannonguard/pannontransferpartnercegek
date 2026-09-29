@@ -40,8 +40,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useLanguage } from "../../context/LanguageContext";
 import NiPremiumLogin from "../components/NiPremiumLogin";
+import { useNiLanguage } from "../useNiLanguage";
 
 interface NiPortalUser {
   email: string;
@@ -142,6 +142,30 @@ const STATUS_DOT: Record<Booking["status"], string> = {
   cancelled: "bg-rose-400",
 };
 
+function getStatusLabel(status: string, english: boolean) {
+  const labels = english ? STATUS_LABELS_EN : STATUS_LABELS;
+  return labels[status as Booking["status"]] || status;
+}
+
+function formatPickupDate(pickupDate: string, locale: string, english: boolean) {
+  if (!english) return pickupDate;
+  const parsed = new Date(`${pickupDate}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return pickupDate;
+  return parsed.toLocaleDateString(locale);
+}
+
+function formatPrice(price: number, locale: string, english: boolean) {
+  return `${price.toLocaleString(locale)} ${english ? "HUF" : "Ft"}`;
+}
+
+function formatPassengerCount(travelers: number, english: boolean) {
+  return `${travelers} ${english ? "pax" : "fő"}`;
+}
+
+function formatLuggageCount(luggage: number, english: boolean) {
+  return `${luggage} ${english ? "pcs" : "db"}`;
+}
+
 function playNotificationSound() {
   try {
     const AudioContextCtor =
@@ -174,8 +198,8 @@ function playNotificationSound() {
 }
 
 export default function NiBookingsClient() {
-  const { t, language, setLanguage, availableLanguages } = useLanguage();
-  const english = language === "en";
+  const { english, language, setLanguage, availableLanguages, locale, tr, msg, msgList } =
+    useNiLanguage();
   const [scrolled, setScrolled] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [authedUser, setAuthedUser] = useState<NiPortalUser | null>(null);
@@ -429,19 +453,25 @@ export default function NiBookingsClient() {
         if (json?.errors) {
           const errMap: Record<string, string> = {};
           Object.entries(json.errors as Record<string, string | string[]>).forEach(([k, v]) => {
-            errMap[k] = Array.isArray(v) ? v[0] : String(v);
+            const messages = Array.isArray(v)
+              ? msgList(v.map((item) => String(item)))
+              : [msg(String(v))];
+            errMap[k] = messages[0] || "";
           });
           setEditErrors(errMap);
         } else {
-          addToast("error", json?.message || "A módosítás sikertelen.");
+          addToast(
+            "error",
+            msg(json?.message) || tr("A módosítás sikertelen.", "Failed to modify the booking."),
+          );
         }
         return;
       }
-      addToast("success", "Foglalás sikeresen módosítva.");
+      addToast("success", tr("Foglalás sikeresen módosítva.", "Booking updated successfully."));
       closeEditModal();
       fetchBookings();
     } catch {
-      addToast("error", "Hálózati hiba történt.");
+      addToast("error", tr("Hálózati hiba történt.", "A network error occurred."));
     } finally {
       setEditLoading(false);
     }
@@ -461,14 +491,17 @@ export default function NiBookingsClient() {
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        addToast("error", json?.message || "A lemondás sikertelen.");
+        addToast(
+          "error",
+          msg(json?.message) || tr("A lemondás sikertelen.", "Failed to cancel the booking."),
+        );
         return;
       }
-      addToast("success", "Foglalás sikeresen lemondva.");
+      addToast("success", tr("Foglalás sikeresen lemondva.", "Booking cancelled successfully."));
       setCancelModal(null);
       fetchBookings();
     } catch {
-      addToast("error", "Hálózati hiba történt.");
+      addToast("error", tr("Hálózati hiba történt.", "A network error occurred."));
     } finally {
       setCancelLoading(false);
     }
@@ -488,6 +521,7 @@ export default function NiBookingsClient() {
     confirmed: bookings.filter((b) => b.status === "confirmed" || b.status === "in-progress").length,
     closed: bookings.filter((b) => b.status === "completed" || b.status === "cancelled").length,
   };
+  const visibleStatusNotifications = statusNotifications.filter((notification) => !notification.dismissed);
 
   if (!authChecked) {
     return (
@@ -511,9 +545,14 @@ export default function NiBookingsClient() {
                 />
               </div>
               <div className="flex flex-col">
-                <span className="text-[15px] font-bold text-white leading-none">NI Portál</span>
+                <span className="text-[15px] font-bold text-white leading-none">
+                  {tr("NI Portál", "NI Portal")}
+                </span>
                 <span className="text-[11px] text-slate-400 mt-0.5 tracking-wide">
-                  Pannon Transfer · Hozzáférés ellenőrzése
+                  {tr(
+                    "Pannon Transfer · Hozzáférés ellenőrzése",
+                    "Pannon Transfer · Checking access",
+                  )}
                 </span>
               </div>
             </div>
@@ -558,7 +597,10 @@ export default function NiBookingsClient() {
                   className="w-5 h-5 rounded-full border-2 border-white/20 border-t-[#41B679]"
                 />
                 <p className="text-[14px] text-slate-300 font-semibold tracking-wide">
-                  Hozzáférés és munkamenet ellenőrzése...
+                  {tr(
+                    "Hozzáférés és munkamenet ellenőrzése...",
+                    "Checking access and session...",
+                  )}
                 </p>
               </div>
             </motion.div>
@@ -566,8 +608,16 @@ export default function NiBookingsClient() {
         </div>
         <div className="w-full border-t border-white/10 bg-[#030816]/70 backdrop-blur-xl mt-auto relative z-10">
           <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-            <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
-            <span className="tracking-wider">NI Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
+            <span>
+              © {new Date().getFullYear()} Pannon Transfer ·{" "}
+              {tr("Minden jog fenntartva.", "All rights reserved.")}
+            </span>
+            <span className="tracking-wider">
+              {tr(
+                "NI Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés",
+                "NI Dedicated Customer Portal · Exclusive link-based access",
+              )}
+            </span>
           </div>
         </div>
       </div>
@@ -691,7 +741,7 @@ export default function NiBookingsClient() {
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               className="mt-5 text-center text-[9px] tracking-[0.3em] text-[#41B679] uppercase font-bold"
             >
-              Rendszer előkészítése...
+              {tr("Rendszer előkészítése...", "Preparing system...")}
             </motion.div>
           </motion.div>
         </div>
@@ -763,20 +813,20 @@ export default function NiBookingsClient() {
                 href="/ni#booking"
                 className="text-slate-300 text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-transparent hover:border-[#41B679]/30"
               >
-                {t("nav", "booking")}
+                {tr("Foglalás", "Booking")}
               </Link>
               <Link
                 href="/ni/bookings"
                 className="text-white text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-[#41B679]"
               >
-                {english ? "My bookings" : "Saját foglalásaim"}
+                {tr("Saját foglalásaim", "My bookings")}
               </Link>
               {authedUser.role === "admin-ni" && (
                 <Link
                   href="/ni/company"
                   className="text-slate-300 text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 border-transparent hover:border-[#41B679]/30"
                 >
-                  {english ? "Company bookings" : "Céges foglalások"}
+                  {tr("Céges foglalások", "Company bookings")}
                 </Link>
               )}
             </div>
@@ -786,13 +836,13 @@ export default function NiBookingsClient() {
             <button
               type="button"
               onClick={() => setNotificationPanelOpen((open) => !open)}
-              aria-label="Értesítések megnyitása"
+              aria-label={tr("Értesítések megnyitása", "Open notifications")}
               className="relative w-10 h-10 rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 hover:text-white hover:bg-white/10 transition"
             >
-              <Bell className={`mx-auto h-4 w-4 ${statusNotifications.some((notification) => !notification.dismissed) ? "animate-bounce text-[#41B679]" : ""}`} />
-              {statusNotifications.filter((notification) => !notification.dismissed).length > 0 && (
+              <Bell className={`mx-auto h-4 w-4 ${visibleStatusNotifications.length > 0 ? "animate-bounce text-[#41B679]" : ""}`} />
+              {visibleStatusNotifications.length > 0 && (
                 <span className="absolute -right-1 -top-1 min-w-5 h-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-[#020813]">
-                  {Math.min(statusNotifications.filter((notification) => !notification.dismissed).length, 99)}
+                  {Math.min(visibleStatusNotifications.length, 99)}
                 </span>
               )}
             </button>
@@ -826,7 +876,8 @@ export default function NiBookingsClient() {
               </div>
               <button
                 onClick={handleLogout}
-                title={english ? "Log out" : "Kijelentkezés"}
+                title={tr("Kijelentkezés", "Log out")}
+                aria-label={tr("Kijelentkezés", "Log out")}
                 className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all shrink-0"
               >
                 <LogOut className="w-4 h-4" />
@@ -837,7 +888,7 @@ export default function NiBookingsClient() {
       </nav>
 
       <AnimatePresence>
-        {notificationPanelOpen && statusNotifications.filter(n => !n.dismissed).length > 0 && (
+        {notificationPanelOpen && visibleStatusNotifications.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -850,28 +901,57 @@ export default function NiBookingsClient() {
                 <div className="flex items-center justify-between px-5 py-3 border-b border-[#41B679]/15 bg-gradient-to-r from-[#41B679]/10 to-[#0A5CCB]/5">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-[#41B679] animate-pulse" />
-                    <span className="text-sm font-bold text-white">Értesítések</span>
+                    <span className="text-sm font-bold text-white">
+                      {tr("Értesítések", "Notifications")}
+                    </span>
                     <span className="px-2 py-0.5 rounded-full bg-[#41B679]/20 text-[#41B679] text-[10px] font-black">
-                      {statusNotifications.filter(n => !n.dismissed).length}
+                      {visibleStatusNotifications.length}
                     </span>
                   </div>
                   <button
                     onClick={dismissAllNotifications}
                     className="text-[11px] font-bold text-slate-400 hover:text-white transition px-2 py-1 rounded-lg hover:bg-white/5"
                   >
-                    Összes elvetése
+                    {tr("Összes elvetése", "Dismiss all")}
                   </button>
                 </div>
                 <div className="max-h-[300px] overflow-y-auto divide-y divide-white/5">
-                  {statusNotifications.filter(n => !n.dismissed).map((notif) => {
+                  {visibleStatusNotifications.map((notif) => {
                     const statusMessages: Record<string, { message: string; accent: string; bg: string }> = {
-                      confirmed: { message: "A foglalása jóváhagyásra került!", accent: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/30" },
-                      modified: { message: "A diszpécser módosítást kér a foglalásán", accent: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/30" },
-                      cancelled: { message: "A foglalása lemondásra került", accent: "text-rose-400", bg: "bg-rose-500/10 border-rose-500/30" },
-                      "in-progress": { message: "A foglalása folyamatban van", accent: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/30" },
-                      completed: { message: "A foglalása befejeződött", accent: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/30" },
+                      confirmed: {
+                        message: tr("A foglalása jóváhagyásra került!", "Your booking has been confirmed!"),
+                        accent: "text-emerald-400",
+                        bg: "bg-emerald-500/10 border-emerald-500/30",
+                      },
+                      modified: {
+                        message: tr(
+                          "A diszpécser módosítást kér a foglalásán",
+                          "Our dispatcher has requested changes to your booking",
+                        ),
+                        accent: "text-orange-400",
+                        bg: "bg-orange-500/10 border-orange-500/30",
+                      },
+                      cancelled: {
+                        message: tr("A foglalása lemondásra került", "Your booking has been cancelled"),
+                        accent: "text-rose-400",
+                        bg: "bg-rose-500/10 border-rose-500/30",
+                      },
+                      "in-progress": {
+                        message: tr("A foglalása folyamatban van", "Your booking is in progress"),
+                        accent: "text-blue-400",
+                        bg: "bg-blue-500/10 border-blue-500/30",
+                      },
+                      completed: {
+                        message: tr("A foglalása befejeződött", "Your booking has been completed"),
+                        accent: "text-slate-400",
+                        bg: "bg-slate-500/10 border-slate-500/30",
+                      },
                     };
-                    const meta = statusMessages[notif.newStatus] || { message: `Státusz: ${notif.newStatus}`, accent: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/30" };
+                    const meta = statusMessages[notif.newStatus] || {
+                      message: `${tr("Státusz", "Status")}: ${getStatusLabel(notif.newStatus, english)}`,
+                      accent: "text-slate-400",
+                      bg: "bg-slate-500/10 border-slate-500/30",
+                    };
                     return (
                       <div
                         key={notif.id}
@@ -903,13 +983,17 @@ export default function NiBookingsClient() {
                             <span className="text-[11px] font-black text-white bg-white/10 px-2 py-0.5 rounded">#{notif.bookingCode}</span>
                             <span className="text-[11px] text-slate-400">{notif.travelerName}</span>
                             <span className="text-[10px] text-slate-500">
-                              {STATUS_LABELS[notif.oldStatus as Booking["status"]] || notif.oldStatus} → {STATUS_LABELS[notif.newStatus as Booking["status"]] || notif.newStatus}
+                              {getStatusLabel(notif.oldStatus, english)} → {getStatusLabel(notif.newStatus, english)}
                             </span>
                           </div>
-                          {notif.details && <p className="text-[11px] text-slate-500 mt-1">{notif.details}</p>}
+                          {notif.details && (
+                            <p className="text-[11px] text-slate-500 mt-1">{msg(notif.details)}</p>
+                          )}
                         </div>
                         <button
                           onClick={() => dismissNotification(notif.id)}
+                          aria-label={tr("Értesítés elvetése", "Dismiss notification")}
+                          title={tr("Értesítés elvetése", "Dismiss notification")}
                           className="shrink-0 w-7 h-7 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 flex items-center justify-center transition"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -938,7 +1022,7 @@ export default function NiBookingsClient() {
             >
               <CalendarDays className="w-3.5 h-3.5 text-[#41B679]" />
               <span className="text-[10px] font-bold text-[#41B679] tracking-widest uppercase">
-                {english ? "Booking manager" : "Foglalás Kezelő"}
+                {tr("Foglalás Kezelő", "Booking Manager")}
               </span>
               {isRefreshing && (
                 <RefreshCw className="w-3 h-3 text-[#41B679] animate-spin ml-1" />
@@ -952,7 +1036,7 @@ export default function NiBookingsClient() {
                   transition={{ delay: 0.1 }}
                   className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-3"
                 >
-                  {english ? "My bookings" : "Saját foglalásaim"}
+                  {tr("Saját foglalásaim", "My bookings")}
                 </motion.h1>
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -960,7 +1044,7 @@ export default function NiBookingsClient() {
                   transition={{ delay: 0.2 }}
                   className="text-slate-400 text-sm md:text-base"
                 >
-                  {english ? "Real-time status and details" : "Valós idejű státusz és részletek"}
+                  {tr("Valós idejű státusz és részletek", "Real-time status and details")}
                 </motion.p>
               </div>
               <motion.div className="flex items-center gap-3">
@@ -969,14 +1053,14 @@ export default function NiBookingsClient() {
                   className="h-10 px-4 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all inline-flex items-center gap-2 text-sm font-medium"
                 >
                   <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-                  {english ? "Refresh" : "Frissítés"}
+                  {tr("Frissítés", "Refresh")}
                 </button>
                 <Link
                   href="/ni"
                   className="h-10 px-4 rounded-lg bg-[#41B679] hover:bg-[#10B981] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(65,182,121,0.28)]"
                 >
                   <Plus className="w-4 h-4" />
-                  {english ? "New booking" : "Új foglalás"}
+                  {tr("Új foglalás", "New booking")}
                 </Link>
               </motion.div>
             </div>
@@ -1006,7 +1090,7 @@ export default function NiBookingsClient() {
                   </div>
                 </div>
                 <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                  {english ? "Total bookings" : "Összes foglalás"}
+                  {tr("Összes foglalás", "Total bookings")}
                 </p>
                 <p className="text-3xl font-black text-white tracking-tight">{stats.total}</p>
               </div>
@@ -1023,11 +1107,11 @@ export default function NiBookingsClient() {
                     <Clock className="w-5 h-5" />
                   </div>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[10px] font-bold tracking-wider uppercase border border-amber-500/30">
-                    {english ? "Pending" : "Függőben"}
+                    {tr("Függőben", "Pending")}
                   </span>
                 </div>
                 <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                  {english ? "Processing" : "Feldolgozás alatt"}
+                  {tr("Feldolgozás alatt", "Processing")}
                 </p>
                 <p className="text-3xl font-black text-white tracking-tight">{stats.pending}</p>
               </div>
@@ -1044,11 +1128,11 @@ export default function NiBookingsClient() {
                     <UserCheck className="w-5 h-5" />
                   </div>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold tracking-wider uppercase border border-emerald-500/30">
-                    {english ? "Active" : "Aktív"}
+                    {tr("Aktív", "Active")}
                   </span>
                 </div>
                 <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                  {english ? "Confirmed" : "Jóváhagyott"}
+                  {tr("Jóváhagyott", "Confirmed")}
                 </p>
                 <p className="text-3xl font-black text-white tracking-tight">{stats.confirmed}</p>
               </div>
@@ -1065,11 +1149,11 @@ export default function NiBookingsClient() {
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-400 text-[10px] font-bold tracking-wider uppercase border border-slate-500/30">
-                    {english ? "Closed" : "Lezárt"}
+                    {tr("Lezárt", "Closed")}
                   </span>
                 </div>
                 <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                  {english ? "Completed" : "Befejezett"}
+                  {tr("Befejezett", "Completed")}
                 </p>
                 <p className="text-3xl font-black text-white tracking-tight">{stats.closed}</p>
               </div>
@@ -1085,10 +1169,10 @@ export default function NiBookingsClient() {
           >
             <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#0B1221]/92 border border-white/8 backdrop-blur-xl">
               {([
-                { key: "all", label: english ? "All" : "Minden" },
-                { key: "pending", label: english ? "Pending" : "Függőben" },
-                { key: "confirmed", label: english ? "Confirmed" : "Jóváhagyott" },
-                { key: "closed", label: english ? "Closed" : "Lezárt" },
+                { key: "all", label: tr("Minden", "All") },
+                { key: "pending", label: tr("Függőben", "Pending") },
+                { key: "confirmed", label: tr("Jóváhagyott", "Confirmed") },
+                { key: "closed", label: tr("Lezárt", "Closed") },
               ] as { key: FilterTab; label: string }[]).map((tab) => (
                 <button
                   key={tab.key}
@@ -1110,7 +1194,9 @@ export default function NiBookingsClient() {
               <div className="w-12 h-12 rounded-2xl bg-[#41B679]/10 border border-[#41B679]/20 flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-[#41B679] animate-spin" />
               </div>
-              <p className="text-sm text-slate-400 font-medium">{english ? "Loading bookings..." : "Foglalások betöltése..."}</p>
+              <p className="text-sm text-slate-400 font-medium">
+                {tr("Foglalások betöltése...", "Loading bookings...")}
+              </p>
             </div>
           ) : filteredBookings.length === 0 ? (
             <motion.div
@@ -1123,15 +1209,20 @@ export default function NiBookingsClient() {
                 <div className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
                   <CalendarPlus className="w-10 h-10 text-slate-500" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">{english ? "No bookings yet" : "Még nincs foglalása"}</h3>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  {tr("Még nincs foglalása", "No bookings yet")}
+                </h3>
                 <p className="text-slate-400 text-sm mb-6 max-w-sm">
-                  Nincs még foglalás a kiválasztott szűrésnél. Menjen a foglalási oldalra és hozzon létre egy új átutalást.
+                  {tr(
+                    "Nincs még foglalás a kiválasztott szűrésnél. Menjen a foglalási oldalra és hozzon létre egy új átutalást.",
+                    "There are no bookings for the selected filter. Go to the booking page and create a new transfer.",
+                  )}
                 </p>
                 <Link
                   href="/ni"
                   className="h-11 px-6 rounded-xl bg-[#41B679] hover:bg-[#10B981] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(65,182,121,0.28)]"
                 >
-                  {english ? "Go to booking page" : "Menjen a foglalási oldalra"}
+                  {tr("Menjen a foglalási oldalra", "Go to booking page")}
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -1179,7 +1270,7 @@ export default function NiBookingsClient() {
                             <div className="flex items-baseline gap-2 mb-1">
                               <CalendarDays className="w-4 h-4 text-[#41B679] shrink-0" />
                               <p className="text-2xl font-black text-white tracking-tight">
-                                {booking.pickupDate}
+                                {formatPickupDate(booking.pickupDate, locale, english)}
                               </p>
                               <span className="text-lg font-bold text-slate-400">
                                 {booking.pickupTime}
@@ -1196,20 +1287,20 @@ export default function NiBookingsClient() {
                             <div className="flex-1 min-w-0 space-y-2">
                               <div className="min-w-0">
                                 <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-0.5">
-                                  Honnan
+                                  {tr("Honnan", "From")}
                                 </p>
                                 <p className="text-sm font-semibold text-white truncate">
                                   {booking.fromAddress}
                                 </p>
                                 {booking.flightNumber && (
                                   <p className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#41B679]/10 border border-[#41B679]/30 text-[#41B679] text-[10px] font-black tracking-wider uppercase">
-                                    Flight Number / Járatszám: <span className="font-mono">{booking.flightNumber}</span>
+                                    {tr("Járatszám", "Flight number")}: <span className="font-mono">{booking.flightNumber}</span>
                                   </p>
                                 )}
                               </div>
                               <div className="min-w-0">
                                 <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-0.5">
-                                  Hova
+                                  {tr("Hova", "To")}
                                 </p>
                                 <p className="text-sm font-semibold text-white truncate">
                                   {booking.toAddress}
@@ -1226,7 +1317,7 @@ export default function NiBookingsClient() {
                             <div className="flex items-center gap-1.5 mb-1">
                               <Car className="w-3.5 h-3.5 text-slate-500" />
                               <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
-                                Típus
+                                {tr("Típus", "Type")}
                               </span>
                             </div>
                             <p
@@ -1244,11 +1335,11 @@ export default function NiBookingsClient() {
                             <div className="flex items-center gap-1.5 mb-1">
                               <Users className="w-3.5 h-3.5 text-slate-500" />
                               <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
-                                Utasok
+                                {tr("Utasok", "Passengers")}
                               </span>
                             </div>
                             <p className="text-sm font-bold text-white">
-                              {booking.travelers} fő
+                              {formatPassengerCount(booking.travelers, english)}
                             </p>
                           </div>
 
@@ -1256,11 +1347,11 @@ export default function NiBookingsClient() {
                             <div className="flex items-center gap-1.5 mb-1">
                               <Luggage className="w-3.5 h-3.5 text-slate-500" />
                               <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
-                                Csomag
+                                {tr("Csomag", "Luggage")}
                               </span>
                             </div>
                             <p className="text-sm font-bold text-white">
-                              {booking.luggage} db
+                              {formatLuggageCount(booking.luggage, english)}
                             </p>
                           </div>
 
@@ -1272,11 +1363,13 @@ export default function NiBookingsClient() {
                                 <Building className="w-3.5 h-3.5 text-slate-500" />
                               )}
                               <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
-                                Fizetés
+                                {tr("Fizetés", "Payment")}
                               </span>
                             </div>
                             <p className="text-sm font-bold text-white">
-                              {booking.paymentMethod === "card" ? "Bankkártya" : "Banki átutalás"}
+                              {booking.paymentMethod === "card"
+                                ? tr("Bankkártya", "Card")
+                                : tr("Banki átutalás", "Bank transfer")}
                             </p>
                           </div>
 
@@ -1284,7 +1377,7 @@ export default function NiBookingsClient() {
                             <div className="flex items-center gap-1.5 mb-1">
                               <Truck className="w-3.5 h-3.5 text-slate-500" />
                               <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
-                                Sofőr & Jármű
+                                {tr("Sofőr & Jármű", "Driver & Vehicle")}
                               </span>
                             </div>
                             {booking.driverName || booking.vehicleName ? (
@@ -1299,7 +1392,7 @@ export default function NiBookingsClient() {
                             ) : (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-500/10 border border-slate-500/20 text-slate-400 text-[11px] font-medium">
                                 <Clock className="w-3 h-3" />
-                                Hozzárendelés függőben
+                                {tr("Hozzárendelés függőben", "Assignment pending")}
                               </span>
                             )}
                           </div>
@@ -1312,7 +1405,7 @@ export default function NiBookingsClient() {
                             onClick={() => setExpandedId(isExpanded ? null : booking._id)}
                             className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-medium"
                           >
-                            Részletek
+                            {tr("Részletek", "Details")}
                             {isExpanded ? (
                               <ChevronUp className="w-4 h-4" />
                             ) : (
@@ -1326,14 +1419,14 @@ export default function NiBookingsClient() {
                                 className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-[#41B679]/15 border border-[#41B679]/30 text-[#41B679] hover:bg-[#41B679]/25 hover:border-[#41B679]/50 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-bold"
                               >
                                 <Edit3 className="w-4 h-4" />
-                                Módosítás
+                                {tr("Módosítás", "Modify")}
                               </button>
                               <button
                                 onClick={() => setCancelModal(booking)}
                                 className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/40 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-bold"
                               >
                                 <Ban className="w-4 h-4" />
-                                Lemondás
+                                {tr("Lemondás", "Cancel")}
                               </button>
                             </>
                           )}
@@ -1354,7 +1447,7 @@ export default function NiBookingsClient() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                               <div>
                                 <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-2">
-                                  Utas adatai
+                                  {tr("Utas adatai", "Passenger details")}
                                 </p>
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
@@ -1381,7 +1474,7 @@ export default function NiBookingsClient() {
 
                               <div>
                                 <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-2">
-                                  Cég
+                                  {tr("Cég", "Company")}
                                 </p>
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
@@ -1394,7 +1487,7 @@ export default function NiBookingsClient() {
                                     <div className="flex items-center gap-2">
                                       <DollarSign className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                                       <span className="text-sm font-bold text-[#41B679]">
-                                        {booking.price.toLocaleString("hu-HU")} Ft
+                                        {formatPrice(booking.price, locale, english)}
                                       </span>
                                     </div>
                                   )}
@@ -1403,14 +1496,14 @@ export default function NiBookingsClient() {
 
                               <div>
                                 <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-2">
-                                  Megjegyzés
+                                  {tr("Megjegyzés", "Comment")}
                                 </p>
                                 <div className="flex items-start gap-2">
                                   <MessageSquare className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
                                   <span className="text-sm text-slate-300">
                                     {booking.comment || (
                                       <span className="text-slate-500 italic">
-                                        Nincs megjegyzés
+                                        {tr("Nincs megjegyzés", "No comment")}
                                       </span>
                                     )}
                                   </span>
@@ -1420,7 +1513,7 @@ export default function NiBookingsClient() {
                               {booking.secondTravelerEmail && (
                                 <div>
                                   <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-2">
-                                    2. Utas
+                                    {tr("2. Utas", "2nd passenger")}
                                   </p>
                                   <div className="space-y-2">
                                     <div className="flex items-center gap-2">
@@ -1467,12 +1560,17 @@ export default function NiBookingsClient() {
             <div className="hidden md:block w-px h-6 bg-white/10"></div>
             <div className="flex flex-col text-center md:text-left">
               <span className="font-bold text-white tracking-wide text-sm leading-none flex items-center gap-2">
-                NI <span className="text-xs font-normal text-slate-400">{t("footer", "portal")}</span>
+                NI{" "}
+                <span className="text-xs font-normal text-slate-400">
+                  {tr("MOBILITÁSI PORTÁL", "MOBILITY PORTAL")}
+                </span>
               </span>
             </div>
           </div>
           <div className="flex items-center gap-6">
-            <span className="text-xs font-medium text-slate-500">Dedikált ügyfélszolgálat</span>
+            <span className="text-xs font-medium text-slate-500">
+              {tr("Dedikált ügyfélszolgálat", "Dedicated customer support")}
+            </span>
           </div>
         </div>
       </footer>
@@ -1499,11 +1597,15 @@ export default function NiBookingsClient() {
               <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#41B679] to-[#0A5CCB]" />
               <div className="sticky top-0 z-10 bg-[#0B1221]/95 border-b border-white/8 px-6 py-4 flex items-center justify-between backdrop-blur-xl">
                 <div>
-                  <h3 className="text-lg font-bold text-white">Foglalás módosítása</h3>
+                  <h3 className="text-lg font-bold text-white">
+                    {tr("Foglalás módosítása", "Modify booking")}
+                  </h3>
                   <p className="text-xs text-slate-400 mt-0.5">#{editModal.bookingCode}</p>
                 </div>
                 <button
                   onClick={closeEditModal}
+                  aria-label={tr("Bezárás", "Close")}
+                  title={tr("Bezárás", "Close")}
                   className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all"
                 >
                   <X className="w-4 h-4" />
@@ -1513,7 +1615,7 @@ export default function NiBookingsClient() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Dátum <span className="text-[#41B679]">*</span>
+                      {tr("Dátum", "Date")} <span className="text-[#41B679]">*</span>
                     </label>
                     <div
                       className={`w-full bg-[#151E32] border rounded-lg p-3.5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all ${
@@ -1539,7 +1641,7 @@ export default function NiBookingsClient() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Időpont <span className="text-[#41B679]">*</span>
+                      {tr("Időpont", "Time")} <span className="text-[#41B679]">*</span>
                     </label>
                     <div
                       className={`w-full bg-[#151E32] border rounded-lg p-3.5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all ${
@@ -1567,7 +1669,7 @@ export default function NiBookingsClient() {
 
                 <div className="space-y-2">
                   <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                    Indulási cím <span className="text-[#41B679]">*</span>
+                    {tr("Indulási cím", "Pick-up address")} <span className="text-[#41B679]">*</span>
                   </label>
                   <div
                     className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all ${
@@ -1595,7 +1697,7 @@ export default function NiBookingsClient() {
 
                 <div className="space-y-2">
                   <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                    Célcím <span className="text-[#41B679]">*</span>
+                    {tr("Célcím", "Destination address")} <span className="text-[#41B679]">*</span>
                   </label>
                   <div
                     className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all ${
@@ -1624,7 +1726,7 @@ export default function NiBookingsClient() {
                 {(editModal.toType === "airport" || editModal.fromType === "airport") && (
                   <div className="space-y-2">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Flight Number / Járatszám <span className="text-[#41B679]">*</span>
+                      {tr("Járatszám", "Flight number")} <span className="text-[#41B679]">*</span>
                     </label>
                     <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
                       <Plane className="w-4 h-4 text-slate-500 shrink-0" />
@@ -1633,7 +1735,7 @@ export default function NiBookingsClient() {
                         value={editForm.flightNumber}
                         onChange={(e) => setEditForm({ ...editForm, flightNumber: e.target.value.toUpperCase() })}
                         className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
-                        placeholder="pl. LH1234"
+                        placeholder={tr("pl. LH1234", "e.g. LH1234")}
                       />
                     </div>
                     {editErrors.flightNumber && (
@@ -1645,7 +1747,7 @@ export default function NiBookingsClient() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Utasok száma <span className="text-[#41B679]">*</span>
+                      {tr("Utasok száma", "Number of passengers")} <span className="text-[#41B679]">*</span>
                     </label>
                     <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-2.5 flex justify-between items-center text-white">
                       <div className="flex items-center gap-3 px-2">
@@ -1661,6 +1763,8 @@ export default function NiBookingsClient() {
                               travelers: Math.max(1, editForm.travelers - 1),
                             })
                           }
+                          aria-label={tr("Utasok számának csökkentése", "Decrease passengers")}
+                          title={tr("Utasok számának csökkentése", "Decrease passengers")}
                           className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
                         >
                           <Minus className="w-4 h-4" />
@@ -1673,6 +1777,8 @@ export default function NiBookingsClient() {
                               travelers: editForm.travelers + 1,
                             })
                           }
+                          aria-label={tr("Utasok számának növelése", "Increase passengers")}
+                          title={tr("Utasok számának növelése", "Increase passengers")}
                           className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
                         >
                           <Plus className="w-4 h-4" />
@@ -1682,7 +1788,7 @@ export default function NiBookingsClient() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Csomagok száma <span className="text-[#41B679]">*</span>
+                      {tr("Csomagok száma", "Number of luggage items")} <span className="text-[#41B679]">*</span>
                     </label>
                     <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-2.5 flex justify-between items-center text-white">
                       <div className="flex items-center gap-3 px-2">
@@ -1698,6 +1804,8 @@ export default function NiBookingsClient() {
                               luggage: Math.max(0, editForm.luggage - 1),
                             })
                           }
+                          aria-label={tr("Csomagok számának csökkentése", "Decrease luggage")}
+                          title={tr("Csomagok számának csökkentése", "Decrease luggage")}
                           className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
                         >
                           <Minus className="w-4 h-4" />
@@ -1710,6 +1818,8 @@ export default function NiBookingsClient() {
                               luggage: editForm.luggage + 1,
                             })
                           }
+                          aria-label={tr("Csomagok számának növelése", "Increase luggage")}
+                          title={tr("Csomagok számának növelése", "Increase luggage")}
                           className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
                         >
                           <Plus className="w-4 h-4" />
@@ -1721,7 +1831,7 @@ export default function NiBookingsClient() {
 
                 <div className="space-y-2">
                   <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
-                    Megjegyzés
+                    {tr("Megjegyzés", "Comment")}
                   </label>
                   <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
                     <textarea
@@ -1730,7 +1840,10 @@ export default function NiBookingsClient() {
                       onChange={(e) =>
                         setEditForm({ ...editForm, comment: e.target.value })
                       }
-                      placeholder="Speciális kérések vagy utasítások..."
+                      placeholder={tr(
+                        "Speciális kérések vagy utasítások...",
+                        "Special requests or instructions...",
+                      )}
                       className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white resize-none"
                     />
                   </div>
@@ -1744,7 +1857,7 @@ export default function NiBookingsClient() {
                     <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-rose-500/10 border border-rose-500/20">
                       <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                       <p className="text-[12px] text-rose-400 font-medium">
-                        Kérjük, javítsa a fenti hibákat.
+                        {tr("Kérjük, javítsa a fenti hibákat.", "Please correct the errors above.")}
                       </p>
                     </div>
                   )}
@@ -1755,7 +1868,7 @@ export default function NiBookingsClient() {
                     onClick={closeEditModal}
                     className="flex-1 h-11 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all font-semibold text-sm"
                   >
-                    Mégse
+                    {tr("Mégse", "Cancel")}
                   </button>
                   <button
                     type="submit"
@@ -1765,12 +1878,12 @@ export default function NiBookingsClient() {
                     {editLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Mentés...
+                        {tr("Mentés...", "Saving...")}
                       </>
                     ) : (
                       <>
                         <Check className="w-4 h-4" />
-                        Módosítások mentése
+                        {tr("Módosítások mentése", "Save changes")}
                       </>
                     )}
                   </button>
@@ -1806,10 +1919,11 @@ export default function NiBookingsClient() {
                     <AlertTriangle className="w-8 h-8 text-rose-400" />
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">
-                    Biztosan lemondja ezt a foglalást?
+                    {tr("Biztosan lemondja ezt a foglalást?", "Are you sure you want to cancel this booking?")}
                   </h3>
                   <p className="text-sm text-slate-400">
-                    #{cancelModal.bookingCode} · {cancelModal.pickupDate} {cancelModal.pickupTime}
+                    #{cancelModal.bookingCode} ·{" "}
+                    {formatPickupDate(cancelModal.pickupDate, locale, english)} {cancelModal.pickupTime}
                   </p>
                 </div>
 
@@ -1819,10 +1933,13 @@ export default function NiBookingsClient() {
                       <DollarSign className="w-4 h-4 text-rose-400" />
                     </div>
                     <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                      Visszatérítés
+                      {tr("Visszatérítés", "Refund")}
                     </p>
                     <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                      Nincs pénzvisszatérítés lehetősége a lemondás után
+                      {tr(
+                        "Nincs pénzvisszatérítés lehetősége a lemondás után",
+                        "No refund is available after cancellation",
+                      )}
                     </p>
                   </div>
                   <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
@@ -1830,10 +1947,13 @@ export default function NiBookingsClient() {
                       <UserCheck className="w-4 h-4 text-slate-400" />
                     </div>
                     <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                      Sofőr
+                      {tr("Sofőr", "Driver")}
                     </p>
                     <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                      A hozzárendelt sofőr automatikusan visszavonásra kerül
+                      {tr(
+                        "A hozzárendelt sofőr automatikusan visszavonásra kerül",
+                        "The assigned driver will be automatically unassigned",
+                      )}
                     </p>
                   </div>
                 </div>
@@ -1845,7 +1965,7 @@ export default function NiBookingsClient() {
                     disabled={cancelLoading}
                     className="flex-1 h-11 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all font-semibold text-sm disabled:opacity-50"
                   >
-                    Mégse
+                    {tr("Mégse", "Cancel")}
                   </button>
                   <button
                     type="button"
@@ -1856,12 +1976,12 @@ export default function NiBookingsClient() {
                     {cancelLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Feldolgozás...
+                        {tr("Feldolgozás...", "Processing...")}
                       </>
                     ) : (
                       <>
                         <Trash2 className="w-4 h-4" />
-                        Lemondás
+                        {tr("Lemondás", "Cancel booking")}
                       </>
                     )}
                   </button>

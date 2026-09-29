@@ -749,6 +749,7 @@ export function buildNiCustomerConfirmationEmail(params: {
   comment?: string;
   price?: number;
   trackUrl?: string;
+  language?: 'hu' | 'en';
 }): string {
   const {
     bookingCode,
@@ -767,17 +768,23 @@ export function buildNiCustomerConfirmationEmail(params: {
     comment,
     price,
     trackUrl,
+    language,
   } = params;
 
-  const paymentMethodLabel = paymentMethod === 'card' ? 'Bankkártya' : 'Banki átutalás';
+  const en = language === 'en';
+
+  const paymentMethodLabel =
+    paymentMethod === 'card'
+      ? (en ? 'Bank card' : 'Bankkártya')
+      : (en ? 'Bank transfer' : 'Banki átutalás');
   const transferTypeLabel = transferType === 'executive' ? 'EXECUTIVE' : 'STANDARD';
 
   return `<!DOCTYPE html>
-<html>
+<html${en ? ' lang="en"' : ''}>
 <head><meta charset="utf-8" /></head>
 <body style="margin:0; padding:0; background:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
 <div style="display:none; max-height:0; overflow:hidden; opacity:0;">
-Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: ${pickupDate} ${pickupTime}.
+${en ? `Booking confirmation. Route: ${fromAddress} - ${toAddress}, Time: ${pickupDate} ${pickupTime}.` : `Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: ${pickupDate} ${pickupTime}.`}
 </div>
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#F3F4F6">
   <tr>
@@ -785,7 +792,7 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;">
         <tr>
           <td style="padding-bottom:16px; text-align:center; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#94A3B8; font-weight:700;">
-            Pannon Transfer · NI Portál · Foglalás
+            ${en ? 'Pannon Transfer · NI Portal · Booking' : 'Pannon Transfer · NI Portál · Foglalás'}
           </td>
         </tr>
         <tr>
@@ -806,17 +813,21 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                   </table>
                   
                   <div style="display:inline-block; padding:6px 12px; margin-bottom:16px; border-radius:999px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#E2E8F0;">
-                    FOGLALÁS RÖGZÍTVE · JÓVÁHAGYÁSRA VÁR
+                    ${en ? 'BOOKING RECORDED · AWAITING APPROVAL' : 'FOGLALÁS RÖGZÍTVE · JÓVÁHAGYÁSRA VÁR'}
                   </div>
                   
                   <h1 style="margin:0 0 16px 0; font-size:28px; line-height:1.2; color:#FFFFFF; font-weight:800;">
-                    Foglalás visszaigazolása
+                    ${en ? 'Booking confirmation' : 'Foglalás visszaigazolása'}
                   </h1>
                   
                   <p style="margin:0 0 32px 0; font-size:15px; line-height:1.6; color:#CBD5E1;">
                     ${userEmail === travelerEmail
-                      ? `Tisztelt ${travelerName}! Köszönjük a foglalását. Utazási igényét a Pannon Transfer rendszere rögzítette, hamarosan diszpécserünk véglegesíti azt.`
-                      : `Tisztelt Partnerünk! Köszönjük, hogy <strong>${travelerName}</strong> utasa számára foglalást rögzített. Az utazási igényt a Pannon Transfer rendszere fogadta, hamarosan diszpécserünk véglegesíti azt.`}
+                      ? (en
+                        ? `Dear ${travelerName}, thank you for your booking. Your travel request has been recorded by the Pannon Transfer system, and our dispatcher will finalise it shortly.`
+                        : `Tisztelt ${travelerName}! Köszönjük a foglalását. Utazási igényét a Pannon Transfer rendszere rögzítette, hamarosan diszpécserünk véglegesíti azt.`)
+                      : (en
+                        ? `Dear Partner, thank you for recording a booking for your passenger <strong>${travelerName}</strong>. The travel request has been received by the Pannon Transfer system, and our dispatcher will finalise it shortly.`
+                        : `Tisztelt Partnerünk! Köszönjük, hogy <strong>${travelerName}</strong> utasa számára foglalást rögzített. Az utazási igényt a Pannon Transfer rendszere fogadta, hamarosan diszpécserünk véglegesíti azt.`)}
                   </p>
                   
                   <!-- Info boxes -->
@@ -824,13 +835,13 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                     <tr>
                       <td width="48%" style="padding-right:8px;">
                         <div style="background:rgba(255,255,255,0.08); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,0.1);">
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8; margin-bottom:6px;">Foglalás kód</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8; margin-bottom:6px;">${en ? 'Booking code' : 'Foglalás kód'}</div>
                           <div style="font-size:14px; font-weight:600; color:#60A5FA; word-break:break-all;">#${bookingCode}</div>
                         </div>
                       </td>
                       <td width="48%" style="padding-left:8px;">
                         <div style="background:rgba(255,255,255,0.08); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,0.1);">
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8; margin-bottom:6px;">Szolgáltatás</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8; margin-bottom:6px;">${en ? 'Service' : 'Szolgáltatás'}</div>
                           <div style="font-size:14px; font-weight:600; color:#FFFFFF;">${transferTypeLabel}</div>
                         </div>
                       </td>
@@ -845,7 +856,7 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                 <td style="padding:32px;">
                   
                   <div style="font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#64748B; margin-bottom:16px;">
-                    Utazás részletei
+                    ${en ? 'Trip details' : 'Utazás részletei'}
                   </div>
                   
                   <!-- Route box -->
@@ -854,19 +865,19 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                       <tr>
                         <td width="50%" valign="top" style="padding-right:16px;">
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Dátum</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">${en ? 'Date' : 'Dátum'}</div>
                           <div style="font-size:15px; font-weight:700; color:#0F172A; margin-bottom:16px;">${pickupDate}</div>
                           
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Időpont</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">${en ? 'Time' : 'Időpont'}</div>
                           <div style="font-size:18px; font-weight:800; color:#16A34A;">${pickupTime}</div>
                         </td>
                         <td width="50%" valign="top" style="padding-left:16px; border-left:1px solid #E2E8F0;">
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Indulás</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">${en ? 'Departure' : 'Indulás'}</div>
                           <div style="font-size:14px; font-weight:600; color:#0F172A; margin-bottom:12px; line-height:1.4;">${fromAddress}</div>
                           
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Érkezés</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">${en ? 'Arrival' : 'Érkezés'}</div>
                           <div style="font-size:14px; font-weight:600; color:#0F172A; line-height:1.4;">${toAddress}</div>
-                          ${flightNumber ? `<div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-top:12px; margin-bottom:4px;">Flight number / Járatszám</div><div style="font-size:15px; font-weight:800; color:#0F172A;">✈ ${flightNumber}</div>` : ''}
+                          ${flightNumber ? `<div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-top:12px; margin-bottom:4px;">${en ? 'Flight number' : 'Flight number / Járatszám'}</div><div style="font-size:15px; font-weight:800; color:#0F172A;">✈ ${flightNumber}</div>` : ''}
                         </td>
                       </tr>
                     </table>
@@ -878,19 +889,19 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                     <tr>
                       <td width="32%" style="padding-right:6px;" valign="top">
                         <div style="height:100%; border:1px solid #E2E8F0; border-radius:12px; padding:12px; background:#FFFFFF;">
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">Utasok</div>
-                          <div style="font-size:14px; font-weight:700; color:#0F172A;">${travelers} fő</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">${en ? 'Passengers' : 'Utasok'}</div>
+                          <div style="font-size:14px; font-weight:700; color:#0F172A;">${en ? `${travelers} ${travelers === 1 ? 'passenger' : 'passengers'}` : `${travelers} fő`}</div>
                         </div>
                       </td>
                       <td width="32%" style="padding-right:6px; padding-left:6px;" valign="top">
                         <div style="height:100%; border:1px solid #E2E8F0; border-radius:12px; padding:12px; background:#FFFFFF;">
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">Csomagok</div>
-                          <div style="font-size:14px; font-weight:700; color:#0F172A;">${luggage} db</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">${en ? 'Luggage' : 'Csomagok'}</div>
+                          <div style="font-size:14px; font-weight:700; color:#0F172A;">${en ? `${luggage} ${luggage === 1 ? 'piece' : 'pieces'}` : `${luggage} db`}</div>
                         </div>
                       </td>
                       <td width="36%" style="padding-left:6px;" valign="top">
                         <div style="height:100%; border:1px solid #E2E8F0; border-radius:12px; padding:12px; background:#FFFFFF;">
-                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">Fizetés</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">${en ? 'Payment' : 'Fizetés'}</div>
                           <div style="font-size:14px; font-weight:700; color:#0F172A;">${paymentMethodLabel}</div>
                         </div>
                       </td>
@@ -899,7 +910,7 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                   
                   ${comment ? `
                   <div style="border-left:3px solid #22C55E; background:#F0FDF4; border-radius:0 12px 12px 0; padding:16px; margin-bottom:24px;">
-                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#166534; margin-bottom:6px;">Megjegyzés</div>
+                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#166534; margin-bottom:6px;">${en ? 'Comment' : 'Megjegyzés'}</div>
                     <div style="font-size:13px; line-height:1.6; font-style:italic; color:#14532D;">
                       "${comment}"
                     </div>
@@ -910,15 +921,15 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                   ${trackUrl ? `
                   <div style="border:1px solid #2563EB; background:#EFF6FF; border-radius:16px; padding:20px; margin-bottom:24px;">
                     <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#1E40AF; margin-bottom:8px;">
-                      Foglalás követése és módosítása
+                      ${en ? 'Track and modify your booking' : 'Foglalás követése és módosítása'}
                     </div>
                     <div style="font-size:13px; line-height:1.6; color:#1E3A8A; margin-bottom:14px;">
-                      Az alábbi egyedi linkre kattintva valós időben nyomon követheti foglalása állapotát, és szükség esetén módosítást is kérhet:
+                      ${en ? 'Using the unique link below you can follow the status of your booking in real time and, if necessary, request a modification:' : 'Az alábbi egyedi linkre kattintva valós időben nyomon követheti foglalása állapotát, és szükség esetén módosítást is kérhet:'}
                     </div>
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td bgcolor="#1D4ED8" style="border-radius:10px;">
-                          <a href="${trackUrl}" style="display:inline-block; padding:12px 24px; font-size:12px; font-weight:800; color:#FFFFFF; text-decoration:none; letter-spacing:1px; text-transform:uppercase; border-radius:10px;">Foglalás követése →</a>
+                          <a href="${trackUrl}" style="display:inline-block; padding:12px 24px; font-size:12px; font-weight:800; color:#FFFFFF; text-decoration:none; letter-spacing:1px; text-transform:uppercase; border-radius:10px;">${en ? 'Track booking →' : 'Foglalás követése →'}</a>
                         </td>
                       </tr>
                     </table>
@@ -928,10 +939,10 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
                   <!-- Support box -->
                   <div style="background:#0F172A; border-radius:16px; padding:20px; color:#F8FAFC;">
                     <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#4ADE80; margin-bottom:8px;">
-                      További teendők
+                      ${en ? 'Next steps' : 'További teendők'}
                     </div>
                     <div style="font-size:13px; line-height:1.6;">
-                      A foglalás véglegesítéséről és a sofőr adatairól külön emailben tájékoztatjuk az utazás előtt. Kérdés esetén forduljon az NI dedikált kapcsolattartójához.
+                      ${en ? 'We will inform you about the finalisation of the booking and the driver details in a separate email before the trip. If you have any questions, please contact your dedicated NI contact person.' : 'A foglalás véglegesítéséről és a sofőr adatairól külön emailben tájékoztatjuk az utazás előtt. Kérdés esetén forduljon az NI dedikált kapcsolattartójához.'}
                     </div>
                   </div>
                   
@@ -942,9 +953,9 @@ Foglalás visszaigazolása. Útvonal: ${fromAddress} - ${toAddress}, Időpont: $
               <tr>
                 <td bgcolor="#F8FAFC" style="padding:24px 32px; border-top:1px solid #E2E8F0; text-align:center;">
                   <p style="margin:0; font-size:11px; line-height:1.6; color:#94A3B8;">
-                    Ezt az üzenetet a Pannon Transfer NI Portál rendszere küldte.<br>
-                    Üdvözlettel, Pannon Transfer csapata<br>
-                    © ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.
+                    ${en ? 'This message was sent by the Pannon Transfer NI Portal system.' : 'Ezt az üzenetet a Pannon Transfer NI Portál rendszere küldte.'}<br>
+                    ${en ? 'Kind regards, the Pannon Transfer team' : 'Üdvözlettel, Pannon Transfer csapata'}<br>
+                    © ${new Date().getFullYear()} Pannon Transfer. ${en ? 'All rights reserved.' : 'Minden jog fenntartva.'}
                   </p>
                 </td>
               </tr>
