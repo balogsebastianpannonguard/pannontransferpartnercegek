@@ -792,7 +792,7 @@ ${en ? `Booking confirmation. Route: ${fromAddress} - ${toAddress}, Time: ${pick
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;">
         <tr>
           <td style="padding-bottom:16px; text-align:center; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#94A3B8; font-weight:700;">
-            ${en ? 'Pannon Transfer · NI Portal · Booking' : 'Pannon Transfer · NI Portál · Foglalás'}
+            ${en ? 'Pannon Transfer · NI | Emerson Portal · Booking' : 'Pannon Transfer · NI | Emerson Portál · Foglalás'}
           </td>
         </tr>
         <tr>
@@ -807,7 +807,7 @@ ${en ? `Booking confirmation. Route: ${fromAddress} - ${toAddress}, Time: ${pick
                     <tr>
                       <td bgcolor="#DCFCE7" style="padding:8px 16px; border-radius:12px;">
                         <span style="font-size:16px; font-weight:900; color:#166534;">NI</span>
-                        <span style="font-size:13px; font-weight:700; color:#166534; margin-left:6px;">Booking Confirmation</span>
+                        <span style="font-size:13px; font-weight:700; color:#166534; margin-left:6px;">| Emerson Booking Confirmation</span>
                       </td>
                     </tr>
                   </table>
@@ -953,7 +953,7 @@ ${en ? `Booking confirmation. Route: ${fromAddress} - ${toAddress}, Time: ${pick
               <tr>
                 <td bgcolor="#F8FAFC" style="padding:24px 32px; border-top:1px solid #E2E8F0; text-align:center;">
                   <p style="margin:0; font-size:11px; line-height:1.6; color:#94A3B8;">
-                    ${en ? 'This message was sent by the Pannon Transfer NI Portal system.' : 'Ezt az üzenetet a Pannon Transfer NI Portál rendszere küldte.'}<br>
+                    ${en ? 'This message was sent by the Pannon Transfer NI | Emerson Portal system.' : 'Ezt az üzenetet a Pannon Transfer NI | Emerson Portál rendszere küldte.'}<br>
                     ${en ? 'Kind regards, the Pannon Transfer team' : 'Üdvözlettel, Pannon Transfer csapata'}<br>
                     © ${new Date().getFullYear()} Pannon Transfer. ${en ? 'All rights reserved.' : 'Minden jog fenntartva.'}
                   </p>
