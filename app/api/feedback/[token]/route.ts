@@ -27,7 +27,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
       bookingCode: feedbackRequest.bookingCode,
       travelerName: feedbackRequest.travelerName,
       language: feedbackRequest.language,
-      submitted: Boolean(feedbackRequest.submittedAt),
+      // A próba kérdőív többször is kitölthető
+      submitted: feedbackRequest.test ? false : Boolean(feedbackRequest.submittedAt),
+      test: Boolean(feedbackRequest.test),
     },
   });
 }
@@ -49,12 +51,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     const db = await getDb();
     const now = Date.now();
 
-    // Atomikus "lefoglalás": két párhuzamos beküldésből csak az egyik mehet át
-    const claimed = await db
-      .collection<FeedbackRequest>(FEEDBACK_REQUESTS_COLLECTION)
-      .findOneAndUpdate({ token, submittedAt: { $exists: false } }, { $set: { submittedAt: now } });
-    if (!claimed) {
-      return NextResponse.json({ success: false, error: "already_submitted" }, { status: 409 });
+    const isTest = feedbackRequest.test === true;
+
+    // Atomikus "lefoglalás": két párhuzamos beküldésből csak az egyik mehet át (a próba kérdőívre ez nem vonatkozik)
+    if (!isTest) {
+      const claimed = await db
+        .collection<FeedbackRequest>(FEEDBACK_REQUESTS_COLLECTION)
+        .findOneAndUpdate({ token, submittedAt: { $exists: false } }, { $set: { submittedAt: now } });
+      if (!claimed) {
+        return NextResponse.json({ success: false, error: "already_submitted" }, { status: 409 });
+      }
     }
 
     const record: FeedbackRecord = {
@@ -74,22 +80,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
       driverName: feedbackRequest.driverName,
       vehicleName: feedbackRequest.vehicleName,
       createdAt: now,
+      ...(isTest ? { test: true } : {}),
     };
 
     try {
       await db.collection(FEEDBACKS_COLLECTION).insertOne({ ...record });
     } catch (error) {
-      await db
-        .collection<FeedbackRequest>(FEEDBACK_REQUESTS_COLLECTION)
-        .updateOne({ token }, { $unset: { submittedAt: "" } });
+      if (!isTest) {
+        await db
+          .collection<FeedbackRequest>(FEEDBACK_REQUESTS_COLLECTION)
+          .updateOne({ token }, { $unset: { submittedAt: "" } });
+      }
       throw error;
     }
 
-    // A Location Support is megkapja a visszajelzést; a küldés hibája nem akadályozza a mentést
+    // Valódi visszajelzésnél a Location Support kapja az összefoglalót; próbánál kizárólag a próbát indító admin megadott címe.
+    // A küldés hibája nem akadályozza a mentést.
+    const recipient = isTest ? feedbackRequest.testRecipient : LOCATION_SUPPORT_EMAIL;
     try {
+      if (!recipient) throw new Error("missing test recipient");
       const result = await sendEmail({
-        to: LOCATION_SUPPORT_EMAIL,
-        subject: `Passenger feedback – #${record.bookingCode} – ${record.satisfied ? "Satisfied" : "Not satisfied"}`,
+        to: recipient,
+        subject: `${isTest ? "[TEST] " : ""}Passenger feedback – #${record.bookingCode} – ${record.satisfied ? "Satisfied" : "Not satisfied"}`,
         html: buildFeedbackNotificationEmail(record),
       });
       if (!result.success) console.error("[feedback] Location Support notification failed", result.error);

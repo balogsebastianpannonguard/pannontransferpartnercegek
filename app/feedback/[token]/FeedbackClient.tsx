@@ -10,6 +10,7 @@ interface RequestInfo {
   travelerName: string;
   language: FeedbackLanguage;
   submitted: boolean;
+  test?: boolean;
 }
 
 type LoadState = "loading" | "ready" | "not_found" | "already" | "done" | "error";
@@ -321,6 +322,12 @@ export default function FeedbackClient({ token }: { token: string }) {
     <Shell lang={lang} onLang={setLang}>
       <div className="mb-5">
         <h1 className="font-serif text-[26px] font-bold leading-tight">{t.title}</h1>
+        {info?.test && (
+          <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />
+            {lang === "en" ? "Test mode – not a real submission" : "Próba mód – nem valódi visszajelzés"}
+          </div>
+        )}
         {info && <p className="mt-2 text-sm font-semibold text-slate-200">{t.hello(info.travelerName)}</p>}
         <p className="mt-1 text-sm leading-relaxed text-slate-400">{t.intro}</p>
         {info && <p className="mt-2 text-[11px] font-semibold tracking-[0.2em] text-slate-600">#{info.bookingCode}</p>}

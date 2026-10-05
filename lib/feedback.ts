@@ -29,6 +29,9 @@ export interface FeedbackRequest {
   vehicleName?: string;
   createdAt: number;
   submittedAt?: number;
+  /** Admin által a diszpécser felületről indított próba: nem számít valódi visszajelzésnek, és az összefoglaló a testRecipient címre megy. */
+  test?: boolean;
+  testRecipient?: string;
 }
 
 /** A leadott visszajelzés – ezt olvassa a diszpécser felület „Visszajelzések” füle. */
@@ -58,6 +61,7 @@ export interface FeedbackRecord extends FeedbackAnswers {
   driverName?: string;
   vehicleName?: string;
   createdAt: number;
+  test?: boolean;
 }
 
 const MAX_TEXT = 2000;
