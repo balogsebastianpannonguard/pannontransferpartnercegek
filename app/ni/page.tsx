@@ -78,6 +78,7 @@ export default function NiLandingPage() {
   const [travelerName, setTravelerName] = useState("");
   const [travelerPhone, setTravelerPhone] = useState("");
   const [secondTravelerEmail, setSecondTravelerEmail] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
   const [secondTravelerPhone, setSecondTravelerPhone] = useState("");
   const [fromAddress, setFromAddress] = useState("");
   const [toAddress, setToAddress] = useState("");
@@ -319,6 +320,7 @@ export default function NiLandingPage() {
     setTravelerName("");
     setTravelerPhone("");
     setSecondTravelerEmail("");
+    setAdminEmail("");
     setSecondTravelerPhone("");
     setFromAddress("");
     setToAddress("");
@@ -361,6 +363,7 @@ export default function NiLandingPage() {
         travelerPhone,
         secondTravelerEmail: secondTravelerEmail || undefined,
         secondTravelerPhone: secondTravelerPhone || undefined,
+        adminEmail: adminEmail.trim() || undefined,
         companyName: "National Instruments",
         paymentMethod,
         transferType,
@@ -1096,6 +1099,35 @@ export default function NiLandingPage() {
                         </p>
                       )}
                     </div>
+                  </div>
+
+                  {/* Admin e-mail: ő is megkapja a visszaigazolást */}
+                  <div className="space-y-2 pt-2 border-t border-slate-800/50">
+                    <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
+                      {tr(
+                        "Admin e-mail cím (opcionális)",
+                        "Admin email address (optional)",
+                      )}
+                    </label>
+                    <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
+                      <Mail className="w-4 h-4 text-slate-500" />
+                      <input
+                        type="email"
+                        value={adminEmail}
+                        onChange={(e) => setAdminEmail(e.target.value)}
+                        placeholder={tr(
+                          "A foglalást rögzítő admin e-mail címe",
+                          "Email of the admin placing the booking",
+                        )}
+                        className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500 ml-1 leading-relaxed">
+                      {tr(
+                        "Az utas mellett Ön is megkapja a foglalás visszaigazolását. Ha üresen hagyja, a bejelentkezett e-mail címére küldjük.",
+                        "In addition to the passenger, you will also receive the booking confirmation. If left empty, it is sent to your signed-in email address.",
+                      )}
+                    </p>
                   </div>
 
                   {/* Optional 2nd Traveler */}

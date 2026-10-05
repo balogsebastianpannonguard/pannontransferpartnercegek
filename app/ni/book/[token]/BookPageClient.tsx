@@ -49,6 +49,7 @@ export default function BookPageClient({ token }: Props) {
   const [travelerName, setTravelerName] = useState("");
   const [travelerPhone, setTravelerPhone] = useState("");
   const [secondTravelerEmail, setSecondTravelerEmail] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
   const [secondTravelerPhone, setSecondTravelerPhone] = useState("");
   const [fromAddress, setFromAddress] = useState("");
   const [toAddress, setToAddress] = useState("");
@@ -228,6 +229,7 @@ export default function BookPageClient({ token }: Props) {
         travelerPhone,
         secondTravelerEmail: secondTravelerEmail || undefined,
         secondTravelerPhone: secondTravelerPhone || undefined,
+        adminEmail: adminEmail.trim() || undefined,
         transferType,
         fromType,
         fromAddress,
@@ -499,6 +501,21 @@ export default function BookPageClient({ token }: Props) {
                           </p>
                         )}
                       </div>
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-slate-800/50">
+                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">{tr("Admin e-mail cím (opcionális)", "Admin email address (optional)")}</label>
+                      <div className="w-full bg-white/[0.03] border border-white/5 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#41B679] focus-within:ring-1 focus-within:ring-[#41B679]/30 transition-all">
+                        <Mail className="w-4 h-4 text-slate-500" />
+                        <input
+                          type="email"
+                          value={adminEmail}
+                          onChange={(e) => setAdminEmail(e.target.value)}
+                          placeholder={tr("A foglalást rögzítő admin e-mail címe", "Email of the admin placing the booking")}
+                          className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-500 ml-1 leading-relaxed">{tr("Ha megadja, a foglalás visszaigazolását Ön is megkapja az utas mellett.", "If provided, you will also receive the booking confirmation in addition to the passenger.")}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-800/50">

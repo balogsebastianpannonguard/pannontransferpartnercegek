@@ -50,6 +50,8 @@ export interface Booking {
   travelerPhone: string;
   secondTravelerEmail?: string;
   secondTravelerPhone?: string;
+  // NI: a foglalást rögzítő admin e-mail címe – ő is megkapja a visszaigazolást (az utas és a Location Support mellett)
+  adminEmail?: string;
   companyName: string;
   paymentMethod: PaymentMethod;
   transferType: TransferType;
@@ -299,6 +301,10 @@ export async function validateTravelConditions(
   }
   if (!travelerName || travelerName.trim() === '') {
     errors.push('Az utas neve kötelező');
+  }
+  const adminEmailValue = (bookingData as { adminEmail?: string }).adminEmail;
+  if (adminEmailValue && adminEmailValue.trim() !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmailValue.trim())) {
+    errors.push('Az admin e-mail cím formátuma érvénytelen');
   }
   if (!travelerPhone || travelerPhone.trim() === '') {
     errors.push('Az utas telefonszáma kötelező');

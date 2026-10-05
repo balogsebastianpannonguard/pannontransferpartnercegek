@@ -18,6 +18,11 @@ import {
 } from "@/lib/email-templates";
 import { getDb } from "@/lib/mongodb";
 import { normalizePortalLanguage } from "@/lib/portal-language";
+import {
+  LOCATION_SUPPORT_EMAIL,
+  buildNiConfirmationRecipients,
+  sendNiBookingConfirmations,
+} from "@/lib/ni-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +108,9 @@ export async function POST(request: Request) {
       travelerPhone: body.travelerPhone,
       secondTravelerEmail: body.secondTravelerEmail,
       secondTravelerPhone: body.secondTravelerPhone,
+      ...(session.portal === "ni" && typeof body.adminEmail === "string" && body.adminEmail.trim()
+        ? { adminEmail: body.adminEmail.trim() }
+        : {}),
       companyName,
       paymentMethod: body.paymentMethod,
       transferType: body.transferType,
@@ -162,11 +170,31 @@ export async function POST(request: Request) {
         ? `Booking confirmation - #${createdBooking.bookingCode}`
         : `Foglalás visszaigazolása - #${createdBooking.bookingCode}`;
 
-    await sendEmail({
-      to: session.email,
-      subject: customerSubject,
-      html: customerHtml,
-    });
+    if (session.portal === "ni") {
+      // NI: az utas, az admin (megadott admin e-mail, különben a foglalást rögzítő) és a Location Support is megkapja.
+      const adminTarget = createdBooking.adminEmail || session.email;
+      const partnerViewer =
+        adminTarget.toLowerCase() !== createdBooking.travelerEmail.toLowerCase() ? adminTarget : LOCATION_SUPPORT_EMAIL;
+      await sendNiBookingConfirmations({
+        recipients: buildNiConfirmationRecipients({
+          travelerEmail: createdBooking.travelerEmail,
+          adminEmail: createdBooking.adminEmail,
+          bookerEmail: session.email,
+        }),
+        subject: customerSubject,
+        htmlFor: (role) =>
+          role === "traveler"
+            ? buildNiCustomerConfirmationEmail({ ...emailParams, userEmail: createdBooking.travelerEmail })
+            : buildNiCustomerConfirmationEmail({ ...emailParams, userEmail: partnerViewer }),
+        logTag: "booking",
+      });
+    } else {
+      await sendEmail({
+        to: session.email,
+        subject: customerSubject,
+        html: customerHtml,
+      });
+    }
 
     const db = await getDb();
     const staffUsers = await db

@@ -16,6 +16,11 @@ import {
 } from "@/lib/email-templates";
 import { getDb } from "@/lib/mongodb";
 import { normalizePortalLanguage } from "@/lib/portal-language";
+import {
+  LOCATION_SUPPORT_EMAIL,
+  buildNiConfirmationRecipients,
+  sendNiBookingConfirmations,
+} from "@/lib/ni-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +61,9 @@ export async function POST(
       travelerPhone: body.travelerPhone,
       secondTravelerEmail: body.secondTravelerEmail,
       secondTravelerPhone: body.secondTravelerPhone,
+      ...(linkRecord.portal === "ni" && typeof body.adminEmail === "string" && body.adminEmail.trim()
+        ? { adminEmail: body.adminEmail.trim() }
+        : {}),
       companyName: linkRecord.companyName,
       paymentMethod: "card",
       transferType: body.transferType,
@@ -113,13 +121,33 @@ export async function POST(
         ? buildNiCustomerConfirmationEmail(emailParams)
         : buildCustomerConfirmationEmail(emailParams);
 
-    if (createdBooking.travelerEmail) {
+    const confirmationSubject =
+      linkRecord.portal === "ni" && createdBooking.language === "en"
+        ? `Booking confirmation - #${createdBooking.bookingCode}`
+        : `Foglalás visszaigazolása - #${createdBooking.bookingCode}`;
+
+    if (linkRecord.portal === "ni") {
+      // NI: az utas, a megadott admin és a Location Support is megkapja.
+      const partnerViewer =
+        createdBooking.adminEmail && createdBooking.adminEmail.toLowerCase() !== createdBooking.travelerEmail.toLowerCase()
+          ? createdBooking.adminEmail
+          : LOCATION_SUPPORT_EMAIL;
+      await sendNiBookingConfirmations({
+        recipients: buildNiConfirmationRecipients({
+          travelerEmail: createdBooking.travelerEmail,
+          adminEmail: createdBooking.adminEmail,
+        }),
+        subject: confirmationSubject,
+        htmlFor: (role) =>
+          role === "traveler"
+            ? customerHtml
+            : buildNiCustomerConfirmationEmail({ ...emailParams, userEmail: partnerViewer }),
+        logTag: "book/submit",
+      });
+    } else if (createdBooking.travelerEmail) {
       await sendEmail({
         to: createdBooking.travelerEmail,
-        subject:
-          linkRecord.portal === "ni" && createdBooking.language === "en"
-            ? `Booking confirmation - #${createdBooking.bookingCode}`
-            : `Foglalás visszaigazolása - #${createdBooking.bookingCode}`,
+        subject: confirmationSubject,
         html: customerHtml,
       });
     }
