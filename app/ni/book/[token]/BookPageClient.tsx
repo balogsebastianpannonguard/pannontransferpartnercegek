@@ -487,13 +487,20 @@ export default function BookPageClient({ token }: Props) {
                           <Phone className={`w-4 h-4 ${isFieldInvalid("travelerPhone") ? "text-red-400" : "text-slate-500"}`} />
                           <input
                             type="tel"
+                            inputMode="numeric"
                             value={travelerPhone}
-                            onChange={(e) => setTravelerPhone(e.target.value)}
+                            onChange={(e) => setTravelerPhone(e.target.value.replace(/[^\d]/g, ""))}
                             onBlur={() => handleBlur("travelerPhone")}
-                            placeholder="+36..."
+                            placeholder="36301234567"
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
                         </div>
+                        <p className="text-[11px] text-slate-500 ml-1 leading-relaxed">
+                          {tr(
+                            "Csak számjegyek, országhívóval együtt, szóköz és kötőjel nélkül (pl. 36301234567).",
+                            "Digits only, including the country code, no spaces or dashes (e.g. 36301234567).",
+                          )}
+                        </p>
                         {getFieldError("travelerPhone") && (
                           <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
                             <XCircle className="w-3 h-3" />
@@ -538,9 +545,10 @@ export default function BookPageClient({ token }: Props) {
                           <Phone className="w-4 h-4 text-slate-500" />
                           <input
                             type="tel"
+                            inputMode="numeric"
                             value={secondTravelerPhone}
-                            onChange={(e) => setSecondTravelerPhone(e.target.value)}
-                            placeholder={tr("Opcionális", "Optional")}
+                            onChange={(e) => setSecondTravelerPhone(e.target.value.replace(/[^\d]/g, ""))}
+                            placeholder="36301234567"
                             className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                           />
                         </div>
@@ -659,12 +667,18 @@ export default function BookPageClient({ token }: Props) {
                               <input
                                 type="text"
                                 value={flightNumber}
-                                onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
+                                onChange={(e) => setFlightNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, ""))}
                                 onBlur={() => handleBlur("flightNumber")}
-                                placeholder={tr("pl. LH1234", "e.g. LH1234")}
+                                placeholder={tr("pl. W6 1234", "e.g. W6 1234")}
                                 className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                               />
                             </div>
+                            <p className="text-[11px] text-slate-500 ml-1 leading-relaxed">
+                              {tr(
+                                "A légitársaság kódja és a járatszám (pl. W6 1234, LH 1234) - NE a repülőgép lajstromjele (pl. HA-LYB).",
+                                "The airline code and flight number (e.g. W6 1234, LH 1234) - NOT the aircraft's registration/tail number (e.g. HA-LYB).",
+                              )}
+                            </p>
                             {getFieldError("flightNumber") && (
                               <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
                                 <XCircle className="w-3 h-3" />
@@ -740,12 +754,18 @@ export default function BookPageClient({ token }: Props) {
                               <input
                                 type="text"
                                 value={flightNumber}
-                                onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
+                                onChange={(e) => setFlightNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, ""))}
                                 onBlur={() => handleBlur("flightNumber")}
-                                placeholder={tr("pl. LH1234", "e.g. LH1234")}
+                                placeholder={tr("pl. W6 1234", "e.g. W6 1234")}
                                 className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                               />
                             </div>
+                            <p className="text-[11px] text-slate-500 ml-1 leading-relaxed">
+                              {tr(
+                                "A légitársaság kódja és a járatszám (pl. W6 1234, LH 1234) - NE a repülőgép lajstromjele (pl. HA-LYB).",
+                                "The airline code and flight number (e.g. W6 1234, LH 1234) - NOT the aircraft's registration/tail number (e.g. HA-LYB).",
+                              )}
+                            </p>
                             {getFieldError("flightNumber") && (
                               <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
                                 <XCircle className="w-3 h-3" />
