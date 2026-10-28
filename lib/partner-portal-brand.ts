@@ -23,11 +23,12 @@ type PartnerPortalBrand = {
 
 const DEFAULT_LANGUAGES: Language[] = ["hu", "en"];
 const CN_LANGUAGES: Language[] = ["hu", "en", "zh"];
+const CATL_LANGUAGES: Language[] = ["en", "zh"];
 
 export const PARTNER_PORTAL_BRANDS: Record<PartnerPortalKey, PartnerPortalBrand> = {
   catl: {
     key: "catl",
-    allowedLanguages: CN_LANGUAGES,
+    allowedLanguages: CATL_LANGUAGES,
     navLabel: "CATL Mobility Desk",
     navSubline: "Dedicated CATL Portal",
     deskLabel: "CATL Booking Desk",

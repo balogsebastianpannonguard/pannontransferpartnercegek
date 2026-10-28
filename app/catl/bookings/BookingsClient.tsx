@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
+import Link from "next/link";
 import {
   MapPin,
   Building2,
@@ -13,6 +15,7 @@ import {
   Luggage,
   CreditCard,
   Building,
+  Banknote,
   Car,
   User,
   Truck,
@@ -31,17 +34,34 @@ import {
   Ban,
   CalendarDays,
   MessageSquare,
-  DollarSign,
   Phone,
+  Mail,
   Minus,
   Plus,
   Bell,
   Eye,
   XCircle,
+  Plane,
+  Search,
+  Link2,
+  Copy,
+  History,
+  Info,
+  Tag,
 } from "lucide-react";
-import Link from "next/link";
 import { useLanguage } from "../../context/LanguageContext";
 import CatlPremiumLogin from "../components/CatlPremiumLogin";
+import {
+  type CatlLang,
+  type CatlKey,
+  makeT,
+  formatPickupDate,
+  formatTimestamp,
+  formatPrice,
+  STATUS_KEY,
+  translateServerMessage,
+  localizeNotificationDetails,
+} from "./i18n";
 
 interface CatlPortalUser {
   email: string;
@@ -49,31 +69,47 @@ interface CatlPortalUser {
   role?: string;
 }
 
+type BookingStatus = "pending" | "modified" | "confirmed" | "in-progress" | "completed" | "cancelled";
+
 interface Booking {
   _id: string;
   bookingCode: string;
-  status: "pending" | "modified" | "confirmed" | "in-progress" | "completed" | "cancelled";
+  status: BookingStatus;
+  portal?: string;
   travelerEmail: string;
   travelerName: string;
   travelerPhone: string;
   secondTravelerEmail?: string;
   secondTravelerPhone?: string;
   companyName: string;
-  paymentMethod: "card" | "bank";
+  paymentMethod: "card" | "bank" | "cash";
   transferType: "standard" | "executive";
   fromType: "airport" | "other";
   fromAddress: string;
   toType: "airport" | "other";
   toAddress: string;
+  flightNumber?: string;
   pickupDate: string;
   pickupTime: string;
   travelers: number;
   luggage: number;
   comment?: string;
+  assignedDriverName?: string;
+  assignedVehicleName?: string;
   driverName?: string;
   vehicleName?: string;
+  driverNotified?: boolean;
+  driverAcknowledged?: boolean;
   price?: number;
   createdAt?: number;
+  updatedAt?: number;
+  lastStatusChange?: {
+    oldStatus: string;
+    newStatus: string;
+    changedAt: number;
+  };
+  bookingTrackToken?: string;
+  trackLinkActive?: boolean;
 }
 
 type FilterTab = "all" | "pending" | "confirmed" | "closed";
@@ -83,24 +119,6 @@ interface Toast {
   type: "success" | "error";
   message: string;
 }
-
-const STATUS_LABELS: Record<Booking["status"], string> = {
-  pending: "Függőben",
-  modified: "Módosítva",
-  confirmed: "Jóváhagyott",
-  "in-progress": "Folyamatban",
-  completed: "Lezárt",
-  cancelled: "Lemondott",
-};
-
-const STATUS_COLORS: Record<Booking["status"], string> = {
-  pending: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  modified: "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  confirmed: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  "in-progress": "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  completed: "bg-slate-500/15 text-slate-400 border-slate-500/30",
-  cancelled: "bg-rose-500/15 text-rose-400 border-rose-500/30",
-};
 
 interface StatusChangeNotification {
   id: string;
@@ -113,60 +131,153 @@ interface StatusChangeNotification {
   dismissed: boolean;
 }
 
-function playNotificationSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.5);
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.frequency.value = 1320;
-    osc2.type = 'sine';
-    gain2.gain.setValueAtTime(0.2, ctx.currentTime + 0.15);
-    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.65);
-    osc2.start(ctx.currentTime + 0.15);
-    osc2.stop(ctx.currentTime + 0.65);
-  } catch {}
-}
+const STATUS_COLORS: Record<BookingStatus, string> = {
+  pending: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  modified: "bg-orange-500/15 text-orange-300 border-orange-500/30",
+  confirmed: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  "in-progress": "bg-sky-500/15 text-sky-300 border-sky-500/30",
+  completed: "bg-slate-500/15 text-slate-300 border-slate-500/30",
+  cancelled: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+};
 
-function getStatusChangeMessage(newStatus: string): { message: string; accent: string } {
-  switch (newStatus) {
-    case "confirmed":
-      return { message: "A foglalása jóváhagyásra került!", accent: "emerald" };
-    case "modified":
-      return { message: "A diszpécser módosítást kér a foglalásán", accent: "orange" };
-    case "cancelled":
-      return { message: "A foglalása lemondásra került", accent: "rose" };
-    case "in-progress":
-      return { message: "A foglalása folyamatban van", accent: "blue" };
-    case "completed":
-      return { message: "A foglalása befejeződött", accent: "slate" };
-    default:
-      return { message: "A foglalás státusza megváltozott", accent: "slate" };
-  }
-}
-
-const STATUS_DOT: Record<Booking["status"], string> = {
+const STATUS_DOT: Record<BookingStatus, string> = {
   pending: "bg-amber-400",
   modified: "bg-orange-400",
   confirmed: "bg-emerald-400",
-  "in-progress": "bg-blue-400",
+  "in-progress": "bg-sky-400",
   completed: "bg-slate-400",
   cancelled: "bg-rose-400",
 };
 
+const STATUS_RAIL: Record<BookingStatus, string> = {
+  pending: "from-amber-400 to-amber-600",
+  modified: "from-orange-400 to-orange-600",
+  confirmed: "from-emerald-400 to-emerald-600",
+  "in-progress": "from-sky-400 to-sky-600",
+  completed: "from-slate-400 to-slate-600",
+  cancelled: "from-rose-400 to-rose-600",
+};
+
+function playNotificationSound() {
+  try {
+    const Ctor =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new Ctor();
+    const tone = (freq: number, start: number, dur: number, vol: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = "sine";
+      gain.gain.setValueAtTime(vol, ctx.currentTime + start);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + start + dur);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur);
+    };
+    tone(880, 0, 0.5, 0.3);
+    tone(1320, 0.15, 0.5, 0.2);
+  } catch {}
+}
+
+function statusLabel(status: string, t: ReturnType<typeof makeT>): string {
+  const key = STATUS_KEY[status];
+  return key ? t(key) : status;
+}
+
+function notificationMessage(
+  newStatus: string,
+  t: ReturnType<typeof makeT>
+): { message: string; accent: string } {
+  switch (newStatus) {
+    case "confirmed":
+      return { message: t("notifConfirmed"), accent: "emerald" };
+    case "modified":
+      return { message: t("notifModified"), accent: "orange" };
+    case "cancelled":
+      return { message: t("notifCancelled"), accent: "rose" };
+    case "in-progress":
+      return { message: t("notifInProgress"), accent: "blue" };
+    case "completed":
+      return { message: t("notifCompleted"), accent: "slate" };
+    default:
+      return { message: t("notifDefault"), accent: "slate" };
+  }
+}
+
+const ACCENTS: Record<string, { border: string; bg: string; text: string; dot: string }> = {
+  emerald: { border: "border-emerald-500/30", bg: "bg-emerald-500/10", text: "text-emerald-300", dot: "bg-emerald-400" },
+  orange: { border: "border-orange-500/30", bg: "bg-orange-500/10", text: "text-orange-300", dot: "bg-orange-400" },
+  rose: { border: "border-rose-500/30", bg: "bg-rose-500/10", text: "text-rose-300", dot: "bg-rose-400" },
+  blue: { border: "border-sky-500/30", bg: "bg-sky-500/10", text: "text-sky-300", dot: "bg-sky-400" },
+  slate: { border: "border-slate-500/30", bg: "bg-slate-500/10", text: "text-slate-300", dot: "bg-slate-400" },
+};
+
+function BrandLockup({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="flex items-center gap-4">
+      <span className="inline-flex items-center justify-center rounded-lg bg-white px-2.5 py-1.5 shadow-[0_4px_18px_rgba(0,0,0,0.35)] ring-1 ring-white/20">
+        <Image
+          src="/brand/pannon-transfer-logo.png"
+          alt="Pannon Transfer"
+          width={387}
+          height={79}
+          priority
+          className={`${compact ? "h-4" : "h-5 md:h-6"} w-auto`}
+        />
+      </span>
+      <span className="w-px h-8 bg-white/15" />
+      <span className="inline-flex items-center justify-center rounded-lg bg-white px-2.5 py-1.5 shadow-[0_4px_18px_rgba(0,71,186,0.35)] ring-1 ring-white/20">
+        <Image
+          src="/partners/catl/logo.png"
+          alt="CATL"
+          width={139}
+          height={45}
+          priority
+          className={`${compact ? "h-5" : "h-6 md:h-7"} w-auto`}
+        />
+      </span>
+    </div>
+  );
+}
+
+function SectionLabel({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <p className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-[#5AA2FF] mb-3">
+      {icon}
+      {children}
+    </p>
+  );
+}
+
+function InfoRow({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="mt-0.5 w-7 h-7 shrink-0 rounded-lg bg-white/[0.04] border border-white/[0.07] flex items-center justify-center text-slate-400">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500">{label}</p>
+        <div className="text-sm font-semibold text-white break-words">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function CatlBookingsClient() {
-  const { t, language, setLanguage, availableLanguages } = useLanguage();
+  const { language, setLanguage } = useLanguage();
+  const lang: CatlLang = language === "zh" ? "zh" : "en";
+  const t = useMemo(() => makeT(lang), [lang]);
+
   const [scrolled, setScrolled] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [authedUser, setAuthedUser] = useState<CatlPortalUser | null>(null);
@@ -176,11 +287,13 @@ export default function CatlBookingsClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
+  const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [editModal, setEditModal] = useState<Booking | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [editGeneral, setEditGeneral] = useState<string[]>([]);
 
   const [cancelModal, setCancelModal] = useState<Booking | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -195,6 +308,8 @@ export default function CatlBookingsClient() {
     pickupTime: "",
     fromAddress: "",
     toAddress: "",
+    flightNumber: "",
+    travelerPhone: "",
     travelers: 1,
     luggage: 0,
     comment: "",
@@ -203,10 +318,8 @@ export default function CatlBookingsClient() {
   useEffect(() => {
     if (authedUser) {
       setPortalBooting(true);
-      const t = setTimeout(() => {
-        setPortalBooting(false);
-      }, 1800);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setPortalBooting(false), 1800);
+      return () => clearTimeout(timer);
     }
   }, [authedUser]);
 
@@ -231,9 +344,7 @@ export default function CatlBookingsClient() {
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -273,14 +384,12 @@ export default function CatlBookingsClient() {
 
   useEffect(() => {
     if (!authedUser) return;
-    const interval = setInterval(() => {
-      fetchBookings(true);
-    }, 15000);
+    const interval = setInterval(() => fetchBookings(true), 15000);
     return () => clearInterval(interval);
   }, [authedUser, fetchBookings]);
 
   const addToast = useCallback((type: "success" | "error", message: string) => {
-    const id = Date.now();
+    const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -288,11 +397,11 @@ export default function CatlBookingsClient() {
   }, []);
 
   const dismissNotification = (id: string) => {
-    setStatusNotifications(prev => prev.map(n => n.id === id ? { ...n, dismissed: true } : n));
+    setStatusNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, dismissed: true } : n)));
   };
 
   const dismissAllNotifications = () => {
-    setStatusNotifications(prev => prev.map(n => ({ ...n, dismissed: true })));
+    setStatusNotifications((prev) => prev.map((n) => ({ ...n, dismissed: true })));
   };
 
   useEffect(() => {
@@ -300,20 +409,25 @@ export default function CatlBookingsClient() {
 
     const pollNotifications = async () => {
       try {
-        const res = await fetch(`/api/notifications?lastPollTimestamp=${lastNotifPollTimestamp.current}`, {
-          cache: "no-store",
-          headers: { "x-partner-portal": "catl" },
-        });
+        const res = await fetch(
+          `/api/notifications?lastPollTimestamp=${lastNotifPollTimestamp.current}`,
+          {
+            cache: "no-store",
+            headers: { "x-partner-portal": "catl" },
+          }
+        );
         if (res.ok) {
           const json = await res.json();
           if (json?.success && json?.statusChanges?.length > 0) {
             playNotificationSound();
-            const newNotifs = json.statusChanges.map((sc: any) => ({
+            const newNotifs: StatusChangeNotification[] = (
+              json.statusChanges as Array<Omit<StatusChangeNotification, "id" | "dismissed"> & { _id: string }>
+            ).map((sc) => ({
               ...sc,
-              id: sc._id + '-' + sc.updatedAt,
+              id: sc._id + "-" + sc.updatedAt,
               dismissed: false,
             }));
-            setStatusNotifications(prev => [...newNotifs, ...prev].slice(0, 20));
+            setStatusNotifications((prev) => [...newNotifs, ...prev].slice(0, 20));
             fetchBookings();
           }
           lastNotifPollTimestamp.current = Date.now();
@@ -332,24 +446,44 @@ export default function CatlBookingsClient() {
       pickupTime: booking.pickupTime,
       fromAddress: booking.fromAddress,
       toAddress: booking.toAddress,
+      flightNumber: booking.flightNumber || "",
+      travelerPhone: booking.travelerPhone || "",
       travelers: booking.travelers,
       luggage: booking.luggage,
       comment: booking.comment || "",
     });
     setEditErrors({});
+    setEditGeneral([]);
   };
 
   const closeEditModal = () => {
     setEditModal(null);
     setEditLoading(false);
     setEditErrors({});
+    setEditGeneral([]);
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editModal) return;
+
+    const errs: Record<string, string> = {};
+    if (!editForm.pickupDate) errs.pickupDate = t("required");
+    if (!editForm.pickupTime) errs.pickupTime = t("required");
+    if (!editForm.fromAddress.trim()) errs.fromAddress = t("required");
+    if (!editForm.toAddress.trim()) errs.toAddress = t("required");
+    if (!editForm.travelerPhone.trim()) errs.travelerPhone = t("required");
+    const airportTrip = editModal.fromType === "airport" || editModal.toType === "airport";
+    if (airportTrip && !editForm.flightNumber.trim()) errs.flightNumber = t("flightRequired");
+    if (Object.keys(errs).length > 0) {
+      setEditErrors(errs);
+      setEditGeneral([t("fixErrors")]);
+      return;
+    }
+
     setEditLoading(true);
     setEditErrors({});
+    setEditGeneral([]);
     try {
       const res = await fetch(`/api/bookings/${editModal._id}`, {
         method: "PATCH",
@@ -357,26 +491,34 @@ export default function CatlBookingsClient() {
           "Content-Type": "application/json",
           "x-partner-portal": "catl",
         },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          ...editForm,
+          flightNumber: editForm.flightNumber.trim(),
+          travelerPhone: editForm.travelerPhone.trim(),
+        }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        if (json?.errors) {
-          const errMap: Record<string, string> = {};
-          Object.entries(json.errors).forEach(([k, v]: [string, any]) => {
-            errMap[k] = Array.isArray(v) ? v[0] : String(v);
-          });
-          setEditErrors(errMap);
+        if (Array.isArray(json?.errors)) {
+          setEditGeneral((json.errors as string[]).map((m) => translateServerMessage(m, lang)));
+        } else if (json?.errors && typeof json.errors === "object") {
+          setEditGeneral(
+            Object.values(json.errors as Record<string, unknown>).map((v) =>
+              translateServerMessage(Array.isArray(v) ? String(v[0]) : String(v), lang)
+            )
+          );
         } else {
-          addToast("error", json?.message || "A módosítás sikertelen.");
+          const msg = json?.message ? translateServerMessage(json.message, lang) : t("toastUpdateFailed");
+          setEditGeneral([msg]);
+          addToast("error", msg);
         }
         return;
       }
-      addToast("success", "Foglalás sikeresen módosítva.");
+      addToast("success", t("toastUpdated"));
       closeEditModal();
       fetchBookings();
     } catch {
-      addToast("error", "Hálózati hiba történt.");
+      addToast("error", t("toastNetwork"));
     } finally {
       setEditLoading(false);
     }
@@ -396,80 +538,127 @@ export default function CatlBookingsClient() {
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        addToast("error", json?.message || "A lemondás sikertelen.");
+        addToast(
+          "error",
+          json?.message ? translateServerMessage(json.message, lang) : t("toastCancelFailed")
+        );
         return;
       }
-      addToast("success", "Foglalás sikeresen lemondva.");
+      addToast("success", t("toastCancelled"));
       setCancelModal(null);
       fetchBookings();
     } catch {
-      addToast("error", "Hálózati hiba történt.");
+      addToast("error", t("toastNetwork"));
     } finally {
       setCancelLoading(false);
     }
   };
 
-  const filteredBookings = bookings.filter((b) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "pending") return b.status === "pending" || b.status === "modified";
-    if (activeTab === "confirmed") return b.status === "confirmed" || b.status === "in-progress";
-    if (activeTab === "closed") return b.status === "completed" || b.status === "cancelled";
-    return true;
-  });
-
-  const stats = {
-    total: bookings.length,
-    pending: bookings.filter((b) => b.status === "pending" || b.status === "modified").length,
-    confirmed: bookings.filter((b) => b.status === "confirmed" || b.status === "in-progress").length,
-    closed: bookings.filter((b) => b.status === "completed" || b.status === "cancelled").length,
+  const copyTrackingLink = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/track/${token}`);
+      addToast("success", t("copied"));
+    } catch {}
   };
+
+  const tabMatch = useCallback(
+    (b: Booking, tab: FilterTab) => {
+      if (tab === "all") return true;
+      if (tab === "pending") return b.status === "pending" || b.status === "modified";
+      if (tab === "confirmed") return b.status === "confirmed" || b.status === "in-progress";
+      return b.status === "completed" || b.status === "cancelled";
+    },
+    []
+  );
+
+  const filteredBookings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return bookings.filter((b) => {
+      if (!tabMatch(b, activeTab)) return false;
+      if (!q) return true;
+      const hay = [
+        b.bookingCode,
+        b.travelerName,
+        b.travelerEmail,
+        b.travelerPhone,
+        b.fromAddress,
+        b.toAddress,
+        b.flightNumber,
+        b.assignedDriverName,
+        b.driverName,
+        b.comment,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [bookings, activeTab, search, tabMatch]);
+
+  const stats = useMemo(
+    () => ({
+      total: bookings.length,
+      pending: bookings.filter((b) => tabMatch(b, "pending")).length,
+      confirmed: bookings.filter((b) => tabMatch(b, "confirmed")).length,
+      closed: bookings.filter((b) => tabMatch(b, "closed")).length,
+    }),
+    [bookings, tabMatch]
+  );
+
+  const langSwitcher = (
+    <div className="flex items-center gap-1 p-1 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+      {(["en", "zh"] as CatlLang[]).map((l) => (
+        <button
+          key={l}
+          onClick={() => setLanguage(l)}
+          className={`min-w-9 h-8 px-2 rounded-md flex items-center justify-center text-[11px] font-bold tracking-wider transition-all duration-200 ${
+            lang === l
+              ? "bg-[#0047BA] text-white shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          {l === "en" ? "EN" : "中文"}
+        </button>
+      ))}
+    </div>
+  );
 
   if (!authChecked) {
     return (
-      <div className="relative min-h-screen bg-[#FAFBFC] text-zinc-900 flex flex-col">
-        <div className="w-full border-b border-zinc-200/70 bg-white/60 backdrop-blur-md">
-          <div className="max-w-6xl mx-auto px-6 h-16 flex items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0047BA] to-[#0066E0] flex items-center justify-center shadow-sm">
-                <span className="text-white font-black text-sm tracking-tighter">C</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[15px] font-bold text-zinc-900 leading-none">CATL Portál</span>
-                <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">
-                  Pannon Transfer · Hozzáférés ellenőrzése
-                </span>
-              </div>
+      <div className="relative min-h-screen bg-[#040914] text-slate-300 flex flex-col">
+        <div className="w-full border-b border-white/10 bg-[#040914]/80 backdrop-blur-md">
+          <div className="max-w-6xl mx-auto px-6 h-20 flex items-center">
+            <BrandLockup compact />
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center px-4 py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="flex flex-col items-center gap-5"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-[#0047BA]/15 border border-[#0047BA]/30 flex items-center justify-center">
+              <Building2 className="w-7 h-7 text-[#5AA2FF] animate-pulse" />
             </div>
-          </div>
+            <div className="flex items-center gap-2.5">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
+                className="w-5 h-5 rounded-full border-2 border-white/10 border-t-[#5AA2FF]"
+              />
+              <p className="text-[14px] text-slate-400 font-semibold tracking-wide">
+                {t("verifyingAccess")}
+              </p>
+            </div>
+          </motion.div>
         </div>
-        <div className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
-          <div className="w-full max-w-[440px]">
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className="flex flex-col items-center py-20 gap-5"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-[#0047BA]/[0.08] border border-[#0047BA]/10 flex items-center justify-center shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                <Building2 className="w-7 h-7 text-[#0047BA] animate-pulse" />
-              </div>
-              <div className="flex items-center gap-2.5">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
-                  className="w-5 h-5 rounded-full border-2 border-zinc-200 border-t-[#0047BA]"
-                />
-                <p className="text-[14px] text-zinc-600 font-semibold tracking-wide">
-                  Hozzáférés és munkamenet ellenőrzése...
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-        <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
-          <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-            <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
-            <span className="tracking-wider">CATL Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
+        <div className="w-full border-t border-white/10">
+          <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+            <span>
+              © {new Date().getFullYear()} Pannon Transfer · {t("rightsReserved")}
+            </span>
+            <span className="tracking-wider">{t("footerPortal")}</span>
           </div>
         </div>
       </div>
@@ -489,38 +678,27 @@ export default function CatlBookingsClient() {
           transition={{ duration: 3, ease: "easeOut" }}
           className="absolute w-[800px] h-[800px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#0047BA]/20 via-transparent to-transparent rounded-full blur-[100px] pointer-events-none"
         />
-        <motion.div
-          animate={{ y: [0, -20, 0], opacity: [0.1, 0.4, 0.1] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/4 left-1/4 w-1 h-1 bg-[#00B4D8] rounded-full blur-[1px]"
-        />
-        <motion.div
-          animate={{ y: [0, 20, 0], opacity: [0.1, 0.3, 0.1] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute bottom-1/3 right-1/4 w-1.5 h-1.5 bg-[#0047BA] rounded-full blur-[2px]"
-        />
         <div className="relative z-10 flex flex-col items-center">
           <div className="relative w-40 h-40 flex items-center justify-center mb-10">
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 12, ease: "linear", repeat: Infinity }}
-              className="absolute inset-0 rounded-full border-[1px] border-white/[0.03] border-t-[#00B4D8]/60 border-r-[#0047BA]/40"
+              className="absolute inset-0 rounded-full border-[1px] border-white/[0.03] border-t-[#5AA2FF]/70 border-r-[#0047BA]/50"
             />
             <motion.div
               animate={{ rotate: -360 }}
               transition={{ duration: 16, ease: "linear", repeat: Infinity }}
-              className="absolute inset-[-16px] rounded-full border-[1px] border-white/[0.02] border-b-[#00B4D8]/30 border-l-[#0047BA]/50"
+              className="absolute inset-[-16px] rounded-full border-[1px] border-white/[0.02] border-b-[#5AA2FF]/30 border-l-[#0047BA]/50"
             />
-            <div className="absolute inset-2 bg-[#020617] rounded-full shadow-[inset_0_0_20px_rgba(0,71,186,0.1)] flex items-center justify-center">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.5 }}
+            <div className="absolute inset-2 bg-[#020617] rounded-full shadow-[inset_0_0_20px_rgba(0,71,186,0.15)] flex items-center justify-center">
+              <motion.span
+                initial={{ opacity: 0, scale: 0.6 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
-                className="w-14 h-14 bg-gradient-to-br from-[#0047BA] to-[#00B4D8] rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(0,180,216,0.4)] relative overflow-hidden"
+                className="inline-flex items-center justify-center rounded-xl bg-white px-3 py-2.5 shadow-[0_0_40px_rgba(0,71,186,0.5)]"
               >
-                <div className="absolute inset-0 bg-white/20 mix-blend-overlay" />
-                <span className="text-white font-black text-2xl tracking-tighter relative z-10">C</span>
-              </motion.div>
+                <Image src="/partners/catl/logo.png" alt="CATL" width={139} height={45} className="h-8 w-auto" priority />
+              </motion.span>
             </div>
           </div>
           <motion.div
@@ -529,13 +707,18 @@ export default function CatlBookingsClient() {
             transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
             className="text-center"
           >
-            <div className="flex items-center justify-center gap-5 mb-4">
-              <span className="font-serif text-2xl tracking-[0.25em] text-white/90">PANNON</span>
-              <span className="w-[1px] h-6 bg-white/20" />
-              <span className="font-sans font-black text-2xl tracking-[0.2em] text-[#00B4D8]">CATL</span>
-            </div>
+            <span className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 mb-4 shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
+              <Image
+                src="/brand/pannon-transfer-logo.png"
+                alt="Pannon Transfer"
+                width={387}
+                height={79}
+                className="h-7 w-auto"
+                priority
+              />
+            </span>
             <p className="text-[10px] tracking-[0.4em] uppercase text-slate-500 font-medium">
-              Premium Corporate Transfer
+              {t("premiumTagline")}
             </p>
           </motion.div>
           <motion.div
@@ -549,15 +732,15 @@ export default function CatlBookingsClient() {
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
                 transition={{ duration: 1.2, ease: [0.7, 0, 0.3, 1], delay: 0.4 }}
-                className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-transparent via-[#00B4D8] to-[#00B4D8] shadow-[0_0_12px_rgba(0,180,216,1)]"
+                className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-transparent via-[#5AA2FF] to-[#5AA2FF] shadow-[0_0_12px_rgba(90,162,255,1)]"
               />
             </div>
             <motion.div
               animate={{ opacity: [0.3, 1, 0.3] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="mt-5 text-center text-[9px] tracking-[0.3em] text-[#00B4D8] uppercase font-bold"
+              className="mt-5 text-center text-[9px] tracking-[0.3em] text-[#5AA2FF] uppercase font-bold"
             >
-              Rendszer előkészítése...
+              {t("preparingWorkspace")}
             </motion.div>
           </motion.div>
         </div>
@@ -565,18 +748,32 @@ export default function CatlBookingsClient() {
     );
   }
 
-  const fadeIn: any = {
+  const fadeIn = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const } },
   };
+
+  const paymentLabel = (m: Booking["paymentMethod"]) =>
+    m === "card" ? t("payCard") : m === "cash" ? t("payCash") : t("payBank");
+  const paymentIcon = (m: Booking["paymentMethod"], cls: string) =>
+    m === "card" ? <CreditCard className={cls} /> : m === "cash" ? <Banknote className={cls} /> : <Building className={cls} />;
+
+  const filterTabs: { key: FilterTab; label: CatlKey; count: number }[] = [
+    { key: "all", label: "filterAll", count: stats.total },
+    { key: "pending", label: "filterPending", count: stats.pending },
+    { key: "confirmed", label: "filterConfirmed", count: stats.confirmed },
+    { key: "closed", label: "filterClosed", count: stats.closed },
+  ];
+
+  const visibleNotifications = statusNotifications.filter((n) => !n.dismissed);
 
   return (
     <div className="min-h-screen bg-[#040914] text-slate-300 font-sans selection:bg-[#0047BA]/30 relative overflow-hidden">
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#0047BA]/15 via-[#0047BA]/5 to-transparent blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#00B4D8]/10 via-transparent to-transparent blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.015] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:48px_48px]" />
-        <div className="absolute inset-x-0 top-0 h-[260px] bg-[linear-gradient(180deg,rgba(0,71,186,0.14),rgba(4,9,20,0))]" />
+        <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#0047BA]/20 via-[#0047BA]/5 to-transparent blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#5AA2FF]/10 via-transparent to-transparent blur-3xl" />
+        <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute inset-x-0 top-0 h-[260px] bg-[linear-gradient(180deg,rgba(0,71,186,0.16),rgba(4,9,20,0))]" />
       </div>
 
       <nav
@@ -586,80 +783,49 @@ export default function CatlBookingsClient() {
             : "bg-transparent border-b border-white/5"
         }`}
       >
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-12 h-20 flex justify-between items-center">
-          <div className="flex items-center gap-5 md:gap-8 h-full">
-            <div className="flex flex-col justify-center">
-              <span className="font-serif font-bold text-lg md:text-xl tracking-widest text-white leading-none">
-                PANNON
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 h-20 flex justify-between items-center gap-4">
+          <div className="flex items-center gap-6 min-w-0">
+            <BrandLockup />
+            <div className="hidden xl:flex flex-col justify-center border-l border-white/10 pl-6">
+              <span className="text-[10px] font-semibold tracking-[0.25em] text-slate-400 uppercase">
+                {t("portalLabel")}
               </span>
-              <span className="font-serif font-bold text-[10px] md:text-xs tracking-[0.25em] text-[#D4AF37] leading-tight mt-1">
-                TRANSFER
-              </span>
-            </div>
-            <div className="w-px h-8 bg-white/20 transform rotate-12"></div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded bg-gradient-to-br from-[#0047BA] to-[#00B4D8] flex items-center justify-center shadow-sm">
-                <Building2 className="w-4 h-4 text-white" />
-              </div>
-              <div className="flex flex-col justify-center">
-                <span className="font-bold text-lg md:text-xl tracking-tight text-white leading-none flex items-center gap-2">
-                  CATL <span className="text-[#00B4D8] text-sm hidden sm:inline">宁德时代</span>
-                </span>
-                <span className="text-[10px] font-medium tracking-widest text-slate-400 uppercase mt-1">
-                  Corporate Portal
-                </span>
-              </div>
             </div>
           </div>
 
-          <div className="hidden lg:flex items-center gap-8 h-full">
-            <div className="flex items-center gap-8 h-full">
+          <div className="flex items-center gap-3 sm:gap-6 h-full">
+            <div className="hidden md:flex items-center gap-8 h-full">
               <Link
                 href="/catl#booking"
                 className="text-slate-300 text-sm font-medium tracking-wide hover:text-white transition-colors h-full flex items-center border-b-2 border-transparent hover:border-white/20"
               >
-                {t("nav", "booking")}
+                {t("navBooking")}
               </Link>
               <Link
                 href="/catl/bookings"
-                className="text-slate-300 text-sm font-medium tracking-wide hover:text-white transition-colors h-full flex items-center border-b-2 border-[#0047BA]"
+                className="text-white text-sm font-semibold tracking-wide h-full flex items-center border-b-2 border-[#0047BA]"
               >
-                Saját foglalásaim
+                {t("navMyBookings")}
               </Link>
             </div>
 
-            <div className="w-px h-5 bg-white/10 mx-2"></div>
+            <div className="hidden md:block w-px h-5 bg-white/10" />
+            {langSwitcher}
+            <div className="hidden md:block w-px h-5 bg-white/10" />
 
-            <div className="flex items-center gap-1">
-              {availableLanguages.map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => setLanguage(lang)}
-                  className={`w-8 h-8 rounded flex items-center justify-center text-[11px] font-bold tracking-wider transition-all duration-200 ${
-                    language === lang
-                      ? "bg-[#0047BA] text-white shadow-sm"
-                      : "text-slate-400 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  {lang.toUpperCase()}
-                </button>
-              ))}
-            </div>
-
-            <div className="w-px h-5 bg-white/10 mx-2"></div>
-
-            <div className="flex items-center gap-3 pl-2">
+            <div className="flex items-center gap-3">
               <div className="hidden xl:flex flex-col items-end">
-                <span className="text-[12px] font-semibold text-white leading-none truncate max-w-[180px]">
+                <span className="text-[12px] font-semibold text-white leading-none truncate max-w-[200px]">
                   {authedUser.email}
                 </span>
               </div>
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0047BA] to-[#00B4D8] flex items-center justify-center shadow-[0_0_20px_rgba(0,71,186,0.4)] shrink-0 ring-1 ring-white/10">
+              <div className="hidden sm:flex w-9 h-9 rounded-xl bg-gradient-to-br from-[#0047BA] to-[#2F7BEA] items-center justify-center shadow-[0_0_20px_rgba(0,71,186,0.4)] shrink-0 ring-1 ring-white/10">
                 <UserCircle className="w-5 h-5 text-white" />
               </div>
               <button
                 onClick={handleLogout}
-                title="Kijelentkezés"
+                title={t("signOut")}
+                aria-label={t("signOut")}
                 className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all shrink-0"
               >
                 <LogOut className="w-4 h-4" />
@@ -667,50 +833,52 @@ export default function CatlBookingsClient() {
             </div>
           </div>
         </div>
+        <div className="md:hidden flex items-center gap-6 px-4 h-11 border-t border-white/5 bg-[#040914]/70 backdrop-blur-xl">
+          <Link href="/catl#booking" className="text-slate-300 text-sm font-medium">
+            {t("navBooking")}
+          </Link>
+          <Link href="/catl/bookings" className="text-white text-sm font-semibold border-b-2 border-[#0047BA] h-full flex items-center">
+            {t("navMyBookings")}
+          </Link>
+        </div>
       </nav>
 
-      {/* Status change notification panel */}
       <AnimatePresence>
-        {statusNotifications.filter(n => !n.dismissed).length > 0 && (
+        {visibleNotifications.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed top-20 left-0 right-0 z-40"
+            className="fixed top-20 md:top-20 left-0 right-0 z-40 mt-11 md:mt-0"
           >
-            <div className="bg-gradient-to-r from-[#0047BA]/20 to-[#00B4D8]/10 border-b border-white/10 backdrop-blur-xl">
-              <div className="max-w-[1440px] mx-auto px-6 lg:px-12 py-3">
+            <div className="bg-gradient-to-r from-[#0047BA]/25 to-[#5AA2FF]/10 border-b border-white/10 backdrop-blur-xl">
+              <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-3">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-[#00B4D8]" />
-                    <span className="text-xs font-bold text-[#00B4D8] tracking-widest uppercase">
-                      Státuszváltozás értesítések
+                    <Bell className="w-4 h-4 text-[#5AA2FF]" />
+                    <span className="text-xs font-bold text-[#5AA2FF] tracking-widest uppercase">
+                      {t("notifTitle")}
                     </span>
-                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#00B4D8]/20 text-[#00B4D8] text-[10px] font-bold">
-                      {statusNotifications.filter(n => !n.dismissed).length}
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#5AA2FF]/20 text-[#5AA2FF] text-[10px] font-bold">
+                      {visibleNotifications.length}
                     </span>
                   </div>
                   <button
                     onClick={dismissAllNotifications}
                     className="text-[11px] font-semibold text-slate-400 hover:text-white transition-colors tracking-wide"
                   >
-                    Összes elvetése
+                    {t("dismissAll")}
                   </button>
                 </div>
                 <div className="flex flex-col gap-2 max-h-[240px] overflow-y-auto">
                   <AnimatePresence>
-                    {statusNotifications.filter(n => !n.dismissed).map((notif) => {
-                      const { message, accent } = getStatusChangeMessage(notif.newStatus);
-                      const accentClasses: Record<string, { border: string; bg: string; text: string; dot: string }> = {
-                        emerald: { border: "border-emerald-500/30", bg: "bg-emerald-500/10", text: "text-emerald-400", dot: "bg-emerald-400" },
-                        orange: { border: "border-orange-500/30", bg: "bg-orange-500/10", text: "text-orange-400", dot: "bg-orange-400" },
-                        rose: { border: "border-rose-500/30", bg: "bg-rose-500/10", text: "text-rose-400", dot: "bg-rose-400" },
-                        blue: { border: "border-blue-500/30", bg: "bg-blue-500/10", text: "text-blue-400", dot: "bg-blue-400" },
-                        slate: { border: "border-slate-500/30", bg: "bg-slate-500/10", text: "text-slate-400", dot: "bg-slate-400" },
-                      };
-                      const ac = accentClasses[accent] || accentClasses.slate;
-
+                    {visibleNotifications.map((notif) => {
+                      const { message, accent } = notificationMessage(notif.newStatus, t);
+                      const ac = ACCENTS[accent] || ACCENTS.slate;
+                      const oldKey = notif.oldStatus as BookingStatus;
+                      const newKey = notif.newStatus as BookingStatus;
+                      const details = localizeNotificationDetails(notif.details, lang);
                       return (
                         <motion.div
                           key={notif.id}
@@ -723,29 +891,29 @@ export default function CatlBookingsClient() {
                           <div className={`w-2 h-2 rounded-full ${ac.dot} shrink-0`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-bold text-white">
-                                #{notif.bookingCode}
-                              </span>
+                              <span className="text-xs font-bold text-white">#{notif.bookingCode}</span>
                               <span className="text-[11px] text-slate-400">·</span>
-                              <span className="text-[11px] text-slate-300 truncate">
-                                {notif.travelerName}
-                              </span>
+                              <span className="text-[11px] text-slate-300 truncate">{notif.travelerName}</span>
                             </div>
                             <div className="flex items-center gap-2 mb-1">
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${STATUS_COLORS[notif.oldStatus as Booking["status"]] || "bg-slate-500/15 text-slate-400 border-slate-500/30"}`}>
-                                {STATUS_LABELS[notif.oldStatus as Booking["status"]] || notif.oldStatus}
+                              <span
+                                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                  STATUS_COLORS[oldKey] || "bg-slate-500/15 text-slate-400 border-slate-500/30"
+                                }`}
+                              >
+                                {statusLabel(notif.oldStatus, t)}
                               </span>
                               <ArrowRight className="w-3 h-3 text-slate-500" />
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${STATUS_COLORS[notif.newStatus as Booking["status"]] || "bg-slate-500/15 text-slate-400 border-slate-500/30"}`}>
-                                {STATUS_LABELS[notif.newStatus as Booking["status"]] || notif.newStatus}
+                              <span
+                                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                  STATUS_COLORS[newKey] || "bg-slate-500/15 text-slate-400 border-slate-500/30"
+                                }`}
+                              >
+                                {statusLabel(notif.newStatus, t)}
                               </span>
                             </div>
-                            <p className={`text-[11px] font-semibold ${ac.text}`}>
-                              {message}
-                            </p>
-                            {notif.details && (
-                              <p className="text-[11px] text-slate-400 mt-0.5">{notif.details}</p>
-                            )}
+                            <p className={`text-[11px] font-semibold ${ac.text}`}>{message}</p>
+                            {details && <p className="text-[11px] text-slate-400 mt-0.5">{details}</p>}
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             <button
@@ -759,14 +927,14 @@ export default function CatlBookingsClient() {
                               className="h-7 px-2.5 rounded-lg bg-white/[0.06] border border-white/[0.1] text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-all inline-flex items-center gap-1"
                             >
                               <Eye className="w-3 h-3" />
-                              Megtekintés
+                              {t("view")}
                             </button>
                             <button
                               onClick={() => dismissNotification(notif.id)}
                               className="h-7 px-2.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] font-semibold text-slate-400 hover:text-white hover:bg-white/10 transition-all inline-flex items-center gap-1"
                             >
                               <XCircle className="w-3 h-3" />
-                              Elutasítás
+                              {t("dismiss")}
                             </button>
                           </div>
                         </motion.div>
@@ -780,62 +948,41 @@ export default function CatlBookingsClient() {
         )}
       </AnimatePresence>
 
-      <section className="relative pt-32 pb-24 px-6 min-h-screen flex items-start justify-center z-10">
+      <section className="relative pt-32 md:pt-32 pb-24 px-4 sm:px-6 min-h-screen flex items-start justify-center z-10">
         <div className="max-w-[1280px] mx-auto w-full">
-          <div className="mb-10">
-            <div className="relative overflow-hidden rounded-[24px] border border-[#0047BA]/20 bg-[linear-gradient(135deg,rgba(0,71,186,0.12),rgba(11,18,33,0.96)_42%,rgba(0,180,216,0.12))] px-5 py-6 md:px-7 md:py-7 shadow-[0_20px_70px_rgba(0,71,186,0.14)]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-[#00B4D8]/10 via-transparent to-transparent pointer-events-none" />
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#00B4D8]/70 to-transparent" />
-              <div className="relative">
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0047BA]/10 border border-[#0047BA]/20 mb-6"
-            >
-              <CalendarDays className="w-3.5 h-3.5 text-[#00B4D8]" />
-              <span className="text-[10px] font-bold text-[#00B4D8] tracking-widest uppercase">
-                Foglalás Kezelő
-              </span>
-              {isRefreshing && (
-                <RefreshCw className="w-3 h-3 text-[#00B4D8] animate-spin ml-1" />
-              )}
-            </motion.div>
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-              <div>
-                <motion.h1
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-3"
-                >
-                  Saját foglalásaim
-                </motion.h1>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-slate-400 text-sm md:text-base"
-                >
-                  Valós idejű státusz és részletek
-                </motion.p>
-              </div>
-              <motion.div className="flex items-center gap-3">
-                <button
-                  onClick={() => fetchBookings(true)}
-                  className="h-10 px-4 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all inline-flex items-center gap-2 text-sm font-medium"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-                  Frissítés
-                </button>
-                <Link
-                  href="/catl"
-                  className="h-10 px-4 rounded-lg bg-[#0047BA] hover:bg-[#00368C] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,71,186,0.3)]"
-                >
-                  <Plus className="w-4 h-4" />
-                  Új foglalás
-                </Link>
-              </motion.div>
-            </div>
+          <div className="mb-8">
+            <div className="relative overflow-hidden rounded-[24px] border border-[#0047BA]/30 bg-[linear-gradient(135deg,rgba(0,71,186,0.22),rgba(11,18,33,0.96)_45%,rgba(90,162,255,0.1))] px-5 py-6 md:px-8 md:py-8 shadow-[0_20px_70px_rgba(0,71,186,0.18)]">
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#5AA2FF]/70 to-transparent" />
+              <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0047BA]/15 border border-[#0047BA]/30 mb-5">
+                    <CalendarDays className="w-3.5 h-3.5 text-[#5AA2FF]" />
+                    <span className="text-[10px] font-bold text-[#5AA2FF] tracking-widest uppercase">
+                      {t("eyebrow")}
+                    </span>
+                    {isRefreshing && <RefreshCw className="w-3 h-3 text-[#5AA2FF] animate-spin ml-1" />}
+                  </div>
+                  <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-3">
+                    {t("pageTitle")}
+                  </h1>
+                  <p className="text-slate-400 text-sm md:text-base max-w-xl">{t("pageSubtitle")}</p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => fetchBookings(true)}
+                    className="h-11 px-4 rounded-xl bg-white/[0.05] border border-white/[0.1] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all inline-flex items-center gap-2 text-sm font-medium"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                    {t("refresh")}
+                  </button>
+                  <Link
+                    href="/catl"
+                    className="h-11 px-5 rounded-xl bg-[#0047BA] hover:bg-[#0A58D6] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_24px_rgba(0,71,186,0.45)]"
+                  >
+                    <Plus className="w-4 h-4" />
+                    {t("newBooking")}
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -845,149 +992,134 @@ export default function CatlBookingsClient() {
             animate="visible"
             variants={{
               hidden: { opacity: 0 },
-              visible: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.2 } },
+              visible: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
             }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8"
           >
-            <motion.div
-              variants={fadeIn}
-              className="bg-[#0B1221] rounded-2xl border border-slate-800 p-5 relative overflow-hidden group hover:border-slate-700/60 transition-colors"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#0047BA]/15 via-transparent to-transparent blur-2xl pointer-events-none" />
-              <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
-                    <CalendarDays className="w-5 h-5" />
+            {(
+              [
+                { label: "statTotal", value: stats.total, icon: <CalendarDays className="w-5 h-5" />, badge: null, tone: "text-slate-300 bg-white/5 border-white/10", glow: "from-[#0047BA]/20" },
+                { label: "statPending", value: stats.pending, icon: <Clock className="w-5 h-5" />, badge: "badgePending", tone: "text-amber-300 bg-amber-500/10 border-amber-500/20", glow: "from-amber-500/15" },
+                { label: "statConfirmed", value: stats.confirmed, icon: <UserCheck className="w-5 h-5" />, badge: "badgeActive", tone: "text-emerald-300 bg-emerald-500/10 border-emerald-500/20", glow: "from-emerald-500/15" },
+                { label: "statClosed", value: stats.closed, icon: <CheckCircle2 className="w-5 h-5" />, badge: "badgeClosed", tone: "text-slate-300 bg-slate-500/10 border-slate-500/20", glow: "from-slate-500/15" },
+              ] as {
+                label: CatlKey;
+                value: number;
+                icon: React.ReactNode;
+                badge: CatlKey | null;
+                tone: string;
+                glow: string;
+              }[]
+            ).map((card) => (
+              <motion.div
+                key={card.label}
+                variants={fadeIn}
+                className="bg-[#0B1221]/90 rounded-2xl border border-slate-800 p-4 md:p-5 relative overflow-hidden hover:border-slate-700/70 transition-colors"
+              >
+                <div
+                  className={`absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] ${card.glow} via-transparent to-transparent blur-2xl pointer-events-none`}
+                />
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${card.tone}`}>
+                      {card.icon}
+                    </div>
+                    {card.badge && (
+                      <span className={`hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border ${card.tone}`}>
+                        {t(card.badge)}
+                      </span>
+                    )}
                   </div>
+                  <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
+                    {t(card.label)}
+                  </p>
+                  <p className="text-3xl font-black text-white tracking-tight tabular-nums">{card.value}</p>
                 </div>
-                <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                  Összes foglalás
-                </p>
-                <p className="text-3xl font-black text-white tracking-tight">{stats.total}</p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              variants={fadeIn}
-              className="bg-[#0B1221] rounded-2xl border border-slate-800 p-5 relative overflow-hidden group hover:border-amber-500/30 transition-colors"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-amber-500/15 via-transparent to-transparent blur-2xl pointer-events-none" />
-              <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-                    <Clock className="w-5 h-5" />
-                  </div>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[10px] font-bold tracking-wider uppercase border border-amber-500/30">
-                    Függőben
-                  </span>
-                </div>
-                <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                  Feldolgozás alatt
-                </p>
-                <p className="text-3xl font-black text-white tracking-tight">{stats.pending}</p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              variants={fadeIn}
-              className="bg-[#0B1221] rounded-2xl border border-slate-800 p-5 relative overflow-hidden group hover:border-emerald-500/30 transition-colors"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/15 via-transparent to-transparent blur-2xl pointer-events-none" />
-              <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                    <UserCheck className="w-5 h-5" />
-                  </div>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold tracking-wider uppercase border border-emerald-500/30">
-                    Aktív
-                  </span>
-                </div>
-                <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                  Jóváhagyott
-                </p>
-                <p className="text-3xl font-black text-white tracking-tight">{stats.confirmed}</p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              variants={fadeIn}
-              className="bg-[#0B1221] rounded-2xl border border-slate-800 p-5 relative overflow-hidden group hover:border-slate-600/60 transition-colors"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-slate-500/15 via-transparent to-transparent blur-2xl pointer-events-none" />
-              <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-slate-500/10 border border-slate-500/20 flex items-center justify-center text-slate-400">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-400 text-[10px] font-bold tracking-wider uppercase border border-slate-500/30">
-                    Lezárt
-                  </span>
-                </div>
-                <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                  Befejezett
-                </p>
-                <p className="text-3xl font-black text-white tracking-tight">{stats.closed}</p>
-              </div>
-            </motion.div>
+              </motion.div>
+            ))}
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mb-6"
-          >
-            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#0B1221] border border-slate-800">
-              {([
-                { key: "all", label: "Minden" },
-                { key: "pending", label: "Függőben" },
-                { key: "confirmed", label: "Jóváhagyott" },
-                { key: "closed", label: "Lezárt" },
-              ] as { key: FilterTab; label: string }[]).map((tab) => (
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#0B1221] border border-slate-800 self-start overflow-x-auto max-w-full">
+              {filterTabs.map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium tracking-wide transition-all ${
+                  className={`px-4 py-2 rounded-lg text-sm font-medium tracking-wide transition-all inline-flex items-center gap-2 whitespace-nowrap ${
                     activeTab === tab.key
-                      ? "bg-white/[0.06] text-white shadow-sm"
-                      : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
+                      ? "bg-[#0047BA] text-white shadow-sm"
+                      : "text-slate-400 hover:text-white hover:bg-white/[0.04]"
                   }`}
                 >
-                  {tab.label}
+                  {t(tab.label)}
+                  <span
+                    className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md tabular-nums ${
+                      activeTab === tab.key ? "bg-white/20 text-white" : "bg-white/[0.06] text-slate-400"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
                 </button>
               ))}
             </div>
-          </motion.div>
+            <div className="relative w-full lg:max-w-md">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t("searchPlaceholder")}
+                className="w-full h-11 pl-10 pr-10 rounded-xl bg-[#0B1221] border border-slate-800 text-sm text-white placeholder:text-slate-500 outline-none focus:border-[#0047BA] focus:ring-1 focus:ring-[#0047BA]/40 transition-all"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  aria-label={t("clearSearch")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
 
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-5">
-              <div className="w-12 h-12 rounded-2xl bg-[#0047BA]/10 border border-[#0047BA]/20 flex items-center justify-center">
-                <Loader2 className="w-6 h-6 text-[#00B4D8] animate-spin" />
+              <div className="w-12 h-12 rounded-2xl bg-[#0047BA]/15 border border-[#0047BA]/30 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 text-[#5AA2FF] animate-spin" />
               </div>
-              <p className="text-sm text-slate-400 font-medium">Foglalások betöltése...</p>
+              <p className="text-sm text-slate-400 font-medium">{t("loadingBookings")}</p>
             </div>
           ) : filteredBookings.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-[#0B1221] rounded-2xl border border-slate-800 p-16 text-center relative overflow-hidden"
+              className="bg-[#0B1221] rounded-2xl border border-slate-800 p-10 md:p-16 text-center relative overflow-hidden"
             >
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#0047BA]/8 via-transparent to-transparent blur-3xl pointer-events-none" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#0047BA]/10 via-transparent to-transparent blur-3xl pointer-events-none" />
               <div className="relative flex flex-col items-center">
                 <div className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
                   <CalendarPlus className="w-10 h-10 text-slate-500" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">Még nincs foglalása</h3>
+                <h3 className="text-xl font-bold text-white mb-2">{t("emptyTitle")}</h3>
                 <p className="text-slate-400 text-sm mb-6 max-w-sm">
-                  Nincs még foglalás a kiválasztott szűrésnél. Menjen a foglalási oldalra és hozzon létre egy új átutalást.
+                  {search ? t("emptySearch") : t("emptyBody")}
                 </p>
-                <Link
-                  href="/catl"
-                  className="h-11 px-6 rounded-xl bg-[#0047BA] hover:bg-[#00368C] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,71,186,0.3)]"
-                >
-                  Menjen a foglalási oldalra
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
+                {search ? (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="h-11 px-6 rounded-xl bg-white/[0.06] border border-white/10 text-white font-semibold text-sm hover:bg-white/10 transition-all"
+                  >
+                    {t("clearSearch")}
+                  </button>
+                ) : (
+                  <Link
+                    href="/catl"
+                    className="h-11 px-6 rounded-xl bg-[#0047BA] hover:bg-[#0A58D6] text-white font-semibold text-sm tracking-wide transition-all inline-flex items-center gap-2 shadow-[0_0_24px_rgba(0,71,186,0.4)]"
+                  >
+                    {t("goBook")}
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                )}
               </div>
             </motion.div>
           ) : (
@@ -996,73 +1128,71 @@ export default function CatlBookingsClient() {
               animate="visible"
               variants={{
                 hidden: { opacity: 0 },
-                visible: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.3 } },
+                visible: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.1 } },
               }}
               className="space-y-4"
             >
               {filteredBookings.map((booking) => {
                 const isExpanded = expandedId === booking._id;
                 const canModify = booking.status !== "cancelled" && booking.status !== "completed";
+                const driver = booking.assignedDriverName || booking.driverName;
+                const vehicle = booking.assignedVehicleName || booking.vehicleName;
+                const trackActive = !!booking.bookingTrackToken && booking.trackLinkActive !== false;
+                const isExec = booking.transferType === "executive";
+
                 return (
                   <motion.div
                     key={booking._id}
+                    id={`booking-${booking.bookingCode}`}
                     variants={fadeIn}
-                    className="bg-[#0B1221] rounded-2xl border border-slate-800 overflow-hidden hover:border-slate-700/70 transition-colors"
+                    className="bg-[#0B1221] rounded-2xl border border-slate-800 overflow-hidden hover:border-slate-700/70 transition-colors relative"
                   >
-                    <div className="p-6">
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${STATUS_RAIL[booking.status]}`} />
+                    <div className="p-5 md:p-6 pl-6 md:pl-7">
                       <div className="flex flex-col lg:flex-row lg:items-stretch gap-6">
-                        <div className="flex-1 lg:max-w-[320px] flex flex-col gap-4">
+                        <div className="flex-1 lg:max-w-[340px] flex flex-col gap-4">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-[#0047BA]/20 to-[#00B4D8]/10 border border-[#0047BA]/30 text-[11px] font-black tracking-wider text-white tracking-wider">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#00B4D8]" />
-                              #{booking.bookingCode}
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-[#0047BA]/25 to-[#5AA2FF]/10 border border-[#0047BA]/40 text-[11px] font-black tracking-wider text-white">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#5AA2FF]" />#{booking.bookingCode}
                             </span>
                             <span
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold tracking-wide ${
-                                STATUS_COLORS[booking.status]
-                              }`}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold tracking-wide ${STATUS_COLORS[booking.status]}`}
                             >
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[booking.status]}`}
-                              />
-                              {STATUS_LABELS[booking.status]}
+                              <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[booking.status]}`} />
+                              {statusLabel(booking.status, t)}
                             </span>
                           </div>
 
                           <div>
-                            <div className="flex items-baseline gap-2 mb-1">
-                              <CalendarDays className="w-4 h-4 text-[#00B4D8] shrink-0" />
-                              <p className="text-2xl font-black text-white tracking-tight">
-                                {booking.pickupDate}
+                            <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-1">
+                              {t("pickup")}
+                            </p>
+                            <div className="flex items-baseline gap-3 flex-wrap">
+                              <p className="text-xl md:text-2xl font-black text-white tracking-tight">
+                                {formatPickupDate(booking.pickupDate, lang)}
                               </p>
-                              <span className="text-lg font-bold text-slate-400">
-                                {booking.pickupTime}
-                              </span>
+                              <span className="text-lg font-bold text-[#5AA2FF] tabular-nums">{booking.pickupTime}</span>
                             </div>
                           </div>
 
                           <div className="flex items-start gap-3">
-                            <div className="flex flex-col items-center pt-1">
-                              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                              <div className="w-px h-10 bg-gradient-to-b from-emerald-400/60 to-rose-400/60" />
-                              <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                            <div className="flex flex-col items-center pt-1.5">
+                              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 ring-4 ring-emerald-400/15" />
+                              <div className="w-px h-10 bg-gradient-to-b from-emerald-400/60 to-[#5AA2FF]/60" />
+                              <div className="w-2.5 h-2.5 rounded-full bg-[#5AA2FF] ring-4 ring-[#5AA2FF]/15" />
                             </div>
-                            <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex-1 min-w-0 space-y-2.5">
                               <div className="min-w-0">
                                 <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-0.5">
-                                  Honnan
+                                  {t("from")}
                                 </p>
-                                <p className="text-sm font-semibold text-white truncate">
-                                  {booking.fromAddress}
-                                </p>
+                                <p className="text-sm font-semibold text-white break-words">{booking.fromAddress}</p>
                               </div>
                               <div className="min-w-0">
                                 <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-0.5">
-                                  Hova
+                                  {t("to")}
                                 </p>
-                                <p className="text-sm font-semibold text-white truncate">
-                                  {booking.toAddress}
-                                </p>
+                                <p className="text-sm font-semibold text-white break-words">{booking.toAddress}</p>
                               </div>
                             </div>
                           </div>
@@ -1070,85 +1200,113 @@ export default function CatlBookingsClient() {
 
                         <div className="hidden lg:block w-px bg-white/5 shrink-0" />
 
-                        <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-5 content-start">
                           <div className="space-y-1">
-                            <div className="flex items-center gap-1.5 mb-1">
+                            <div className="flex items-center gap-1.5">
                               <Car className="w-3.5 h-3.5 text-slate-500" />
                               <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
-                                Típus
+                                {t("vehicleClass")}
                               </span>
                             </div>
-                            <p
-                              className={`text-sm font-bold ${
-                                booking.transferType === "executive"
-                                  ? "text-[#00B4D8]"
-                                  : "text-white"
-                              }`}
-                            >
-                              {booking.transferType === "executive" ? "Executive" : "Standard"}
+                            <p className={`text-sm font-bold ${isExec ? "text-[#5AA2FF]" : "text-white"}`}>
+                              {isExec ? t("executive") : t("standard")}
                             </p>
+                            <p className="text-[11px] text-slate-500">{isExec ? t("executiveSub") : t("standardSub")}</p>
                           </div>
 
                           <div className="space-y-1">
-                            <div className="flex items-center gap-1.5 mb-1">
+                            <div className="flex items-center gap-1.5">
                               <Users className="w-3.5 h-3.5 text-slate-500" />
                               <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
-                                Utasok
+                                {t("passengers")}
                               </span>
                             </div>
-                            <p className="text-sm font-bold text-white">
-                              {booking.travelers} fő
-                            </p>
+                            <p className="text-sm font-bold text-white">{t("paxUnit", { n: booking.travelers })}</p>
                           </div>
 
                           <div className="space-y-1">
-                            <div className="flex items-center gap-1.5 mb-1">
+                            <div className="flex items-center gap-1.5">
                               <Luggage className="w-3.5 h-3.5 text-slate-500" />
                               <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
-                                Csomag
+                                {t("luggage")}
+                              </span>
+                            </div>
+                            <p className="text-sm font-bold text-white">{t("bagUnit", { n: booking.luggage })}</p>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <Plane className="w-3.5 h-3.5 text-slate-500" />
+                              <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
+                                {t("flight")}
                               </span>
                             </div>
                             <p className="text-sm font-bold text-white">
-                              {booking.luggage} db
+                              {booking.flightNumber ? (
+                                booking.flightNumber
+                              ) : (
+                                <span className="text-slate-500 font-medium">{t("noFlight")}</span>
+                              )}
                             </p>
                           </div>
 
                           <div className="space-y-1">
-                            <div className="flex items-center gap-1.5 mb-1">
-                              {booking.paymentMethod === "card" ? (
-                                <CreditCard className="w-3.5 h-3.5 text-slate-500" />
-                              ) : (
-                                <Building className="w-3.5 h-3.5 text-slate-500" />
-                              )}
+                            <div className="flex items-center gap-1.5">
+                              {paymentIcon(booking.paymentMethod, "w-3.5 h-3.5 text-slate-500")}
                               <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
-                                Fizetés
+                                {t("payment")}
                               </span>
                             </div>
-                            <p className="text-sm font-bold text-white">
-                              {booking.paymentMethod === "card" ? "Bankkártya" : "Banki átutalás"}
+                            <p className="text-sm font-bold text-white">{paymentLabel(booking.paymentMethod)}</p>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <Tag className="w-3.5 h-3.5 text-slate-500" />
+                              <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
+                                {t("price")}
+                              </span>
+                            </div>
+                            <p className="text-sm font-bold text-[#5AA2FF]">
+                              {booking.price !== undefined && booking.price !== null ? (
+                                formatPrice(booking.price, lang)
+                              ) : (
+                                <span className="text-slate-500 font-medium">{t("priceNotSet")}</span>
+                              )}
                             </p>
                           </div>
 
-                          <div className="space-y-1 col-span-2 md:col-span-2">
-                            <div className="flex items-center gap-1.5 mb-1">
+                          <div className="space-y-1.5 col-span-2 md:col-span-3">
+                            <div className="flex items-center gap-1.5">
                               <Truck className="w-3.5 h-3.5 text-slate-500" />
                               <span className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
-                                Sofőr & Jármű
+                                {t("driverVehicle")}
                               </span>
                             </div>
-                            {booking.driverName || booking.vehicleName ? (
-                              <p className="text-sm font-bold text-white">
-                                {booking.driverName}
-                                {booking.vehicleName && (
-                                  <span className="text-slate-400 font-medium ml-2">
-                                  · {booking.vehicleName}
+                            {driver || vehicle ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-bold text-white">
+                                  {driver}
+                                  {vehicle && (
+                                    <span className="text-slate-400 font-medium ml-2">· {vehicle}</span>
+                                  )}
+                                </p>
+                                {booking.driverAcknowledged ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-[10px] font-bold">
+                                    <Check className="w-3 h-3" />
+                                    {t("driverAcknowledged")}
                                   </span>
-                                )}
-                              </p>
+                                ) : booking.driverNotified ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/10 border border-sky-500/25 text-sky-300 text-[10px] font-bold">
+                                    <Bell className="w-3 h-3" />
+                                    {t("driverNotified")}
+                                  </span>
+                                ) : null}
+                              </div>
                             ) : (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-500/10 border border-slate-500/20 text-slate-400 text-[11px] font-medium">
                                 <Clock className="w-3 h-3" />
-                                Hozzárendelés függőben
+                                {t("driverPending")}
                               </span>
                             )}
                           </div>
@@ -1156,33 +1314,29 @@ export default function CatlBookingsClient() {
 
                         <div className="hidden lg:block w-px bg-white/5 shrink-0" />
 
-                        <div className="flex lg:flex-col items-stretch lg:items-end gap-2 lg:min-w-[140px">
+                        <div className="flex lg:flex-col items-stretch lg:items-end gap-2 lg:min-w-[160px]">
                           <button
                             onClick={() => setExpandedId(isExpanded ? null : booking._id)}
                             className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-medium"
                           >
-                            Részletek
-                            {isExpanded ? (
-                              <ChevronUp className="w-4 h-4" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4" />
-                            )}
+                            {isExpanded ? t("hideDetails") : t("details")}
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                           </button>
                           {canModify && (
                             <>
                               <button
                                 onClick={() => openEditModal(booking)}
-                                className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-[#0047BA]/15 border border-[#0047BA]/30 text-[#00B4D8] hover:bg-[#0047BA]/25 hover:border-[#0047BA]/50 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-bold"
+                                className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-[#0047BA]/20 border border-[#0047BA]/40 text-[#8DBBFF] hover:bg-[#0047BA]/35 hover:border-[#0047BA]/60 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-bold"
                               >
                                 <Edit3 className="w-4 h-4" />
-                                Módosítás
+                                {t("modify")}
                               </button>
                               <button
                                 onClick={() => setCancelModal(booking)}
-                                className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/40 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-bold"
+                                className="flex-1 lg:flex-none h-10 px-4 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-300 hover:bg-rose-500/20 hover:border-rose-500/40 transition-all inline-flex items-center justify-center gap-1.5 text-sm font-bold"
                               >
                                 <Ban className="w-4 h-4" />
-                                Lemondás
+                                {t("cancel")}
                               </button>
                             </>
                           )}
@@ -1199,95 +1353,159 @@ export default function CatlBookingsClient() {
                           transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                           className="overflow-hidden"
                         >
-                          <div className="border-t border-slate-800 px-6 py-5 bg-slate-900/40">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          <div className="border-t border-slate-800 px-5 md:px-7 py-6 bg-slate-900/40">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-7">
                               <div>
-                                <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-2">
-                                  Utas adatai
-                                </p>
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <User className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                    <span className="text-sm font-semibold text-white">
-                                      {booking.travelerName}
-                                    </span>
+                                <SectionLabel icon={<User className="w-3.5 h-3.5" />}>{t("secPassenger")}</SectionLabel>
+                                <div className="space-y-3">
+                                  <InfoRow icon={<User className="w-3.5 h-3.5" />} label={t("name")}>
+                                    {booking.travelerName}
+                                  </InfoRow>
+                                  <InfoRow icon={<Mail className="w-3.5 h-3.5" />} label={t("email")}>
+                                    {booking.travelerEmail}
+                                  </InfoRow>
+                                  <InfoRow icon={<Phone className="w-3.5 h-3.5" />} label={t("phone")}>
+                                    {booking.travelerPhone}
+                                  </InfoRow>
+                                </div>
+                              </div>
+
+                              {(booking.secondTravelerEmail || booking.secondTravelerPhone) && (
+                                <div>
+                                  <SectionLabel icon={<Users className="w-3.5 h-3.5" />}>{t("secSecond")}</SectionLabel>
+                                  <div className="space-y-3">
+                                    {booking.secondTravelerEmail && (
+                                      <InfoRow icon={<Mail className="w-3.5 h-3.5" />} label={t("email")}>
+                                        {booking.secondTravelerEmail}
+                                      </InfoRow>
+                                    )}
+                                    {booking.secondTravelerPhone && (
+                                      <InfoRow icon={<Phone className="w-3.5 h-3.5" />} label={t("phone")}>
+                                        {booking.secondTravelerPhone}
+                                      </InfoRow>
+                                    )}
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <UserCircle className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                    <span className="text-sm text-slate-300">
-                                      {booking.travelerEmail}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                    <span className="text-sm text-slate-300">
-                                      {booking.travelerPhone}
-                                    </span>
-                                  </div>
+                                </div>
+                              )}
+
+                              <div>
+                                <SectionLabel icon={<Building2 className="w-3.5 h-3.5" />}>{t("secCompany")}</SectionLabel>
+                                <div className="space-y-3">
+                                  <InfoRow icon={<Building2 className="w-3.5 h-3.5" />} label={t("company")}>
+                                    {booking.companyName}
+                                  </InfoRow>
+                                  <InfoRow icon={paymentIcon(booking.paymentMethod, "w-3.5 h-3.5")} label={t("payment")}>
+                                    {paymentLabel(booking.paymentMethod)}
+                                  </InfoRow>
+                                  <InfoRow icon={<Tag className="w-3.5 h-3.5" />} label={t("price")}>
+                                    {booking.price !== undefined && booking.price !== null ? (
+                                      <span className="text-[#5AA2FF]">{formatPrice(booking.price, lang)}</span>
+                                    ) : (
+                                      <span className="text-slate-500 font-medium">{t("priceNotSet")}</span>
+                                    )}
+                                  </InfoRow>
                                 </div>
                               </div>
 
                               <div>
-                                <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-2">
-                                  Cég
-                                </p>
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                    <span className="text-sm font-semibold text-white">
-                                      {booking.companyName}
-                                    </span>
-                                  </div>
-                                  {booking.price !== undefined && (
-                                    <div className="flex items-center gap-2">
-                                      <DollarSign className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                      <span className="text-sm font-bold text-[#00B4D8]">
-                                        {booking.price.toLocaleString("hu-HU")} Ft
-                                      </span>
-                                    </div>
+                                <SectionLabel icon={<MapPin className="w-3.5 h-3.5" />}>{t("secTrip")}</SectionLabel>
+                                <div className="space-y-3">
+                                  <InfoRow icon={<CalendarDays className="w-3.5 h-3.5" />} label={t("pickup")}>
+                                    {formatPickupDate(booking.pickupDate, lang)} · {booking.pickupTime}
+                                  </InfoRow>
+                                  <InfoRow icon={<Plane className="w-3.5 h-3.5" />} label={t("flight")}>
+                                    {booking.flightNumber || <span className="text-slate-500 font-medium">{t("noFlight")}</span>}
+                                  </InfoRow>
+                                  <InfoRow icon={<Car className="w-3.5 h-3.5" />} label={t("vehicleClass")}>
+                                    {isExec ? `${t("executive")} · ${t("executiveSub")}` : `${t("standard")} · ${t("standardSub")}`}
+                                  </InfoRow>
+                                  <InfoRow icon={<Tag className="w-3.5 h-3.5" />} label={t("bookingCode")}>
+                                    #{booking.bookingCode}
+                                  </InfoRow>
+                                </div>
+                              </div>
+
+                              <div>
+                                <SectionLabel icon={<Truck className="w-3.5 h-3.5" />}>{t("secDriver")}</SectionLabel>
+                                <div className="space-y-3">
+                                  <InfoRow icon={<User className="w-3.5 h-3.5" />} label={t("fieldDriver")}>
+                                    {driver || <span className="text-slate-500 font-medium">{t("driverPending")}</span>}
+                                  </InfoRow>
+                                  <InfoRow icon={<Car className="w-3.5 h-3.5" />} label={t("fieldVehicle")}>
+                                    {vehicle || <span className="text-slate-500 font-medium">{t("driverPending")}</span>}
+                                  </InfoRow>
+                                  {(driver || vehicle) && (booking.driverNotified || booking.driverAcknowledged) && (
+                                    <InfoRow icon={<Bell className="w-3.5 h-3.5" />} label={t("secDriver")}>
+                                      {booking.driverAcknowledged ? t("driverAcknowledged") : t("driverNotified")}
+                                    </InfoRow>
                                   )}
                                 </div>
                               </div>
 
                               <div>
-                                <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-2">
-                                  Megjegyzés
+                                <SectionLabel icon={<MessageSquare className="w-3.5 h-3.5" />}>{t("secComment")}</SectionLabel>
+                                <p className="text-sm text-slate-300 whitespace-pre-wrap break-words">
+                                  {booking.comment || <span className="text-slate-500 italic">{t("noComment")}</span>}
                                 </p>
-                                <div className="flex items-start gap-2">
-                                  <MessageSquare className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
-                                  <span className="text-sm text-slate-300">
-                                    {booking.comment || (
-                                      <span className="text-slate-500 italic">
-                                        Nincs megjegyzés
-                                      </span>
-                                    )}
-                                  </span>
-                                </div>
                               </div>
 
-                              {booking.secondTravelerEmail && (
+                              <div className="md:col-span-2 xl:col-span-3 border-t border-white/5 pt-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                                 <div>
-                                  <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-2">
-                                    2. Utas
-                                  </p>
-                                  <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                      <UserCircle className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                      <span className="text-sm text-slate-300">
-                                        {booking.secondTravelerEmail}
-                                      </span>
-                                    </div>
-                                    {booking.secondTravelerPhone && (
-                                      <div className="flex items-center gap-2">
-                                        <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                        <span className="text-sm text-slate-300">
-                                          {booking.secondTravelerPhone}
+                                  <SectionLabel icon={<History className="w-3.5 h-3.5" />}>{t("secTimeline")}</SectionLabel>
+                                  <div className="space-y-3">
+                                    <InfoRow icon={<CalendarPlus className="w-3.5 h-3.5" />} label={t("createdAt")}>
+                                      {formatTimestamp(booking.createdAt, lang)}
+                                    </InfoRow>
+                                    <InfoRow icon={<RefreshCw className="w-3.5 h-3.5" />} label={t("updatedAt")}>
+                                      {formatTimestamp(booking.updatedAt, lang)}
+                                    </InfoRow>
+                                    {booking.lastStatusChange && (
+                                      <InfoRow icon={<ArrowRight className="w-3.5 h-3.5" />} label={t("statusChangedAt")}>
+                                        {t("statusChange", {
+                                          from: statusLabel(booking.lastStatusChange.oldStatus, t),
+                                          to: statusLabel(booking.lastStatusChange.newStatus, t),
+                                        })}
+                                        <span className="block text-[11px] text-slate-500 font-medium mt-0.5">
+                                          {formatTimestamp(booking.lastStatusChange.changedAt, lang)}
                                         </span>
-                                      </div>
+                                      </InfoRow>
                                     )}
                                   </div>
+                                  <p className="flex items-start gap-1.5 text-[11px] text-slate-500 mt-4">
+                                    <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                                    {t("timesNote")}
+                                  </p>
                                 </div>
-                              )}
+
+                                <div>
+                                  <SectionLabel icon={<Link2 className="w-3.5 h-3.5" />}>{t("secTracking")}</SectionLabel>
+                                  {trackActive ? (
+                                    <div className="space-y-3">
+                                      <p className="text-sm text-slate-400">{t("trackingHint")}</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        <a
+                                          href={`/track/${booking.bookingTrackToken}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="h-10 px-4 rounded-lg bg-[#0047BA]/20 border border-[#0047BA]/40 text-[#8DBBFF] hover:bg-[#0047BA]/35 transition-all inline-flex items-center gap-2 text-sm font-bold"
+                                        >
+                                          <Link2 className="w-4 h-4" />
+                                          {t("openTracking")}
+                                        </a>
+                                        <button
+                                          onClick={() => copyTrackingLink(booking.bookingTrackToken as string)}
+                                          className="h-10 px-4 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 transition-all inline-flex items-center gap-2 text-sm font-medium"
+                                        >
+                                          <Copy className="w-4 h-4" />
+                                          {t("copyTracking")}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-slate-500 italic">{t("trackingInactive")}</p>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </motion.div>
@@ -1298,29 +1516,22 @@ export default function CatlBookingsClient() {
               })}
             </motion.div>
           )}
+          <p className="text-center text-[11px] text-slate-600 mt-8">{t("lastUpdated")}</p>
         </div>
       </section>
 
       <footer className="border-t border-white/5 bg-[#040914] py-10 px-6 z-10 relative">
         <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="flex flex-col text-center md:text-left">
-              <span className="font-serif font-bold tracking-widest text-slate-400 text-sm leading-none">
-                PANNON <span className="text-[#D4AF37]/80">TRANSFER</span>
-              </span>
-              <span className="text-[9px] text-slate-500 font-medium tracking-[0.2em] mt-1">
-                EXECUTIVE TRAVEL
-              </span>
-            </div>
-            <div className="hidden md:block w-px h-6 bg-white/10"></div>
-            <div className="flex flex-col text-center md:text-left">
-              <span className="font-bold text-white tracking-wide text-sm leading-none flex items-center gap-2">
-                CATL <span className="text-xs font-normal text-slate-400">{t("footer", "portal")}</span>
-              </span>
-            </div>
+            <BrandLockup compact />
+            <div className="hidden md:block w-px h-6 bg-white/10" />
+            <span className="text-xs font-medium text-slate-400 tracking-wide">{t("footerPortal")}</span>
           </div>
-          <div className="flex items-center gap-6">
-            <span className="text-xs font-medium text-slate-500">Dedikált ügyfélszolgálat</span>
+          <div className="flex flex-col items-center md:items-end gap-1 text-xs text-slate-500">
+            <span className="font-medium">{t("footerSupport")}</span>
+            <span>
+              © {new Date().getFullYear()} Pannon Transfer. {t("rightsReserved")}
+            </span>
           </div>
         </div>
       </footer>
@@ -1333,10 +1544,7 @@ export default function CatlBookingsClient() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-4"
           >
-            <div
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={closeEditModal}
-            />
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={closeEditModal} />
             <motion.div
               initial={{ opacity: 0, scale: 0.96, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1347,234 +1555,130 @@ export default function CatlBookingsClient() {
               <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#0047BA] to-transparent" />
               <div className="sticky top-0 z-10 bg-[#0B1221] border-b border-slate-800 px-6 py-4 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-white">Foglalás módosítása</h3>
+                  <h3 className="text-lg font-bold text-white">{t("editTitle")}</h3>
                   <p className="text-xs text-slate-400 mt-0.5">#{editModal.bookingCode}</p>
                 </div>
                 <button
                   onClick={closeEditModal}
+                  aria-label={t("back")}
                   className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
               <form onSubmit={handleEditSubmit} className="p-6 space-y-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Dátum <span className="text-[#00B4D8]">*</span>
-                    </label>
-                    <div
-                      className={`w-full bg-[#151E32] border rounded-lg p-3.5 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all ${
-                        editErrors.pickupDate
-                          ? "border-rose-500/50 ring-1 ring-rose-500/20"
-                          : "border-slate-700/50"
-                      }`}
-                    >
-                      <input
-                        type="date"
-                        value={editForm.pickupDate}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, pickupDate: e.target.value })
-                        }
-                        className="bg-transparent border-none outline-none w-full text-sm font-medium text-white [color-scheme:dark]"
-                      />
-                    </div>
-                    {editErrors.pickupDate && (
-                      <p className="text-[11px] text-rose-400 font-medium">
-                        {editErrors.pickupDate}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Időpont <span className="text-[#00B4D8]">*</span>
-                    </label>
-                    <div
-                      className={`w-full bg-[#151E32] border rounded-lg p-3.5 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all ${
-                        editErrors.pickupTime
-                          ? "border-rose-500/50 ring-1 ring-rose-500/20"
-                          : "border-slate-700/50"
-                      }`}
-                    >
-                      <input
-                        type="time"
-                        value={editForm.pickupTime}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, pickupTime: e.target.value })
-                        }
-                        className="bg-transparent border-none outline-none w-full text-sm font-medium text-white [color-scheme:dark]"
-                      />
-                    </div>
-                    {editErrors.pickupTime && (
-                      <p className="text-[11px] text-rose-400 font-medium">
-                        {editErrors.pickupTime}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                    Indulási cím <span className="text-[#00B4D8]">*</span>
-                  </label>
-                  <div
-                    className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all ${
-                      editErrors.fromAddress
-                        ? "border-rose-500/50 ring-1 ring-rose-500/20"
-                        : "border-slate-700/50"
-                    }`}
-                  >
-                    <MapPin className="w-4 h-4 text-slate-500 shrink-0" />
-                    <input
-                      type="text"
-                      value={editForm.fromAddress}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, fromAddress: e.target.value })
-                      }
-                      className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
-                    />
-                  </div>
-                  {editErrors.fromAddress && (
-                    <p className="text-[11px] text-rose-400 font-medium">
-                      {editErrors.fromAddress}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                    Célcím <span className="text-[#00B4D8]">*</span>
-                  </label>
-                  <div
-                    className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all ${
-                      editErrors.toAddress
-                        ? "border-rose-500/50 ring-1 ring-rose-500/20"
-                        : "border-slate-700/50"
-                    }`}
-                  >
-                    <MapPin className="w-4 h-4 text-slate-500 shrink-0" />
-                    <input
-                      type="text"
-                      value={editForm.toAddress}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, toAddress: e.target.value })
-                      }
-                      className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
-                    />
-                  </div>
-                  {editErrors.toAddress && (
-                    <p className="text-[11px] text-rose-400 font-medium">
-                      {editErrors.toAddress}
-                    </p>
-                  )}
+                <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-[#0047BA]/10 border border-[#0047BA]/25">
+                  <Info className="w-4 h-4 text-[#5AA2FF] shrink-0 mt-0.5" />
+                  <p className="text-[12px] text-slate-300 leading-relaxed">
+                    <span className="font-bold text-white">{t("noticeTitle")}: </span>
+                    {t("noticeBody")}
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Utasok száma <span className="text-[#00B4D8]">*</span>
-                    </label>
-                    <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-2.5 flex justify-between items-center text-white">
-                      <div className="flex items-center gap-3 px-2">
-                        <Users className="w-4 h-4 text-slate-500" />
-                        <span className="text-sm font-bold">{editForm.travelers}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEditForm({
-                              ...editForm,
-                              travelers: Math.max(1, editForm.travelers - 1),
-                            })
-                          }
-                          className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEditForm({
-                              ...editForm,
-                              travelers: editForm.travelers + 1,
-                            })
-                          }
-                          className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Csomagok száma <span className="text-[#00B4D8]">*</span>
-                    </label>
-                    <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-2.5 flex justify-between items-center text-white">
-                      <div className="flex items-center gap-3 px-2">
-                        <Luggage className="w-4 h-4 text-slate-500" />
-                        <span className="text-sm font-bold">{editForm.luggage}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEditForm({
-                              ...editForm,
-                              luggage: Math.max(0, editForm.luggage - 1),
-                            })
-                          }
-                          className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEditForm({
-                              ...editForm,
-                              luggage: editForm.luggage + 1,
-                            })
-                          }
-                          className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
-                    Megjegyzés
-                  </label>
-                  <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all">
-                    <textarea
-                      rows={3}
-                      value={editForm.comment}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, comment: e.target.value })
-                      }
-                      placeholder="Speciális kérések vagy utasítások..."
-                      className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white resize-none"
+                  <FieldShell label={t("date")} required error={editErrors.pickupDate}>
+                    <input
+                      type="date"
+                      value={editForm.pickupDate}
+                      onChange={(e) => setEditForm({ ...editForm, pickupDate: e.target.value })}
+                      className="bg-transparent border-none outline-none w-full text-sm font-medium text-white [color-scheme:dark]"
                     />
-                  </div>
+                  </FieldShell>
+                  <FieldShell label={t("time")} required error={editErrors.pickupTime}>
+                    <input
+                      type="time"
+                      value={editForm.pickupTime}
+                      onChange={(e) => setEditForm({ ...editForm, pickupTime: e.target.value })}
+                      className="bg-transparent border-none outline-none w-full text-sm font-medium text-white [color-scheme:dark]"
+                    />
+                  </FieldShell>
                 </div>
 
-                {Object.keys(editErrors).length > 0 &&
-                  !editErrors.pickupDate &&
-                  !editErrors.pickupTime &&
-                  !editErrors.fromAddress &&
-                  !editErrors.toAddress && (
-                    <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-rose-500/10 border border-rose-500/20">
-                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                      <p className="text-[12px] text-rose-400 font-medium">
-                        Kérjük, javítsa a fenti hibákat.
-                      </p>
-                    </div>
-                  )}
+                <FieldShell label={t("fromAddress")} required error={editErrors.fromAddress} icon={<MapPin className="w-4 h-4 text-slate-500 shrink-0" />}>
+                  <input
+                    type="text"
+                    value={editForm.fromAddress}
+                    onChange={(e) => setEditForm({ ...editForm, fromAddress: e.target.value })}
+                    className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                  />
+                </FieldShell>
+
+                <FieldShell label={t("toAddress")} required error={editErrors.toAddress} icon={<MapPin className="w-4 h-4 text-slate-500 shrink-0" />}>
+                  <input
+                    type="text"
+                    value={editForm.toAddress}
+                    onChange={(e) => setEditForm({ ...editForm, toAddress: e.target.value })}
+                    className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                  />
+                </FieldShell>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FieldShell
+                    label={t("flightLabel")}
+                    required={editModal.fromType === "airport" || editModal.toType === "airport"}
+                    error={editErrors.flightNumber}
+                    icon={<Plane className="w-4 h-4 text-slate-500 shrink-0" />}
+                  >
+                    <input
+                      type="text"
+                      value={editForm.flightNumber}
+                      onChange={(e) => setEditForm({ ...editForm, flightNumber: e.target.value.toUpperCase() })}
+                      placeholder={t("flightPlaceholder")}
+                      className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                    />
+                  </FieldShell>
+                  <FieldShell
+                    label={t("phoneLabel")}
+                    required
+                    error={editErrors.travelerPhone}
+                    icon={<Phone className="w-4 h-4 text-slate-500 shrink-0" />}
+                  >
+                    <input
+                      type="tel"
+                      value={editForm.travelerPhone}
+                      onChange={(e) => setEditForm({ ...editForm, travelerPhone: e.target.value })}
+                      className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
+                    />
+                  </FieldShell>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Stepper
+                    label={t("paxCount")}
+                    icon={<Users className="w-4 h-4 text-slate-500" />}
+                    value={editForm.travelers}
+                    onMinus={() => setEditForm({ ...editForm, travelers: Math.max(1, editForm.travelers - 1) })}
+                    onPlus={() => setEditForm({ ...editForm, travelers: editForm.travelers + 1 })}
+                  />
+                  <Stepper
+                    label={t("bagCount")}
+                    icon={<Luggage className="w-4 h-4 text-slate-500" />}
+                    value={editForm.luggage}
+                    onMinus={() => setEditForm({ ...editForm, luggage: Math.max(0, editForm.luggage - 1) })}
+                    onPlus={() => setEditForm({ ...editForm, luggage: editForm.luggage + 1 })}
+                  />
+                </div>
+
+                <FieldShell label={t("commentLabel")}>
+                  <textarea
+                    rows={3}
+                    value={editForm.comment}
+                    onChange={(e) => setEditForm({ ...editForm, comment: e.target.value })}
+                    placeholder={t("commentPlaceholder")}
+                    className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white resize-none"
+                  />
+                </FieldShell>
+
+                {editGeneral.length > 0 && (
+                  <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <ul className="text-[12px] text-rose-300 font-medium space-y-1">
+                      {editGeneral.map((msg, i) => (
+                        <li key={i}>{msg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 <div className="flex gap-3 pt-2">
                   <button
@@ -1582,22 +1686,22 @@ export default function CatlBookingsClient() {
                     onClick={closeEditModal}
                     className="flex-1 h-11 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all font-semibold text-sm"
                   >
-                    Mégse
+                    {t("back")}
                   </button>
                   <button
                     type="submit"
                     disabled={editLoading}
-                    className="flex-[2] h-11 rounded-lg bg-[#0047BA] hover:bg-[#00368C] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm tracking-wide transition-all inline-flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,71,186,0.3)]"
+                    className="flex-[2] h-11 rounded-lg bg-[#0047BA] hover:bg-[#0A58D6] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm tracking-wide transition-all inline-flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,71,186,0.35)]"
                   >
                     {editLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Mentés...
+                        {t("saving")}
                       </>
                     ) : (
                       <>
                         <Check className="w-4 h-4" />
-                        Módosítások mentése
+                        {t("saveChanges")}
                       </>
                     )}
                   </button>
@@ -1632,36 +1736,30 @@ export default function CatlBookingsClient() {
                   <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-5">
                     <AlertTriangle className="w-8 h-8 text-rose-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    Biztosan lemondja ezt a foglalást?
-                  </h3>
+                  <h3 className="text-xl font-bold text-white mb-2">{t("cancelTitle")}</h3>
                   <p className="text-sm text-slate-400">
-                    #{cancelModal.bookingCode} · {cancelModal.pickupDate} {cancelModal.pickupTime}
+                    #{cancelModal.bookingCode} · {formatPickupDate(cancelModal.pickupDate, lang)} {cancelModal.pickupTime}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
                     <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center mb-3">
-                      <DollarSign className="w-4 h-4 text-rose-400" />
+                      <Banknote className="w-4 h-4 text-rose-400" />
                     </div>
                     <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                      Visszatérítés
+                      {t("refundTitle")}
                     </p>
-                    <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                      Nincs pénzvisszatérítés lehetősége a lemondás után
-                    </p>
+                    <p className="text-xs text-slate-300 font-medium leading-relaxed">{t("refundBody")}</p>
                   </div>
                   <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
                     <div className="w-8 h-8 rounded-lg bg-slate-500/10 flex items-center justify-center mb-3">
                       <UserCheck className="w-4 h-4 text-slate-400" />
                     </div>
                     <p className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-1">
-                      Sofőr
+                      {t("driverTitle")}
                     </p>
-                    <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                      A hozzárendelt sofőr automatikusan visszavonásra kerül
-                    </p>
+                    <p className="text-xs text-slate-300 font-medium leading-relaxed">{t("driverBody")}</p>
                   </div>
                 </div>
 
@@ -1672,7 +1770,7 @@ export default function CatlBookingsClient() {
                     disabled={cancelLoading}
                     className="flex-1 h-11 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all font-semibold text-sm disabled:opacity-50"
                   >
-                    Mégse
+                    {t("keepBooking")}
                   </button>
                   <button
                     type="button"
@@ -1683,12 +1781,12 @@ export default function CatlBookingsClient() {
                     {cancelLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Feldolgozás...
+                        {t("processing")}
                       </>
                     ) : (
                       <>
                         <Trash2 className="w-4 h-4" />
-                        Lemondás
+                        {t("confirmCancel")}
                       </>
                     )}
                   </button>
@@ -1721,11 +1819,7 @@ export default function CatlBookingsClient() {
                     : "bg-rose-500/20 text-rose-400"
                 }`}
               >
-                {toast.type === "success" ? (
-                  <CheckCircle2 className="w-4 h-4" />
-                ) : (
-                  <AlertTriangle className="w-4 h-4" />
-                )}
+                {toast.type === "success" ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
               </div>
               <p
                 className={`text-sm font-semibold leading-relaxed ${
@@ -1737,6 +1831,81 @@ export default function CatlBookingsClient() {
             </motion.div>
           ))}
         </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+function FieldShell({
+  label,
+  required,
+  error,
+  icon,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
+        {label} {required && <span className="text-[#5AA2FF]">*</span>}
+      </label>
+      <div
+        className={`w-full bg-[#151E32] border rounded-lg p-3.5 flex items-center gap-3 focus-within:border-[#0047BA] focus-within:ring-1 focus-within:ring-[#0047BA]/30 transition-all ${
+          error ? "border-rose-500/50 ring-1 ring-rose-500/20" : "border-slate-700/50"
+        }`}
+      >
+        {icon}
+        {children}
+      </div>
+      {error && <p className="text-[11px] text-rose-400 font-medium">{error}</p>}
+    </div>
+  );
+}
+
+function Stepper({
+  label,
+  icon,
+  value,
+  onMinus,
+  onPlus,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  value: number;
+  onMinus: () => void;
+  onPlus: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
+        {label} <span className="text-[#5AA2FF]">*</span>
+      </label>
+      <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-2.5 flex justify-between items-center text-white">
+        <div className="flex items-center gap-3 px-2">
+          {icon}
+          <span className="text-sm font-bold">{value}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onMinus}
+            className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onPlus}
+            className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
