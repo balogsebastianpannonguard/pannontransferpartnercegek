@@ -14,7 +14,7 @@ export async function GET() {
       user: {
         userId: session.userId,
         email: session.email,
-        company: "ECOPRO BM Hungary Kft.",
+        company: "Ecopro BM",
         role: "partner",
         requireTwoFactor: session.requireTwoFactor,
         twoFactorEnabled: session.twoFactorEnabled,

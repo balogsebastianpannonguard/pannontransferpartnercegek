@@ -1013,6 +1013,8 @@ export default function CatlBookingsClient() {
             ).map((card) => (
               <motion.div
                 key={card.label}
+                initial="hidden"
+                animate="visible"
                 variants={fadeIn}
                 className="bg-[#0B1221]/90 rounded-2xl border border-slate-800 p-4 md:p-5 relative overflow-hidden hover:border-slate-700/70 transition-colors"
               >
@@ -1144,6 +1146,8 @@ export default function CatlBookingsClient() {
                   <motion.div
                     key={booking._id}
                     id={`booking-${booking.bookingCode}`}
+                    initial="hidden"
+                    animate="visible"
                     variants={fadeIn}
                     className="bg-[#0B1221] rounded-2xl border border-slate-800 overflow-hidden hover:border-slate-700/70 transition-colors relative"
                   >

@@ -1,22 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Eye,
-  EyeOff,
-  CheckCircle2,
   AlertTriangle,
   ArrowRight,
-  Loader2,
-  Mail,
-  ShieldCheck,
-  ArrowLeft,
-  Copy,
   Check,
+  CheckCircle2,
+  Clock3,
+  Copy,
+  Eye,
+  EyeOff,
+  Building2,
   KeyRound,
+  Loader2,
+  Lock,
+  Mail,
+  Phone,
+  ShieldCheck,
 } from "lucide-react";
+import { useTamaLang } from "../lang";
+import { authText, translateAuthMessage } from "../auth-i18n";
+import { AuthFrame, SUPPORT, authCard, authInput, authPrimaryBtn, serifFont } from "../ui";
 
 function extractTokenFromUrl(): string {
   if (typeof window === "undefined") return "";
@@ -26,25 +31,22 @@ function extractTokenFromUrl(): string {
     if (q && q.trim()) return q.trim();
     const hash = url.hash.replace(/^#/, "");
     if (!hash) return "";
-    if (hash.startsWith("token=")) {
-      return decodeURIComponent(hash.slice("token=".length)).trim();
-    }
-    if (hash.startsWith("?token=")) {
-      return decodeURIComponent(hash.slice("?token=".length)).trim();
-    }
+    if (hash.startsWith("token=")) return decodeURIComponent(hash.slice("token=".length)).trim();
+    if (hash.startsWith("?token=")) return decodeURIComponent(hash.slice("?token=".length)).trim();
     return decodeURIComponent(hash).trim();
   } catch {
     return "";
   }
 }
 
+type PageState = "loading" | "invalid" | "form" | "tfa-setup" | "done";
+
 export default function TamaSetupPasswordPage() {
-  const router = useRouter();
+  const [lang, setLang] = useTamaLang();
+  const tx = (key: string, params?: Record<string, string | number>) => authText(lang, key, params);
 
   const [rawToken, setRawToken] = useState("");
-  const [state, setState] = useState<
-    "loading" | "invalid" | "form" | "tfa-setup" | "done"
-  >("loading");
+  const [state, setState] = useState<PageState>("loading");
   const [email, setEmail] = useState("");
   const [require2FA, setRequire2FA] = useState(false);
   const [alreadyActivated, setAlreadyActivated] = useState(false);
@@ -54,7 +56,6 @@ export default function TamaSetupPasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 2FA setup state
   const [tfaQr, setTfaQr] = useState<string | null>(null);
   const [tfaSecret, setTfaSecret] = useState<string | null>(null);
   const [tfaBackupCodes, setTfaBackupCodes] = useState<string[] | null>(null);
@@ -64,23 +65,24 @@ export default function TamaSetupPasswordPage() {
   const [tfaBackupDownloaded, setTfaBackupDownloaded] = useState(false);
 
   useEffect(() => {
-    const t = extractTokenFromUrl();
-    setRawToken(t);
-    if (!t) {
-      setState("invalid");
-    }
-  }, []);
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   useEffect(() => {
-    if (!rawToken) return;
     let cancelled = false;
     (async () => {
+      const t = extractTokenFromUrl();
+      setRawToken(t);
+      if (!t) {
+        setState("invalid");
+        return;
+      }
       setState("loading");
       try {
         const res = await fetch("/api/tama-auth/validate-invite", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: rawToken }),
+          body: JSON.stringify({ token: t }),
         });
         if (cancelled) return;
         const json = await res.json().catch(() => null);
@@ -90,11 +92,6 @@ export default function TamaSetupPasswordPage() {
           setEmail(json.email || "");
           setRequire2FA(!!json.requireTwoFactor);
           setAlreadyActivated(!!json.alreadyActivated);
-          if (json.alreadyActivated) {
-            setError(
-              "Ez a fiók már aktiválva lett. Továbblépéshez használd a TAMA Hungary Kft. Portálra küldött egyedi bejelentkezési linket, vagy lépj kapcsolatba az ügyvezetővel új meghívóért."
-            );
-          }
           setState("form");
         }
       } catch {
@@ -104,7 +101,7 @@ export default function TamaSetupPasswordPage() {
     return () => {
       cancelled = true;
     };
-  }, [rawToken]);
+  }, []);
 
   const getStrength = (p: string) => {
     let s = 0;
@@ -120,23 +117,21 @@ export default function TamaSetupPasswordPage() {
     e.preventDefault();
     setError(null);
     if (alreadyActivated) {
-      window.location.href =
-        "mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Hungary%20Kft.%20Port%C3%A1l%20-%20%C3%9Aj%20egyedi%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se&body=K%C3%A9rek%20egy%20%C3%BAj%20egyedi%20bel%C3%A9p%C3%A9si%20linket%20a%20TAMA%20Hungary%20Kft.%20Port%C3%A1lhoz%20ezen%20c%C3%ADmen:%20" +
-        encodeURIComponent(email || "");
+      window.location.href = `mailto:${SUPPORT.email}?subject=${encodeURIComponent(tx("alreadyMailSubject"))}&body=${encodeURIComponent(
+        tx("alreadyMailBody") + (email || ""),
+      )}`;
       return;
     }
     if (password.length < 8) {
-      setError("A jelszónak minimum 8 karakter hosszúnak kell lennie.");
+      setError(tx("pwdShort"));
       return;
     }
     if (password !== confirm) {
-      setError("A két jelszó nem egyezik meg.");
+      setError(tx("pwdMismatch"));
       return;
     }
     if (getStrength(password) < 3) {
-      setError(
-        "A jelszó túl gyenge. Használj kisbetűt, nagybetűt és számot a biztonságos hozzáféréshez."
-      );
+      setError(tx("pwdWeak"));
       return;
     }
     setSubmitting(true);
@@ -144,13 +139,12 @@ export default function TamaSetupPasswordPage() {
       const res = await fetch("/api/tama-auth/set-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: rawToken, password }),
+        body: JSON.stringify({ token: rawToken, password, language: lang }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        setError(json?.message || "Hiba történt a jelszó beállítása közben.");
+        setError(translateAuthMessage(lang, json?.message, "setPwdFailed"));
       } else if (json.requireTwoFactorSetup && json.twoFactorSetup) {
-        // Átváltunk 2FA setup állapotra (felhasználónak QR-t kell beolvasni és 6 számot ellenőrizni)
         setTfaQr(json.twoFactorSetup.qrDataUrl || null);
         setTfaSecret(json.twoFactorSetup.secretBase32 || null);
         setTfaBackupCodes(json.twoFactorSetup.backupCodes || null);
@@ -158,11 +152,10 @@ export default function TamaSetupPasswordPage() {
         setTfaUseBackup(false);
         setState("tfa-setup");
       } else {
-        // Nincs 2FA kötelező → done screen (NEM redirect!)
         setState("done");
       }
     } catch {
-      setError("Hálózati hiba történt. Kérjük, ellenőrizd az internetkapcsolatot.");
+      setError(tx("networkError"));
     } finally {
       setSubmitting(false);
     }
@@ -172,12 +165,12 @@ export default function TamaSetupPasswordPage() {
     e.preventDefault();
     setError(null);
     const clean = tfaCode.replace(/\s+/g, "");
-    if (!tfaUseBackup && (clean.length !== 6 || !/^\d{6}$/.test(clean))) {
-      setError("Az Authenticator kód 6 számjegyből áll.");
+    if (!tfaUseBackup && !/^\d{6}$/.test(clean)) {
+      setError(tx("tfaCode6"));
       return;
     }
     if (tfaUseBackup && clean.length < 6) {
-      setError("A biztonsági kód formátuma: A1B2-C3D4-E5");
+      setError(tx("tfaBackupFormat"));
       return;
     }
     setSubmitting(true);
@@ -185,20 +178,16 @@ export default function TamaSetupPasswordPage() {
       const res = await fetch("/api/tama-auth/verify-2fa-setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inviteToken: rawToken,
-          code: tfaCode,
-          useBackup: tfaUseBackup,
-        }),
+        body: JSON.stringify({ inviteToken: rawToken, code: tfaCode, useBackup: tfaUseBackup }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        setError(json?.message || "Helytelen kód.");
+        setError(translateAuthMessage(lang, json?.message, "tfaIncorrect"));
       } else {
         setState("done");
       }
     } catch {
-      setError("Hálózati hiba történt.");
+      setError(tx("networkError"));
     } finally {
       setSubmitting(false);
     }
@@ -215,21 +204,20 @@ export default function TamaSetupPasswordPage() {
   const downloadBackupCodes = () => {
     if (!tfaBackupCodes) return;
     const content =
-      "TAMA Hungary Kft. Portál – Kétfaktoros hitelesítés – Biztonsági kódok\n\n" +
-      `Fiók: ${email || "N/A"}\n` +
-      `Dátum: ${new Date().toLocaleString("hu-HU")}\n\n` +
-      "Használj egyet-egyet, ha az Authenticator alkalmazásodhoz nincs hozzáférés.\n" +
-      "Minden kód csak egyszer használható.\n\n" +
+      `${tx("tfaFileTitle")}\n\n` +
+      `${tx("tfaFileAccount")}: ${email || "N/A"}\n` +
+      `${tx("tfaFileDate")}: ${new Date().toLocaleString(lang === "hu" ? "hu-HU" : "en-GB")}\n\n` +
+      `${tx("tfaFileUse")}\n${tx("tfaFileOnce")}\n\n` +
       "-------------------------\n" +
       tfaBackupCodes.map((c, i) => `${String(i + 1).padStart(2, "0")}.  ${c}`).join("\n") +
       "\n-------------------------\n\n" +
-      "Kérjük, tárold ezeket a kódokat biztonságos helyen.\n" +
-      "© Pannon Transfer Kft. – TAMA Hungary Kft. Dedikált Ügyfélportál";
+      `${tx("tfaFileSafe")}\n` +
+      "© Pannon Transfer – TAMA";
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `TAMA_Portal_Biztonsagi_Kodok_${email || "user"}.txt`;
+    a.download = `TAMA_Portal_Backup_Codes_${email || "user"}.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -238,571 +226,460 @@ export default function TamaSetupPasswordPage() {
   };
 
   const strength = getStrength(password);
-  const strengthText =
-    ["Túl gyenge", "Gyenge", "Közepes", "Erős", "Nagyon erős", "Kiváló"][strength] ||
-    "Túl gyenge";
-  const strengthColor = [
-    "bg-red-500",
-    "bg-orange-500",
-    "bg-amber-500",
-    "bg-lime-500",
-    "bg-emerald-500",
-    "bg-emerald-600",
-  ][strength] || "bg-red-500";
+  const strengthText = tx(`str${Math.min(strength, 5)}`);
+  const strengthColor =
+    ["bg-red-500", "bg-orange-500", "bg-amber-500", "bg-lime-500", "bg-[#7B9824]", "bg-[#5F8016]"][strength] || "bg-red-500";
+
+  const rules = [
+    { ok: password.length >= 8, label: tx("rule8") },
+    { ok: /[a-z]/.test(password), label: tx("ruleLower") },
+    { ok: /[A-Z]/.test(password), label: tx("ruleUpper") },
+    { ok: /[0-9]/.test(password), label: tx("ruleDigit") },
+  ];
+
+  const errorBlock = (
+    <AnimatePresence>
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -6, height: 0 }}
+          animate={{ opacity: 1, y: 0, height: "auto" }}
+          exit={{ opacity: 0, y: -6, height: 0 }}
+          transition={{ duration: 0.2 }}
+          className="overflow-hidden mb-5"
+        >
+          <div role="alert" className="flex items-start gap-3 px-4 py-3.5 bg-red-50 border border-red-200 rounded-2xl">
+            <AlertTriangle className="w-[18px] h-[18px] text-red-500 shrink-0 mt-0.5" />
+            <p className="text-[13px] text-red-700 font-medium leading-relaxed">{error}</p>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  const stepPill = (icon: React.ReactNode, text: string) => (
+    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EAF1D3] border border-[#CFDDA0] text-[#3E560C] text-[11px] font-bold tracking-[0.14em] uppercase mb-4">
+      {icon}
+      {text}
+    </div>
+  );
+
+  const panelTiles = (
+    <div className="grid grid-cols-2 gap-3">
+      {[
+        { icon: <Lock className="h-4 w-4" />, label: tx("tileAccess"), value: tx("tileAccessValue") },
+        {
+          icon: <ShieldCheck className="h-4 w-4" />,
+          label: tx("tileSecurity"),
+          value: require2FA ? tx("tileSecurity2fa") : tx("tileSecurityPwd"),
+        },
+        { icon: <Clock3 className="h-4 w-4" />, label: tx("tileSignin"), value: tx("tileSigninValue") },
+        { icon: <Building2 className="h-4 w-4" />, label: tx("tilePortal"), value: tx("tilePortalValue") },
+      ].map((t) => (
+        <div key={t.label} className="rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm p-4">
+          <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/20">{t.icon}</div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">{t.label}</div>
+          <div className="mt-0.5 text-[13px] font-semibold leading-snug">{t.value}</div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="relative min-h-screen bg-[#FAFBFC] text-zinc-900 flex flex-col">
-      <div className="w-full border-b border-zinc-200/70 bg-white/60 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#5CA700] to-[#47840B] flex items-center justify-center shadow-sm">
-              <span className="text-white font-black text-sm tracking-tighter">C</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-zinc-900 leading-none">
-                TAMA Hungary Kft. Portál
-              </span>
-              <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">
-                Pannon Transfer · Jelszó beállítása
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <AuthFrame
+      lang={lang}
+      onLang={setLang}
+      panelEyebrow={tx("setupEyebrow")}
+      panelTitle={tx("setupHeroTitle")}
+      panelText={tx("setupHeroText")}
+      panelExtra={panelTiles}
+      footerNote={tx("secureActivation")}
+      wide={state === "tfa-setup"}
+    >
+      <div className={`${authCard} p-6 sm:p-9`}>
+        <AnimatePresence mode="wait">
+          {state === "loading" && (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.25 }}
+              className="flex flex-col items-center py-16 gap-5"
+            >
+              <Loader2 className="w-8 h-8 text-[#5F8016] animate-spin" />
+              <p className="text-sm text-[#5B6450] font-medium">{tx("verifyingInvite")}</p>
+            </motion.div>
+          )}
 
-      <div className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
-        <div className="w-full max-w-[480px]">
-          <AnimatePresence mode="wait">
-            {state === "loading" && (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                className="flex flex-col items-center py-20 gap-5"
-              >
-                <Loader2 className="w-8 h-8 text-[#5CA700] animate-spin" />
-                <p className="text-sm text-zinc-500 font-medium">
-                  Meghívó érvényességének ellenőrzése...
+          {state === "invalid" && (
+            <motion.div
+              key="invalid"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.25 }}
+              className="flex flex-col"
+            >
+              <div className="text-center mb-7">
+                <div className="mx-auto w-14 h-14 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center mb-5">
+                  <AlertTriangle className="w-7 h-7 text-red-500" />
+                </div>
+                <h2 className="text-[26px] text-[#26301B] mb-2" style={serifFont}>{tx("invalidTitle")}</h2>
+                <p className="text-[15px] text-[#5B6450] leading-relaxed max-w-sm mx-auto">{tx("invalidText")}</p>
+              </div>
+              <div className="rounded-2xl border border-[#EEE5C6] bg-[#FBF8EC] p-5 mb-5">
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8B917D] mb-3">{tx("contact")}</div>
+                <div className="text-[14px] font-semibold text-[#26301B] mb-2">
+                  {SUPPORT.name} · {tx("supportRole")}
+                </div>
+                <a href={`mailto:${SUPPORT.email}`} className="flex items-center gap-2 text-[14px] font-semibold text-[#4B6A0E] hover:text-[#3E560C] transition-colors mb-1.5">
+                  <Mail className="w-4 h-4" />
+                  {SUPPORT.email}
+                </a>
+                <a href={`tel:${SUPPORT.phoneHref}`} className="flex items-center gap-2 text-[14px] font-semibold text-[#4B6A0E] hover:text-[#3E560C] transition-colors">
+                  <Phone className="w-4 h-4" />
+                  {SUPPORT.phone}
+                </a>
+              </div>
+              <p className="text-center text-[13px] text-[#8B917D] font-medium">{tx("closeSafely")}</p>
+            </motion.div>
+          )}
+
+          {state === "form" && (
+            <motion.form
+              key="form"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.25 }}
+              onSubmit={submitForm}
+              className="flex flex-col"
+            >
+              <div className="mb-7">
+                {stepPill(<KeyRound className="w-3.5 h-3.5" />, require2FA ? tx("step1of2Pill") : tx("step1Pill"))}
+                <h2 className="text-[28px] leading-tight text-[#26301B] mb-2.5" style={serifFont}>{tx("setPwdTitle")}</h2>
+                <p className="text-[15px] text-[#5B6450] leading-relaxed">
+                  {alreadyActivated ? tx("setPwdActivated") : require2FA ? tx("setPwd2fa") : tx("setPwdPlain")}
                 </p>
-              </motion.div>
-            )}
+              </div>
 
-            {state === "invalid" && (
-              <motion.div
-                key="invalid"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                className="flex flex-col"
-              >
-                <div className="text-center mb-8">
-                  <div className="mx-auto w-14 h-14 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center mb-5">
-                    <AlertTriangle className="w-7 h-7 text-red-500" />
-                  </div>
-                  <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Érvénytelen vagy lejárt link
-                  </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed max-w-sm mx-auto">
-                    Ez a hozzáférési link nem létezik, lejárt, vagy már felhasználták. Kérjük,
-                    kérj új meghívót.
-                  </p>
+              <div className="rounded-2xl border border-[#E4DDC7] bg-[#FBFAF4] p-4 mb-6 flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-xl bg-white border border-[#CFDDA0] flex items-center justify-center shrink-0 shadow-sm">
+                  <Mail className="w-5 h-5 text-[#5F8016]" />
                 </div>
-
-                <div className="bg-white border border-zinc-200 rounded-2xl p-5 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-zinc-500 mb-2.5">
-                    Ügyvezető támogatás
-                  </div>
-                  <a
-                    href="mailto:balog.sebastian@pannonguard.hu"
-                    className="inline-flex items-center gap-2 text-[15px] font-semibold text-[#5CA700] hover:text-[#003A99] transition-colors"
-                  >
-                    <Mail className="w-4 h-4" />
-                    balog.sebastian@pannonguard.hu
-                  </a>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8B917D] mb-0.5">{tx("invitedAccount")}</div>
+                  <div className="text-[15px] font-semibold text-[#26301B] break-all leading-snug">{email || tx("loading")}</div>
                 </div>
+                {require2FA && (
+                  <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#EAF1D3] border border-[#CFDDA0] text-[#3E560C] text-[11px] font-bold tracking-wide">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    {tx("twoFaRequired")}
+                  </span>
+                )}
+              </div>
 
-                <p className="text-center text-[13px] text-zinc-500 font-medium leading-relaxed">
-                  Ez az oldal most bezárható. Kérés esetén vedd fel a kapcsolatot az ügyfélszolgálattal.
-                </p>
-              </motion.div>
-            )}
-
-            {state === "form" && (
-              <motion.form
-                key="form"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                onSubmit={submitForm}
-                className="flex flex-col"
-              >
-                <div className="mb-7">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#5CA700]/[0.07] border border-[#5CA700]/10 text-[#5CA700] text-[11px] font-bold tracking-widest uppercase mb-4">
-                    <KeyRound className="w-3.5 h-3.5" />
-                    1. lépés · Jelszó
-                  </div>
-                  <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Állítsd be a jelszavad
-                  </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed">
-                    {alreadyActivated
-                      ? "Ez a fiók már aktív. Új egyedi belépési link kéréséhez vedd fel a kapcsolatot az ügyfélszolgálattal az alább látható email címen."
-                      : "Kérjük, állíts be egy erős jelszót, amelyet csak te ismeresz. " +
-                        (require2FA
-                          ? "A fiókodhoz további biztonsági lépésként KÉTFACTOROS hitelesítés is be lesz kapcsolva a következő lépésben."
-                          : "Ezzel véglegesíted a TAMA Hungary Kft. Portál hozzáférést.")}
-                  </p>
+              {alreadyActivated && (
+                <div className="mb-5 flex items-start gap-3 px-4 py-3.5 bg-amber-50 border border-amber-200 rounded-2xl">
+                  <AlertTriangle className="w-[18px] h-[18px] text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[13px] text-amber-800 font-medium leading-relaxed">{tx("alreadyActivatedMsg")}</p>
                 </div>
+              )}
 
-                <div className="bg-white border border-zinc-200 rounded-2xl p-4 mb-6 flex items-center gap-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="w-11 h-11 rounded-xl bg-[#5CA700]/[0.08] border border-[#5CA700]/10 flex items-center justify-center shrink-0">
-                    <Mail className="w-5 h-5 text-[#5CA700]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 mb-0.5">
-                      Meghívott fiók
-                    </div>
-                    <div className="text-[15px] font-semibold text-zinc-900 truncate">
-                      {email || "Kérés feldolgozása..."}
-                    </div>
-                  </div>
-                  {require2FA && (
-                    <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#5CA700]/[0.07] border border-[#5CA700]/10 text-[#5CA700] text-[11px] font-bold tracking-wide">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      2FA kötelező
-                    </span>
-                  )}
-                </div>
-
-                {!alreadyActivated && (
-                  <>
-                    <div className="mb-4">
-                      <label className="block text-[13px] font-semibold text-zinc-800 mb-2 pl-0.5">
-                        Új jelszó
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showPwd ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="Minimum 8 karakter · kisbetű · nagybetű · szám"
-                          className="w-full h-[52px] px-4 pr-12 bg-white border border-zinc-200 rounded-xl text-[15px] text-zinc-900 placeholder:text-zinc-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#5CA700]/20 focus:border-[#5CA700]/50 transition-all shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
-                          autoComplete="new-password"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPwd((p) => !p)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg hover:bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-700 transition-colors"
-                          tabIndex={-1}
-                        >
-                          {showPwd ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-                        </button>
-                      </div>
-
-                      {password && (
-                        <div className="mt-3 flex items-center gap-3">
-                          <div className="flex-1 h-1.5 rounded-full bg-zinc-100 grid grid-cols-5 gap-1 overflow-hidden">
-                            {[...Array(5)].map((_, i) => (
-                              <div
-                                key={i}
-                                className={`transition-all duration-300 rounded-full ${
-                                  i < strength ? strengthColor : "bg-zinc-100"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 w-24 text-right shrink-0">
-                            {strengthText}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mb-5">
-                      <label className="block text-[13px] font-semibold text-zinc-800 mb-2 pl-0.5">
-                        Jelszó megerősítése
-                      </label>
+              {!alreadyActivated && (
+                <>
+                  <div className="mb-4">
+                    <label htmlFor="tama-new-pwd" className="block text-[13px] font-bold text-[#4A5340] mb-2 pl-1">{tx("newPassword")}</label>
+                    <div className="relative">
                       <input
+                        id="tama-new-pwd"
                         type={showPwd ? "text" : "password"}
-                        value={confirm}
-                        onChange={(e) => setConfirm(e.target.value)}
-                        placeholder="Írd be újra a fenti jelszót"
-                        className="w-full h-[52px] px-4 bg-white border border-zinc-200 rounded-xl text-[15px] text-zinc-900 placeholder:text-zinc-400 font-medium focus:outline-none focus:ring-2 focus:ring-[#5CA700]/20 focus:border-[#5CA700]/50 transition-all shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={tx("newPasswordPh")}
+                        className={`${authInput} pr-12`}
                         autoComplete="new-password"
                       />
-                    </div>
-                  </>
-                )}
-
-                <AnimatePresence>
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6, height: 0 }}
-                      animate={{ opacity: 1, y: 0, height: "auto" }}
-                      exit={{ opacity: 0, y: -6, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden mb-5"
-                    >
-                      <div className="flex items-start gap-3 px-4 py-3.5 bg-red-50 border border-red-100 rounded-xl">
-                        <AlertTriangle className="w-4.5 h-4.5 text-red-500 shrink-0 mt-0.5" />
-                        <p className="text-[13px] text-red-700 font-medium leading-relaxed">{error}</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {!alreadyActivated && (
-                  <>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="w-full h-[54px] rounded-xl bg-[#5CA700] hover:bg-[#0B1F47] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(0,180,216,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(0,180,216,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
-                    >
-                      {submitting ? (
-                        <>
-                          <Loader2 className="w-4.5 h-4.5 animate-spin" />
-                          Feldolgozás...
-                        </>
-                      ) : require2FA ? (
-                        <>
-                          Jelszó beállítása &amp; Tovább a 2FA beállításhoz
-                          <ArrowRight className="w-4.5 h-4.5" />
-                        </>
-                      ) : (
-                        <>
-                          Jelszó beállítása
-                          <ArrowRight className="w-4.5 h-4.5" />
-                        </>
-                      )}
-                    </button>
-
-                    <p className="mt-7 text-center text-[12px] text-zinc-400 leading-relaxed">
-                      A jelszó beállításával megerősíted a céges hozzáférési feltételek elfogadását.{" "}
-                      <a
-                        href="mailto:balog.sebastian@pannonguard.hu"
-                        className="text-[#5CA700] font-semibold hover:underline"
-                      >
-                        Támogatás
-                      </a>
-                    </p>
-                  </>
-                )}
-
-                {alreadyActivated && (
-                  <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                    <div className="flex items-start gap-3.5">
-                      <div className="w-11 h-11 rounded-xl bg-[#5CA700]/[0.06] border border-[#5CA700]/10 flex items-center justify-center shrink-0">
-                        <Mail className="w-5 h-5 text-[#5CA700]" />
-                      </div>
-                      <div className="flex-1 min-w-0 text-[13px] text-zinc-700 leading-relaxed">
-                        <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 mb-1">
-                          Új link igénylése
-                        </div>
-                        Vedd fel a kapcsolatot az ügyfélszolgálattal az egyedi belépési link
-                        újraküldéséhez:{" "}
-                        <a
-                          href="mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Hungary%20Kft.%20Port%C3%A1l%20-%20%C3%9Aj%20egyedi%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
-                          className="font-semibold text-[#5CA700] hover:underline"
-                        >
-                          balog.sebastian@pannonguard.hu
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </motion.form>
-            )}
-
-            {state === "tfa-setup" && (
-              <motion.form
-                key="tfa-setup"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                onSubmit={submitTfaVerify}
-                className="flex flex-col"
-              >
-                <div className="mb-7">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#5CA700]/[0.07] border border-[#5CA700]/10 text-[#5CA700] text-[11px] font-bold tracking-widest uppercase mb-4">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    2. lépés · Kétfaktoros hitelesítés
-                  </div>
-                  <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Állítsd be a kétfaktoros hitelesítést
-                  </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed">
-                    Ez a fiók <strong className="text-zinc-800 font-semibold">kizárólag 2FA-val</strong>{" "}
-                    elérhető. Kövesd az alábbi lépéseket az Authenticator alkalmazás
-                    (pl. Google Authenticator, 1Password, Authy) beállításához.
-                  </p>
-                </div>
-
-                <div className="bg-white border border-zinc-200 rounded-2xl p-5 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-5">
-                  <div>
-                    <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-zinc-500 mb-3">
-                      1. lépés · Olvasd be a QR kódot
-                    </div>
-                    <div className="flex items-center gap-5">
-                      <div className="shrink-0 p-3 bg-white border border-zinc-200 rounded-2xl shadow-inner">
-                        {tfaQr ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={tfaQr}
-                            alt="2FA QR kód"
-                            width={196}
-                            height={196}
-                            style={{ borderRadius: 10, display: "block" }}
-                          />
-                        ) : (
-                          <div className="w-[196px] h-[196px] rounded-2xl bg-zinc-100 animate-pulse" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-3">
-                        <p className="text-[13px] leading-relaxed text-zinc-600 font-medium">
-                          Nyisd meg a telefonodon az Authenticator alkalmazást és válaszd az{" "}
-                          <strong className="text-zinc-900">„+”</strong>{" "}
-                          ikont, majd olvasd be a bal oldali QR kódot, vagy másold be a manuális kulcsot.
-                        </p>
-                        <div className="rounded-xl bg-zinc-50 border border-zinc-200 p-3">
-                          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-1.5">
-                            Manuális kulcs (ha a QR nem olvasható)
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 text-[13px] font-mono font-bold text-zinc-900 break-all">
-                              {tfaSecret || "—"}
-                            </code>
-                            <button
-                              type="button"
-                              onClick={() => copy(tfaSecret || "", "secret")}
-                              className="shrink-0 w-8 h-8 rounded-lg hover:bg-zinc-200/70 flex items-center justify-center text-zinc-600 transition-colors"
-                              title="Kulcs másolása"
-                            >
-                              {tfaCopied === "secret" ? (
-                                <Check className="w-4 h-4 text-emerald-600" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-5 border-t border-zinc-100">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-zinc-500">
-                        2. lépés · Mentsd el a biztonsági kódokat
-                      </div>
                       <button
                         type="button"
-                        onClick={downloadBackupCodes}
-                        className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-semibold transition-colors ${
-                          tfaBackupDownloaded
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200/70 border border-zinc-200"
-                        }`}
+                        onClick={() => setShowPwd((p) => !p)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full hover:bg-[#F1EDDD] flex items-center justify-center text-[#8B917D] hover:text-[#26301B] transition-colors"
+                        tabIndex={-1}
+                        aria-label={showPwd ? tx("hidePwd") : tx("showPwd")}
                       >
-                        {tfaBackupDownloaded ? (
-                          <Check className="w-3.5 h-3.5" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
-                        {tfaBackupDownloaded ? "Letöltve" : "Letöltés (.txt)"}
+                        {showPwd ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
                       </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {tfaBackupCodes?.map((c, i) => (
-                        <div
-                          key={c}
-                          className="flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200"
-                        >
-                          <code className="font-mono text-[12.5px] font-bold text-zinc-800 tracking-wide">
-                            {c}
-                          </code>
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                            #{String(i + 1).padStart(2, "0")}
-                          </span>
+
+                    {password && (
+                      <div className="mt-3 flex items-center gap-3">
+                        <div className="flex-1 h-1.5 rounded-full grid grid-cols-5 gap-1 overflow-hidden">
+                          {[...Array(5)].map((_, i) => (
+                            <div key={i} className={`transition-all duration-300 rounded-full ${i < strength ? strengthColor : "bg-[#EFE9D7]"}`} />
+                          ))}
+                        </div>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#6B705C] w-24 text-right shrink-0">{strengthText}</span>
+                      </div>
+                    )}
+
+                    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                      {rules.map((r) => (
+                        <div key={r.label} className={`flex items-center gap-2 text-[12px] font-medium transition-colors ${r.ok ? "text-[#4B6A0E]" : "text-[#9CA08A]"}`}>
+                          <CheckCircle2 className={`w-3.5 h-3.5 ${r.ok ? "text-[#5F8016]" : "text-[#D8D1B8]"}`} />
+                          {r.label}
                         </div>
                       ))}
                     </div>
-                    <p className="mt-3 text-[12px] text-zinc-500 leading-relaxed font-medium">
-                      💡 <strong className="text-zinc-700">Fontos:</strong>{" "}
-                      Tárold a fenti 8 kódot biztonságos helyen. Ha elveszted a telefonod, vagy az
-                      Authenticator alkalmazást, ezekkel a kódokkal tudsz helyettesíteni a belépést.
-                      Minden kód csak egyszer használható.
+                  </div>
+
+                  <div className="mb-5">
+                    <label htmlFor="tama-confirm-pwd" className="block text-[13px] font-bold text-[#4A5340] mb-2 pl-1">{tx("confirmPassword")}</label>
+                    <input
+                      id="tama-confirm-pwd"
+                      type={showPwd ? "text" : "password"}
+                      value={confirm}
+                      onChange={(e) => setConfirm(e.target.value)}
+                      placeholder={tx("confirmPasswordPh")}
+                      className={authInput}
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </>
+              )}
+
+              {errorBlock}
+
+              {!alreadyActivated ? (
+                <>
+                  <button type="submit" disabled={submitting} className={authPrimaryBtn}>
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-[18px] h-[18px] animate-spin" />
+                        {tx("processing")}
+                      </>
+                    ) : (
+                      <>
+                        {require2FA ? tx("setPwdBtn2fa") : tx("setPwdBtn")}
+                        <ArrowRight className="w-[18px] h-[18px]" />
+                      </>
+                    )}
+                  </button>
+                  <p className="mt-6 text-center text-[12px] text-[#8B917D] leading-relaxed">
+                    {tx("termsNote")}{" "}
+                    <a href={`mailto:${SUPPORT.email}`} className="text-[#4B6A0E] font-semibold hover:underline">{tx("support")}</a>
+                  </p>
+                </>
+              ) : (
+                <div className="rounded-2xl border border-[#EEE5C6] bg-[#FBF8EC] p-4">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-11 h-11 rounded-xl bg-white border border-[#CFDDA0] flex items-center justify-center shrink-0 shadow-sm">
+                      <Mail className="w-5 h-5 text-[#5F8016]" />
+                    </div>
+                    <div className="flex-1 min-w-0 text-[13px] text-[#4A5340] leading-relaxed">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8B917D] mb-1">{tx("requestNewLinkTitle")}</div>
+                      {tx("requestNewLinkText")}{" "}
+                      <a
+                        href={`mailto:${SUPPORT.email}?subject=${encodeURIComponent(tx("alreadyMailSubject"))}`}
+                        className="font-semibold text-[#4B6A0E] hover:underline"
+                      >
+                        {SUPPORT.email}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.form>
+          )}
+
+          {state === "tfa-setup" && (
+            <motion.form
+              key="tfa-setup"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.25 }}
+              onSubmit={submitTfaVerify}
+              className="flex flex-col"
+            >
+              <div className="mb-6">
+                {stepPill(<ShieldCheck className="w-3.5 h-3.5" />, tx("step2of2Pill"))}
+                <h2 className="text-[28px] leading-tight text-[#26301B] mb-2.5" style={serifFont}>{tx("tfaTitle")}</h2>
+                <p className="text-[15px] text-[#5B6450] leading-relaxed">{tx("tfaLead")}</p>
+              </div>
+
+              <div className="space-y-5 mb-6">
+                <div className="rounded-2xl border border-[#E4DDC7] bg-[#FBFAF4] p-5">
+                  <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#6B705C] mb-3">{tx("tfaStep1")}</div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+                    <div className="shrink-0 self-center p-3 bg-white border border-[#E4DDC7] rounded-2xl shadow-sm">
+                      {tfaQr ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={tfaQr} alt={tx("qrAlt")} width={176} height={176} style={{ borderRadius: 10, display: "block" }} />
+                      ) : (
+                        <div className="w-[176px] h-[176px] rounded-2xl bg-[#F1EDDD] animate-pulse" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-3">
+                      <p className="text-[13px] leading-relaxed text-[#5B6450] font-medium">{tx("tfaStep1Text")}</p>
+                      <div className="rounded-xl bg-white border border-[#E4DDC7] p-3">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8B917D] mb-1.5">{tx("tfaManual")}</div>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 text-[13px] font-mono font-bold text-[#26301B] break-all">{tfaSecret || "—"}</code>
+                          <button
+                            type="button"
+                            onClick={() => copy(tfaSecret || "", "secret")}
+                            className="shrink-0 w-8 h-8 rounded-full hover:bg-[#F1EDDD] flex items-center justify-center text-[#6B705C] transition-colors"
+                            title={tx("tfaCopyKey")}
+                          >
+                            {tfaCopied === "secret" ? <Check className="w-4 h-4 text-[#5F8016]" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[#E4DDC7] bg-[#FBFAF4] p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#6B705C]">{tx("tfaStep2")}</div>
+                    <button
+                      type="button"
+                      onClick={downloadBackupCodes}
+                      className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[12px] font-semibold transition-colors ${
+                        tfaBackupDownloaded
+                          ? "bg-[#EAF1D3] text-[#3E560C] border border-[#CFDDA0]"
+                          : "bg-white text-[#4A5340] hover:bg-[#F1EDDD] border border-[#E4DDC7]"
+                      }`}
+                    >
+                      {tfaBackupDownloaded ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {tfaBackupDownloaded ? tx("tfaDownloaded") : tx("tfaDownload")}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {tfaBackupCodes?.map((c, i) => (
+                      <div key={c} className="flex items-center justify-between px-3 py-2 rounded-xl bg-white border border-[#E4DDC7]">
+                        <code className="font-mono text-[12.5px] font-bold text-[#26301B] tracking-wide">{c}</code>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#9CA08A]">#{String(i + 1).padStart(2, "0")}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-[12px] text-[#6B705C] leading-relaxed font-medium">{tx("tfaBackupNote")}</p>
+                </div>
+
+                <div className="rounded-2xl border border-[#E4DDC7] bg-[#FBFAF4] p-5">
+                  <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#6B705C] mb-3">{tx("tfaStep3")}</div>
+                  <label htmlFor="tama-tfa-code" className="block text-[13px] font-bold text-[#4A5340] mb-2 pl-1">
+                    {tfaUseBackup ? tx("tfaBackupLabel") : tx("tfaCodeLabel")}
+                  </label>
+                  <input
+                    id="tama-tfa-code"
+                    type="text"
+                    autoComplete="one-time-code"
+                    inputMode={tfaUseBackup ? "text" : "numeric"}
+                    value={tfaCode}
+                    onChange={(e) => {
+                      let v = e.target.value;
+                      if (!tfaUseBackup) v = v.replace(/\D/g, "").slice(0, 6);
+                      else v = v.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 16);
+                      setTfaCode(v);
+                    }}
+                    placeholder={tfaUseBackup ? "A1B2-C3D4-E5" : "000000"}
+                    className={`${authInput} text-center tracking-[0.45em] font-mono font-bold text-[18px]`}
+                  />
+                  <label className="flex items-center gap-2.5 pl-1 mt-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tfaUseBackup}
+                      onChange={(e) => {
+                        setTfaUseBackup(e.target.checked);
+                        setTfaCode("");
+                      }}
+                      className="w-4 h-4 rounded border-[#CFC7A8] accent-[#5F8016]"
+                    />
+                    <span className="text-[13px] font-medium text-[#5B6450]">{tx("tfaUseBackup")}</span>
+                  </label>
+                </div>
+              </div>
+
+              {errorBlock}
+
+              <button type="submit" disabled={submitting} className={authPrimaryBtn}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-[18px] h-[18px] animate-spin" />
+                    {tx("processing")}
+                  </>
+                ) : (
+                  <>
+                    {tx("tfaFinish")}
+                    <ArrowRight className="w-[18px] h-[18px]" />
+                  </>
+                )}
+              </button>
+            </motion.form>
+          )}
+
+          {state === "done" && (
+            <motion.div
+              key="done"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.25 }}
+              className="flex flex-col items-center text-center"
+            >
+              <motion.div
+                initial={{ scale: 0, rotate: -15 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 260, damping: 18, delay: 0.05 }}
+                className="w-20 h-20 rounded-full bg-[#EAF1D3] border-2 border-[#CFDDA0] flex items-center justify-center mb-6 shadow-[0_8px_30px_rgba(95,128,22,0.18)]"
+              >
+                <CheckCircle2 className="w-12 h-12 text-[#5F8016]" />
+              </motion.div>
+              <h2 className="text-[28px] text-[#26301B] mb-2" style={serifFont}>{tx("doneTitle")}</h2>
+              <p className="text-[15px] text-[#5B6450] leading-relaxed max-w-md mb-7">
+                {tx("doneText")}{" "}
+                <strong className="font-semibold text-[#26301B]">
+                  {tx("doneMail", { email: email || tx("doneMailFallback") })}
+                </strong>
+              </p>
+
+              <div className="w-full rounded-2xl border border-[#EEE5C6] bg-[#FBF8EC] p-5 mb-5">
+                <div className="flex items-start gap-3.5 text-left">
+                  <div className="shrink-0 w-11 h-11 rounded-xl bg-white border border-[#CFDDA0] flex items-center justify-center shadow-sm">
+                    <Mail className="w-5 h-5 text-[#5F8016]" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-[13px] font-bold text-[#26301B] mb-1">{tx("checkInbox")}</div>
+                    <p className="text-[13px] text-[#5B6450] leading-relaxed">
+                      {tx("checkInboxText")}
+                      {require2FA && <> {tx("checkInbox2fa")}</>}
                     </p>
                   </div>
-
-                  <div className="pt-5 border-t border-zinc-100">
-                    <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-zinc-500 mb-3">
-                      3. lépés · Add meg az első 6 számjegyű kódot
-                    </div>
-                    <div className="mb-4">
-                      <label className="block text-[13px] font-semibold text-zinc-800 mb-2 pl-0.5">
-                        {tfaUseBackup ? "Biztonsági kód (pl. A1B2-C3D4-E5)" : "Authenticator 6 számjegyes kód"}
-                      </label>
-                      <input
-                        type="text"
-                        autoComplete="one-time-code"
-                        inputMode="numeric"
-                        value={tfaCode}
-                        onChange={(e) => {
-                          let v = e.target.value;
-                          if (!tfaUseBackup) v = v.replace(/\D/g, "").slice(0, 6);
-                          else
-                            v = v
-                              .toUpperCase()
-                              .replace(/[^A-Z0-9-]/g, "")
-                              .slice(0, 16);
-                          setTfaCode(v);
-                        }}
-                        placeholder={tfaUseBackup ? "A1B2-C3D4-E5" : "000000"}
-                        className="w-full h-[52px] px-4 bg-white border border-zinc-200 rounded-xl text-center tracking-[0.45em] font-mono font-bold text-[18px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#5CA700]/20 focus:border-[#5CA700]/50 transition-all"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2.5 pl-0.5">
-                      <input
-                        id="tfa-use-backup"
-                        type="checkbox"
-                        checked={tfaUseBackup}
-                        onChange={(e) => {
-                          setTfaUseBackup(e.target.checked);
-                          setTfaCode("");
-                        }}
-                        className="w-4 h-4 rounded border-zinc-300 text-[#5CA700] focus:ring-[#5CA700]/30"
-                      />
-                      <label htmlFor="tfa-use-backup" className="text-[13px] font-medium text-zinc-600">
-                        Biztonsági kódot használok (nincs hozzáférés az Authenticator-hoz most)
-                      </label>
-                    </div>
-                  </div>
                 </div>
+              </div>
 
-                <AnimatePresence>
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6, height: 0 }}
-                      animate={{ opacity: 1, y: 0, height: "auto" }}
-                      exit={{ opacity: 0, y: -6, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden mb-5"
+              <p className="text-center text-[13px] text-[#8B917D] font-medium leading-relaxed">
+                {tx("closePage")}
+                {email && (
+                  <>
+                    <br />
+                    {tx("emailNotArriving")}{" "}
+                    <a
+                      href={`mailto:${SUPPORT.email}?subject=${encodeURIComponent(tx("welcomeMissingSubject"))}&body=${encodeURIComponent(
+                        tx("alreadyMailBody") + email,
+                      )}`}
+                      className="font-semibold text-[#4B6A0E] hover:underline"
                     >
-                      <div className="flex items-start gap-3 px-4 py-3.5 bg-red-50 border border-red-100 rounded-xl">
-                        <AlertTriangle className="w-4.5 h-4.5 text-red-500 shrink-0 mt-0.5" />
-                        <p className="text-[13px] text-red-700 font-medium leading-relaxed">{error}</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full h-[54px] rounded-xl bg-[#5CA700] hover:bg-[#0B1F47] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(0,180,216,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(0,180,216,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-4.5 h-4.5 animate-spin" />
-                      Feldolgozás...
-                    </>
-                  ) : (
-                    <>
-                      2FA aktiválása &amp; Befejezés
-                      <ArrowRight className="w-4.5 h-4.5" />
-                    </>
-                  )}
-                </button>
-              </motion.form>
-            )}
-
-            {state === "done" && (
-              <motion.div
-                key="done"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                className="flex flex-col items-center text-center"
-              >
-                <motion.div
-                  initial={{ scale: 0, rotate: -15 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: "spring", stiffness: 260, damping: 18, delay: 0.05 }}
-                  className="w-20 h-20 rounded-2xl bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center mb-6 shadow-[0_8px_30px_rgba(16,185,129,0.12)]"
-                >
-                  <CheckCircle2 className="w-12 h-12 text-emerald-500" />
-                </motion.div>
-                <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                  Hozzáférés beállítva ✔
-                </h1>
-                <p className="text-[15px] text-zinc-500 leading-relaxed max-w-md mb-8">
-                  Köszönjük! A TAMA Hungary Kft. Portál fiókod már be van állítva.{" "}
-                  <strong className="font-semibold text-zinc-800">
-                    Hamarosan kapsz egy emailt a(z) {email || "megadott"} címre, amely tartalmazza az egyedi,
-                    személyre szabott belépési linket.
-                  </strong>
-                </p>
-
-                <div className="w-full bg-white border border-zinc-200 rounded-2xl p-5 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="flex items-start gap-3.5 text-left">
-                    <div className="shrink-0 w-11 h-11 rounded-xl bg-[#5CA700]/[0.08] border border-[#5CA700]/10 flex items-center justify-center">
-                      <Mail className="w-5 h-5 text-[#5CA700]" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-[13px] font-bold text-zinc-900 mb-1">
-                        Ellenőrizd postaládád (és a spam mappát is!)
-                      </div>
-                      <p className="text-[13px] text-zinc-600 leading-relaxed">
-                        A belépéshez <strong>kizárólag az emailben küldött egyedi linket</strong>{" "}
-                        használd — a publikus /tama oldalon nincs bejelentkező űrlap.
-                        {require2FA && (
-                          <>
-                            {" "}
-                            A linkre kattintva az emailben az Authenticator alkalmazás által generált 6
-                            számjegyű kódot is meg kell adnod.
-                          </>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="mt-2 text-center text-[13px] text-zinc-500 font-medium leading-relaxed">
-                  Ez az oldal most bezárható. A belépéshez használd az emailben érkező egyedi személyes linket.
-                  <br />
-                  {email && (
-                    <>
-                      Kérés esetén vedd fel a kapcsolatot az ügyfélszolgálattal:{" "}
-                      <a
-                        href={
-                          "mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Hungary%20Kft.%20Port%C3%A1l%20-%20Welcome%20email%20nem%20%C3%A9rkezett%20meg&body=K%C3%A9rek%20egy%20%C3%BAj%20egyedi%20bel%C3%A9p%C3%A9si%20linket%20a%20TAMA%20Hungary%20Kft.%20Port%C3%A1lhoz%20ezen%20c%C3%ADmen:%20" +
-                          encodeURIComponent(email)
-                        }
-                        className="font-semibold text-[#5CA700] hover:underline"
-                      >
-                        balog.sebastian@pannonguard.hu
-                      </a>
-                    </>
-                  )}
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                      {SUPPORT.email}
+                    </a>
+                  </>
+                )}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-
-      <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-          <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
-          <span className="tracking-wider">TAMA Hungary Kft. Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
-        </div>
-      </div>
-    </div>
+    </AuthFrame>
   );
 }

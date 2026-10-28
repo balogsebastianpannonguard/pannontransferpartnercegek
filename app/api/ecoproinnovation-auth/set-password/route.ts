@@ -9,87 +9,9 @@ import {
   TWO_FACTOR_ISSUER,
 } from "@/lib/ecoproinnovation-portal-users";
 import { ObjectId } from "mongodb";
+import { buildWelcomeEmail } from "@/lib/ecoproinnovation-email-layout";
 
 export const dynamic = "force-dynamic";
-
-function buildWelcomeEmail(recipientEmail: string, loginLink: string, twoFactorRequired: boolean) {
-  const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8" /></head>
-<body style="margin:0; padding:0; background:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#F3F4F6"><tr><td align="center" style="padding:40px 15px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:580px; background:#FFFFFF; border-radius:12px; overflow:hidden;">
-<tr><td bgcolor="#040914" style="padding:44px 40px; border-bottom:3px solid #0096D6;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:22px;"><tr>
-<td width="64" height="64" align="center" valign="middle" bgcolor="#FFFFFF" style="border-radius:14px;">
-<span style="font-family:-apple-system, sans-serif; font-size:22px; font-weight:900; color:#0096D6;">ECOPRO INNOVATION</span>
-</td></tr></table>
-<h1 style="margin:0 0 8px 0; font-family:Georgia, serif; color:#FFFFFF; font-size:26px; letter-spacing:.5px;">Üdvözlünk, ${recipientEmail}!</h1>
-<p style="margin:0; font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#60A5FA;">Pannon Transfer Ecopro Innovation Portál</p>
-</td></tr>
-<tr><td style="padding:44px 40px;">
-<h2 style="margin:0 0 20px 0; font-family:Georgia, serif; font-size:22px; color:#0F172A;">
-Jelszavad sikeresen beállítva!
-</h2>
-<p style="margin:0 0 10px 0; font-size:15px; line-height:1.7; color:#475569;">
-Kedves Partner!<br><br>
-Köszöntjük a Ecopro Innovation dedikált portálon. A fiókod mostantól aktív.
-</p>
-<p style="margin:0 0 30px 0; font-size:15px; line-height:1.7; color:#475569;">
-<strong>Kizárólag az alábbi egyedi linken keresztül tudsz belépni</strong> a szolgáltatásokhoz és a dedikált árstruktúrához (publikus bejelentkező oldal NINCS!).
-${twoFactorRequired ? `<br><br><strong style="color:#0F172A;">2FA / Kétfaktoros hitelesítés kötelező:</strong> A linkre kattintva az első bejelentkezés során a beállított Authenticator app által generált 6 számjegyű kódot is meg kell adnod.` : ""}
-</p>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:30px;"><tr><td align="center">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td align="center" bgcolor="#0096D6" style="border-radius:10px;">
-<a href="${loginLink}" style="display:inline-block; padding:18px 40px; font-size:14px; font-weight:800; color:#FFFFFF; text-decoration:none; letter-spacing:1.5px; text-transform:uppercase; border-radius:10px;">
-Egyedi belépés a Ecopro Innovation Portálra →
-</a>
-</td></tr></table>
-</td></tr></table>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #E2E8F0; border-bottom:1px solid #E2E8F0; margin-bottom:28px;"><tr>
-<td width="50%" style="padding:20px 20px 20px 0; border-right:1px solid #E2E8F0;">
-<p style="margin:0 0 6px 0; font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8;">Belépési fiók</p>
-<p style="margin:0; font-size:14px; font-weight:700; color:#0F172A; word-break:break-all;">${recipientEmail}</p>
-</td>
-<td width="50%" style="padding:20px 0 20px 20px;">
-<p style="margin:0 0 6px 0; font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8;">Hozzáférés típusa</p>
-<p style="margin:0; font-size:14px; font-weight:700; color:#0F172A;">Ecopro Innovation dedikált partner · ${twoFactorRequired ? "2FA kötelező" : "2FA nélkül"}</p>
-</td>
-</tr></table>
-<p style="margin:0; font-size:13px; line-height:1.6; color:#64748B;">
-<strong style="color:#0F172A;">Fontos:</strong> Ez a link és a hozzáférés <strong>egyedi</strong>, csak a Te használatodra lett kiküldve. Kérjük ne oszd meg senkivel. A link 30 napig érvényes; lejárta után kérj új meghívót az ügyvezetődtől.
-</p>
-</td></tr>
-<tr><td bgcolor="#F8FAFC" style="padding:30px 40px; border-top:1px solid #E2E8F0;">
-<p style="margin:0; font-size:11px; line-height:1.6; color:#94A3B8; text-align:center;">
-Ezt az üzenetet a Pannon Transfer Ecopro Innovation Portál rendszere küldte.<br>
-Kérdés esetén: Vezető fejlesztő - Balog Sebastian Máté (balogh.sebastian@pannonguard.hu, +36 30 665 4135)<br>
-© ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.
-</p>
-</td></tr>
-</table></td></tr></table>
-</body></html>`;
-  const text = [
-    "Üdvözölünk a Ecopro Innovation Portálon!",
-    "",
-    "Jelszavad sikeresen be lett állítva. A fiókod mostantól aktív.",
-    twoFactorRequired ? "2FA (kétfaktoros hitelesítés) kötelező a belépéshez." : "2FA nincs bekapcsolva.",
-    "",
-    "Kizárólag az alábbi EGYEDI linken keresztül tudsz belépni a Ecopro Innovation Portálra (publikus login nincs):",
-    loginLink,
-    "",
-    "Belépési fiókod: " + recipientEmail,
-    "",
-    "A link 30 napig érvényes. Lejárta után kérj új meghívót az ügyvezetődtől.",
-    "",
-    "Üdvözlettel:",
-    "Pannon Transfer - Ecopro Innovation dedikált portál",
-    `© ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.`,
-  ].join("\n");
-  return { html, text };
-}
 
 export async function POST(request: Request) {
   try {
@@ -159,7 +81,12 @@ export async function POST(request: Request) {
       }
 
       const magicLink = `${loginBase}/ecoproinnovation/auth?token=${encodeURIComponent(magicRaw)}`;
-      const { html, text } = buildWelcomeEmail(res.user.email, magicLink, require2FA);
+      const { subject, html, text } = buildWelcomeEmail({
+        recipientEmail: res.user.email,
+        loginLink: magicLink,
+        twoFactorRequired: require2FA,
+        origin: loginBase,
+      });
 
       console.log("\n=========== ECOPRO INNOVATION WELCOME EMAIL (TEST MODE) ===========");
       console.log("Címzett:", res.user.email);
@@ -169,9 +96,7 @@ export async function POST(request: Request) {
 
       const emailRes = await sendEmail({
         to: res.user.email,
-        subject: require2FA
-          ? "Ecopro Innovation Portál – Jelszó beállítva · 2FA kötelező · Egyedi belépési link"
-          : "Ecopro Innovation Portál – Üdvözlünk! Jelszó beállítva · Egyedi belépési link",
+        subject,
         html,
         text,
       });

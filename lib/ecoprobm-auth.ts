@@ -38,12 +38,12 @@ export async function authenticateEcoproBmByPassword(
 ): Promise<{ success: boolean; message?: string; user?: EcoproBmDbUser }> {
   if (!email || !password) return { success: false, message: "Hiányzó hitelesítő adatok." };
   const user = await findEcoproBmUserByEmail(email);
-  if (!user) return { success: false, message: "Hibás email vagy jelszó." };
+  if (!user) return { success: false, message: "Hibás e-mail cím vagy jelszó." };
   if (!user.isActivated || !user.hashedPassword) {
     return { success: false, message: "Ehhez a fiókhoz előbb be kell állítani a jelszót a meghívó linken keresztül." };
   }
   const ok = await compareEcoproBmPassword(user, password);
-  if (!ok) return { success: false, message: "Hibás email vagy jelszó." };
+  if (!ok) return { success: false, message: "Hibás e-mail cím vagy jelszó." };
   await recordEcoproBmLogin(user._id!);
   return { success: true, user };
 }

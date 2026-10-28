@@ -9,84 +9,89 @@ import {
   TWO_FACTOR_ISSUER,
 } from "@/lib/ibusz-portal-users";
 import { ObjectId } from "mongodb";
+import { ibuszBilingual, ibuszButton, ibuszEmailShell, ibuszInfoRow, IBUSZ_CONTACT } from "@/lib/ibusz-email-layout";
 
 export const dynamic = "force-dynamic";
 
-function buildWelcomeEmail(recipientEmail: string, loginLink: string, twoFactorRequired: boolean) {
-  const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8" /></head>
-<body style="margin:0; padding:0; background:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#F3F4F6"><tr><td align="center" style="padding:40px 15px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:580px; background:#FFFFFF; border-radius:12px; overflow:hidden;">
-<tr><td bgcolor="#040914" style="padding:44px 40px; border-bottom:3px solid #009A44;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:22px;"><tr>
-<td width="64" height="64" align="center" valign="middle" bgcolor="#FFFFFF" style="border-radius:14px;">
-<span style="font-family:-apple-system, sans-serif; font-size:22px; font-weight:900; color:#009A44;">IBUSZ HUNGARY KFT.</span>
-</td></tr></table>
-<h1 style="margin:0 0 8px 0; font-family:Georgia, serif; color:#FFFFFF; font-size:26px; letter-spacing:.5px;">Üdvözlünk, ${recipientEmail}!</h1>
-<p style="margin:0; font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#60A5FA;">Pannon Transfer IBUSZ Hungary Kft. Portál</p>
-</td></tr>
-<tr><td style="padding:44px 40px;">
-<h2 style="margin:0 0 20px 0; font-family:Georgia, serif; font-size:22px; color:#0F172A;">
-Jelszavad sikeresen beállítva!
-</h2>
-<p style="margin:0 0 10px 0; font-size:15px; line-height:1.7; color:#475569;">
-Kedves Partner!<br><br>
-Köszöntjük a IBUSZ Hungary Kft. dedikált portálon. A fiókod mostantól aktív.
+function buildWelcomeEmail(recipientEmail: string, loginLink: string, twoFactorRequired: boolean, origin: string) {
+  const year = new Date().getFullYear();
+  const huBody = `
+<p style="margin:0 0 14px 0; font-size:16px; font-weight:600; color:#0F2238;">Kedves Partnerünk!</p>
+<p style="margin:0 0 14px 0; font-size:15px; line-height:1.7; color:#3C5068;">
+A jelszó beállítva, az IBUSZ dedikált portálon lévő fiókja mostantól aktív. Üdvözöljük!
 </p>
-<p style="margin:0 0 30px 0; font-size:15px; line-height:1.7; color:#475569;">
-<strong>Kizárólag az alábbi egyedi linken keresztül tudsz belépni</strong> a szolgáltatásokhoz és a dedikált árstruktúrához (publikus bejelentkező oldal NINCS!).
-${twoFactorRequired ? `<br><br><strong style="color:#0F172A;">2FA / Kétfaktoros hitelesítés kötelező:</strong> A linkre kattintva az első bejelentkezés során a beállított Authenticator app által generált 6 számjegyű kódot is meg kell adnod.` : ""}
+<p style="margin:0 0 24px 0; font-size:15px; line-height:1.7; color:#3C5068;">
+A belépés <strong>kizárólag az alábbi személyes linken</strong> keresztül lehetséges – nyilvános belépési oldal nincs.${
+    twoFactorRequired
+      ? " Mivel a fiókjához kétfaktoros hitelesítés (2FA) kötelező, belépéskor a hitelesítő alkalmazás 6 számjegyű kódját is meg kell adnia."
+      : ""
+  }
 </p>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:30px;"><tr><td align="center">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td align="center" bgcolor="#009A44" style="border-radius:10px;">
-<a href="${loginLink}" style="display:inline-block; padding:18px 40px; font-size:14px; font-weight:800; color:#FFFFFF; text-decoration:none; letter-spacing:1.5px; text-transform:uppercase; border-radius:10px;">
-Egyedi belépés a IBUSZ Hungary Kft. Portálra →
-</a>
-</td></tr></table>
-</td></tr></table>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #E2E8F0; border-bottom:1px solid #E2E8F0; margin-bottom:28px;"><tr>
-<td width="50%" style="padding:20px 20px 20px 0; border-right:1px solid #E2E8F0;">
-<p style="margin:0 0 6px 0; font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8;">Belépési fiók</p>
-<p style="margin:0; font-size:14px; font-weight:700; color:#0F172A; word-break:break-all;">${recipientEmail}</p>
-</td>
-<td width="50%" style="padding:20px 0 20px 20px;">
-<p style="margin:0 0 6px 0; font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8;">Hozzáférés típusa</p>
-<p style="margin:0; font-size:14px; font-weight:700; color:#0F172A;">IBUSZ Hungary Kft. dedikált partner · ${twoFactorRequired ? "2FA kötelező" : "2FA nélkül"}</p>
-</td>
-</tr></table>
-<p style="margin:0; font-size:13px; line-height:1.6; color:#64748B;">
-<strong style="color:#0F172A;">Fontos:</strong> Ez a link és a hozzáférés <strong>egyedi</strong>, csak a Te használatodra lett kiküldve. Kérjük ne oszd meg senkivel. A link 30 napig érvényes; lejárta után kérj új meghívót az ügyvezetődtől.
+${ibuszButton(loginLink, "Belépés az IBUSZ portálra")}
+${ibuszInfoRow(
+  { label: "Belépési fiók", value: recipientEmail },
+  { label: "Hozzáférés", value: twoFactorRequired ? "Dedikált partner · 2FA kötelező" : "Dedikált partner" },
+)}
+<p style="margin:0; font-size:13px; line-height:1.7; color:#6B7F96;">
+<strong style="color:#0F2238;">Biztonság:</strong> ez a link személyes, 30 napig érvényes. Kérjük, ne továbbítsa és ne ossza meg senkivel. Lejárta után kérjen új meghívót a Pannon Transfertől.
+</p>`;
+  const enBody = `
+<p style="margin:0 0 14px 0; font-size:16px; font-weight:600; color:#0F2238;">Dear Partner,</p>
+<p style="margin:0 0 14px 0; font-size:15px; line-height:1.7; color:#3C5068;">
+Your password has been set and your account on the dedicated IBUSZ portal is now active. Welcome aboard.
 </p>
-</td></tr>
-<tr><td bgcolor="#F8FAFC" style="padding:30px 40px; border-top:1px solid #E2E8F0;">
-<p style="margin:0; font-size:11px; line-height:1.6; color:#94A3B8; text-align:center;">
-Ezt az üzenetet a Pannon Transfer IBUSZ Hungary Kft. Portál rendszere küldte.<br>
-Kérdés esetén: Vezető fejlesztő - Balog Sebastian Máté (balogh.sebastian@pannonguard.hu, +36 30 665 4135)<br>
-© ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.
+<p style="margin:0 0 24px 0; font-size:15px; line-height:1.7; color:#3C5068;">
+Access is available <strong>exclusively through your personal sign-in link</strong> below &mdash; there is no public login page.${
+    twoFactorRequired
+      ? " Because two-factor authentication is mandatory for your account, you will also be asked for the 6-digit code from your authenticator app when you sign in."
+      : ""
+  }
 </p>
-</td></tr>
-</table></td></tr></table>
-</body></html>`;
+${ibuszButton(loginLink, "Open the IBUSZ portal")}
+<p style="margin:0; font-size:13px; line-height:1.7; color:#6B7F96;">
+<strong style="color:#0F2238;">Security:</strong> this link is personal and valid for 30 days. Please do not forward or share it. After it expires, ask Pannon Transfer for a new invitation.
+</p>`;
+  const html = ibuszEmailShell({
+    origin,
+    lang: "both",
+    preheader:
+      "Az IBUSZ portálfiókja aktív – használja személyes belépési linkjét. / Your IBUSZ portal account is active – use your personal sign-in link.",
+    eyebrow: "Fiók aktiválva · Account activated",
+    headline: "Üdvözöljük az<br>IBUSZ foglalási portálon",
+    bodyHtml: ibuszBilingual(huBody, enBody),
+    topRight: "IBUSZ Hungary Kft.",
+    footerKind: "welcome",
+  });
   const text = [
-    "Üdvözölünk a IBUSZ Hungary Kft. Portálon!",
+    "PANNON TRANSFER x IBUSZ HUNGARY KFT. - DEDIKÁLT PORTÁL / DEDICATED PORTAL",
     "",
-    "Jelszavad sikeresen be lett állítva. A fiókod mostantól aktív.",
-    twoFactorRequired ? "2FA (kétfaktoros hitelesítés) kötelező a belépéshez." : "2FA nincs bekapcsolva.",
-    "",
-    "Kizárólag az alábbi EGYEDI linken keresztül tudsz belépni a IBUSZ Hungary Kft. Portálra (publikus login nincs):",
+    "Kedves Partnerünk!",
+    "A jelszó beállítva, az IBUSZ portálfiókja mostantól aktív.",
+    twoFactorRequired
+      ? "A belépéshez kétfaktoros hitelesítés (2FA) kötelező."
+      : "Kétfaktoros hitelesítés nincs bekapcsolva.",
+    "Belépés kizárólag személyes linken (nincs nyilvános belépési oldal):",
     loginLink,
+    "Belépési fiók: " + recipientEmail,
+    "A link 30 napig érvényes. Lejárta után kérjen új meghívót a Pannon Transfertől.",
     "",
-    "Belépési fiókod: " + recipientEmail,
+    "----------------------------------------",
+    "Dear Partner,",
+    "Your password has been set and your IBUSZ portal account is now active.",
+    twoFactorRequired
+      ? "Two-factor authentication (2FA) is mandatory for your account."
+      : "Two-factor authentication is not enabled for your account.",
+    "Access is available only through your personal sign-in link (there is no public login page):",
+    loginLink,
+    "Your account: " + recipientEmail,
+    "The link is valid for 30 days. After it expires, please ask Pannon Transfer for a new invitation.",
     "",
-    "A link 30 napig érvényes. Lejárta után kérj új meghívót az ügyvezetődtől.",
+    `${IBUSZ_CONTACT.name} - Fejlesztő / Developer`,
+    IBUSZ_CONTACT.email,
+    IBUSZ_CONTACT.phone,
     "",
-    "Üdvözlettel:",
-    "Pannon Transfer - IBUSZ Hungary Kft. dedikált portál",
-    `© ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.`,
+    "Ezt az üzenetet a Pannon Transfer Komplex rendszere küldte. / This message was sent by the Pannon Transfer Komplex system.",
+    `© ${year} Pannon Transfer. Minden jog fenntartva. / All rights reserved.`,
   ].join("\n");
   return { html, text };
 }
@@ -107,7 +112,7 @@ export async function POST(request: Request) {
     const res = await setIbuszPasswordByInvite(token, password);
     if (!res.success || !res.user) {
       return NextResponse.json(
-        { success: false, message: res.message || "Jelszó beállítás sikertelen." },
+        { success: false, message: res.message || "A jelszó beállítása sikertelen." },
         { status: 400 }
       );
     }
@@ -159,7 +164,7 @@ export async function POST(request: Request) {
       }
 
       const magicLink = `${loginBase}/ibusz/auth?token=${encodeURIComponent(magicRaw)}`;
-      const { html, text } = buildWelcomeEmail(res.user.email, magicLink, require2FA);
+      const { html, text } = buildWelcomeEmail(res.user.email, magicLink, require2FA, loginBase);
 
       console.log("\n=========== IBUSZ HUNGARY KFT. WELCOME EMAIL (TEST MODE) ===========");
       console.log("Címzett:", res.user.email);
@@ -170,8 +175,8 @@ export async function POST(request: Request) {
       const emailRes = await sendEmail({
         to: res.user.email,
         subject: require2FA
-          ? "IBUSZ Hungary Kft. Portál – Jelszó beállítva · 2FA kötelező · Egyedi belépési link"
-          : "IBUSZ Hungary Kft. Portál – Üdvözlünk! Jelszó beállítva · Egyedi belépési link",
+          ? "IBUSZ portál – Fiók aktív · 2FA kötelező · Személyes belépési link / Account active · 2FA required"
+          : "IBUSZ portál – Fiók aktív · Személyes belépési link / Account active · Personal sign-in link",
         html,
         text,
       });
@@ -189,8 +194,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: require2FA
-        ? "Jelszó beállítva! Most állítsd be a kétfaktoros hitelesítést — az egyedi belépési linket emailben kapsz majd."
-        : "Jelszó sikeresen beállítva. Hamarosan kapsz egy emailt az egyedi belépési linkkel.",
+        ? "A jelszó beállítva! Most állítsa be a kétfaktoros hitelesítést — az egyedi belépési linket e-mailben kapja meg."
+        : "A jelszó sikeresen beállítva. Hamarosan e-mailt kap az egyedi belépési linkkel.",
       requireTwoFactorSetup: require2FA,
       twoFactorSetup,
       user: {
@@ -201,7 +206,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Hiba" },
+      { success: false, message: error instanceof Error ? error.message : "Hiba történt." },
       { status: 500 }
     );
   }

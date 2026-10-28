@@ -71,7 +71,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[IBUSZ HUNGARY KFT. validate-invite] ERROR:", error);
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Hiba" },
+      { success: false, message: error instanceof Error ? error.message : "Hiba történt." },
       { status: 500 }
     );
   }

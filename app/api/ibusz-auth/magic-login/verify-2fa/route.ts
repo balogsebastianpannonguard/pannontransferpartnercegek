@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         {
           success: false,
           message:
-            "A kétfaktoros kód helytelen. Próbáld újra 30 mp múlva, vagy használd az egyik mentett biztonsági kódot.",
+            "A kétfaktoros kód helytelen. Próbálja újra 30 másodperc múlva, vagy használja az egyik mentett biztonsági kódot.",
         },
         { status: 401 }
       );
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Hiba" },
+      { success: false, message: error instanceof Error ? error.message : "Hiba történt." },
       { status: 500 }
     );
   }

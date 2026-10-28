@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -13,6 +14,9 @@ import {
   Mail,
   ArrowLeft,
 } from "lucide-react";
+import { useIbuszLang } from "../lang";
+import { authMessage, ibText, type IbuszKey } from "../i18n";
+import { HeroBackdrop, IbuszLogo, LangSwitch, PannonChip } from "../components/IbuszBrand";
 
 function extractTokenFromUrl(): string {
   if (typeof window === "undefined") return "";
@@ -32,6 +36,10 @@ function extractTokenFromUrl(): string {
 
 export default function IbuszAuthPage() {
   const router = useRouter();
+  const [lang, setLang] = useIbuszLang();
+  const tx = (key: IbuszKey, params?: Record<string, string | number>) =>
+    ibText(lang, key, params);
+
   const [rawToken, setRawToken] = useState("");
   const [state, setState] = useState<
     "loading" | "invalid" | "twofactor" | "done" | "redirecting"
@@ -40,7 +48,12 @@ export default function IbuszAuthPage() {
   const [code, setCode] = useState("");
   const [useBackup, setUseBackup] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // raw server message ("srv:...") or translation key ("i18n:...")
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   useEffect(() => {
     const t = extractTokenFromUrl();
@@ -61,7 +74,7 @@ export default function IbuszAuthPage() {
         const json = await res.json().catch(() => null);
         if (!res.ok || !json?.success) {
           setState("invalid");
-          setError(json?.message || "Érvénytelen vagy lejárt link.");
+          setError(json?.message ? `srv:${json.message}` : "i18n:authLinkInvalid");
         } else if (json.needTwoFactor) {
           setEmail(json.email || "");
           setState("twofactor");
@@ -72,7 +85,7 @@ export default function IbuszAuthPage() {
       } catch {
         if (!cancelled) {
           setState("invalid");
-          setError("Hálózati hiba történt.");
+          setError("i18n:errNetworkShort");
         }
       }
     })();
@@ -81,11 +94,18 @@ export default function IbuszAuthPage() {
     };
   }, [rawToken, router]);
 
+  const errorText = (e: string | null, fallback: IbuszKey): string | null => {
+    if (!e) return null;
+    if (e.startsWith("i18n:")) return tx(e.slice(5) as IbuszKey);
+    if (e.startsWith("srv:")) return authMessage(lang, e.slice(4), fallback);
+    return e;
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (code.replace(/\s+/g, "").length < 4) {
-      setError(useBackup ? "A biztonsági kód túl rövid." : "Az Authenticator kód 6 számjegyből áll.");
+      setError(useBackup ? "i18n:errShortBackup" : "i18n:errCode6Digits");
       return;
     }
     setSubmitting(true);
@@ -93,51 +113,61 @@ export default function IbuszAuthPage() {
       const res = await fetch("/api/ibusz-auth/magic-login/verify-2fa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: rawToken,
-          code,
-          useBackup,
-        }),
+        body: JSON.stringify({ token: rawToken, code, useBackup }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        setError(json?.message || "Helytelen kód.");
+        setError(json?.message ? `srv:${json.message}` : "i18n:errWrongCode");
       } else {
         setState("done");
         setTimeout(() => router.push("/ibusz"), 2500);
       }
     } catch {
-      setError("Hálózati hiba történt.");
+      setError("i18n:errNetworkShort");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const mailNew =
+    "mailto:balogh.sebastian@pannonguard.hu?subject=" +
+    encodeURIComponent(
+      lang === "hu"
+        ? "IBUSZ portál - új belépési link"
+        : "IBUSZ Portal - new sign-in link",
+    );
+
   return (
-    <div className="relative min-h-screen bg-[#FAFBFC] text-zinc-900 flex flex-col">
-      <div className="w-full border-b border-zinc-200/70 bg-white/60 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+    <div className="relative min-h-screen bg-[#F4F7FB] text-slate-900 flex flex-col">
+      <div className="relative">
+        <div className="absolute inset-x-0 top-0 h-[210px] overflow-hidden">
+          <HeroBackdrop height={210} />
+        </div>
+        <div className="relative z-10 max-w-6xl mx-auto px-6 h-[72px] flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#009A44] to-[#007335] flex items-center justify-center shadow-sm">
-              <span className="text-white font-black text-sm tracking-tighter">C</span>
+            <div className="h-10 px-3 rounded-xl bg-white flex items-center shadow-[0_2px_10px_rgba(0,30,70,0.25)]">
+              <PannonChip className="h-5" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-zinc-900 leading-none">IBUSZ HUNGARY KFT. Portál</span>
-              <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">Pannon Transfer · Egyedi bejelentkezés</span>
+            <div className="h-10 px-3 rounded-xl bg-white flex items-center shadow-[0_2px_10px_rgba(0,30,70,0.25)]">
+              <IbuszLogo className="h-7" />
             </div>
+            <span className="hidden md:block text-[11px] text-white/80 tracking-wide ml-1">{tx("authSub")}</span>
           </div>
-          <a
-            href="/"
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Vissza a főoldalra
-          </a>
+          <div className="flex items-center gap-3">
+            <LangSwitch lang={lang} onChange={setLang} tone="dark" label={tx("language")} />
+            <Link
+              href="/"
+              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-[13px] font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {tx("authBackHome")}
+            </Link>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
-        <div className="w-full max-w-[440px]">
+      <div className="relative z-10 flex-1 flex items-start justify-center px-4 pb-12 -mt-16 pt-20">
+        <div className="w-full max-w-[460px] rounded-[28px] bg-white border border-slate-200/80 shadow-[0_30px_80px_rgba(15,34,56,0.14)] p-7 sm:p-9">
           <AnimatePresence mode="wait">
             {state === "loading" || state === "redirecting" ? (
               <motion.div
@@ -146,11 +176,11 @@ export default function IbuszAuthPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.25 }}
-                className="flex flex-col items-center py-20 gap-5"
+                className="flex flex-col items-center py-16 gap-5"
               >
-                <Loader2 className="w-8 h-8 text-[#009A44] animate-spin" />
-                <p className="text-sm text-zinc-500 font-medium">
-                  {state === "redirecting" ? "Átirányítás..." : "Belépési link ellenőrzése..."}
+                <Loader2 className="w-8 h-8 text-[#004A8D] animate-spin" />
+                <p className="text-sm text-slate-500 font-medium">
+                  {state === "redirecting" ? tx("authRedirecting") : tx("authVerifyingLink")}
                 </p>
               </motion.div>
             ) : null}
@@ -168,42 +198,41 @@ export default function IbuszAuthPage() {
                   <div className="mx-auto w-14 h-14 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center mb-5">
                     <AlertTriangle className="w-7 h-7 text-red-500" />
                   </div>
-                  <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Hozzáférés megtagadva
+                  <h1 className="text-[26px] font-bold text-slate-900 tracking-tight mb-2">
+                    {tx("authDeniedTitle")}
                   </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed max-w-sm mx-auto">
-                    {error ||
-                      "Ez az egyedi link nem létezik, lejárt, vagy már felhasználták. Kérjük, használd a legújabb emailben küldött linket, vagy kérj új meghívót."}
+                  <p className="text-[15px] text-slate-500 leading-relaxed max-w-sm mx-auto">
+                    {errorText(error, "authLinkInvalid") || tx("authDeniedBody")}
                   </p>
                 </div>
 
-                <div className="bg-white border border-zinc-200 rounded-2xl p-5 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-zinc-500 mb-2.5">
-                    Új meghívó igénylése
+                <div className="bg-slate-50/80 border border-slate-200 rounded-2xl p-5 mb-6">
+                  <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-2.5">
+                    {tx("authRequestInvite")}
                   </div>
                   <a
-                    href="mailto:balog.sebastian@pannonguard.hu"
-                    className="inline-flex items-center gap-2 text-[15px] font-semibold text-[#009A44] hover:text-[#003A99] transition-colors"
+                    href="mailto:balogh.sebastian@pannonguard.hu"
+                    className="inline-flex items-center gap-2 text-[15px] font-semibold text-[#004A8D] hover:text-[#00386B] transition-colors"
                   >
                     <Mail className="w-4 h-4" />
-                    balog.sebastian@pannonguard.hu
+                    balogh.sebastian@pannonguard.hu
                   </a>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <a
-                    href="mailto:balog.sebastian@pannonguard.hu?subject=IBUSZ%20HUNGARY%20KFT.%20Port%C3%A1l%20-%20%C3%9Aj%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
-                    className="flex-1 h-12 rounded-xl bg-white hover:bg-zinc-50 text-zinc-900 text-[14px] font-semibold border border-zinc-200 transition-colors inline-flex items-center justify-center gap-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                    href={mailNew}
+                    className="flex-1 h-12 rounded-2xl bg-white hover:bg-slate-50 text-slate-900 text-[14px] font-semibold border border-slate-200 transition-colors inline-flex items-center justify-center gap-2"
                   >
                     <Mail className="w-4 h-4" />
-                    Új belépési link kérése
+                    {tx("authRequestLink")}
                   </a>
-                  <a
+                  <Link
                     href="/"
-                    className="flex-1 h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-[14px] font-semibold transition-colors inline-flex items-center justify-center gap-2"
+                    className="flex-1 h-12 rounded-2xl bg-[#004A8D] hover:bg-[#00386B] text-white text-[14px] font-semibold transition-colors inline-flex items-center justify-center gap-2"
                   >
-                    Vissza a főoldalra
-                  </a>
+                    {tx("authBackHome")}
+                  </Link>
                 </div>
               </motion.div>
             )}
@@ -215,49 +244,38 @@ export default function IbuszAuthPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.05 }}
                 transition={{ duration: 0.5 }}
-                className="flex flex-col items-center justify-center py-8 w-full"
+                className="flex flex-col items-center justify-center py-6 w-full"
               >
-                <div className="relative flex items-center justify-center w-full max-w-sm mb-12 px-4">
-                  {/* Pannon Transfer side */}
-                  <motion.div 
+                <div className="relative flex items-center justify-center w-full max-w-sm mb-10 px-2">
+                  <motion.div
                     initial={{ x: -20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.2, duration: 0.6 }}
-                    className="flex flex-col items-center"
+                    className="h-14 px-3.5 rounded-2xl bg-white border border-slate-200 flex items-center shadow-lg"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-zinc-900 flex items-center justify-center shadow-lg mb-4">
-                      <span className="text-white font-black text-xl tracking-tighter">PT</span>
-                    </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase text-center w-32">Pannon Transfer</span>
+                    <PannonChip className="h-5" />
                   </motion.div>
-
-                  {/* Arrow Transition */}
-                  <motion.div 
+                  <motion.div
                     initial={{ scaleX: 0, opacity: 0 }}
                     animate={{ scaleX: 1, opacity: 1 }}
                     transition={{ delay: 0.8, duration: 0.6 }}
                     style={{ transformOrigin: "left center" }}
-                    className="flex-1 mx-4 h-[2px] bg-gradient-to-r from-zinc-200 via-[#009A44]/50 to-[#009A44] relative mt-[-24px]"
+                    className="flex-1 mx-3 h-[2px] bg-gradient-to-r from-slate-200 via-[#F39200]/60 to-[#F39200] relative"
                   >
-                    <motion.div 
+                    <motion.div
                       initial={{ left: "0%", opacity: 0, scale: 0 }}
                       animate={{ left: "100%", opacity: 1, scale: 1 }}
                       transition={{ delay: 1.4, duration: 0.8, ease: "easeInOut" }}
-                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#009A44] shadow-[0_0_12px_4px_rgba(0,180,216,0.4)]"
+                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#F39200] shadow-[0_0_12px_4px_rgba(243,146,0,0.4)]"
                     />
                   </motion.div>
-
-                  {/* IBUSZ HUNGARY KFT. side */}
-                  <motion.div 
+                  <motion.div
                     initial={{ x: 20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.5, duration: 0.6 }}
-                    className="flex flex-col items-center"
+                    className="h-14 px-3.5 rounded-2xl bg-white border border-[#004A8D]/15 flex items-center shadow-xl shadow-[#004A8D]/15"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#009A44] to-[#007335] flex items-center justify-center shadow-xl shadow-[#009A44]/20 mb-4">
-                      <span className="text-white font-black text-xl tracking-tighter">C</span>
-                    </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#009A44] uppercase text-center w-32">IBUSZ HUNGARY KFT. Portál</span>
+                    <IbuszLogo className="h-8" />
                   </motion.div>
                 </div>
 
@@ -269,15 +287,13 @@ export default function IbuszAuthPage() {
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">
-                      Sikeres hitelesítés
+                    <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">
+                      {tx("authSuccess")}
                     </h1>
                   </div>
-                  <div className="flex items-center gap-2.5 px-4 py-2 bg-zinc-100 rounded-full">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#009A44]" />
-                    <p className="text-[13px] text-zinc-600 font-medium">
-                      Biztonságos kapcsolat felépítése...
-                    </p>
+                  <div className="flex items-center gap-2.5 px-4 py-2 bg-slate-100 rounded-full">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#004A8D]" />
+                    <p className="text-[13px] text-slate-600 font-medium">{tx("secureConn")}</p>
                   </div>
                 </motion.div>
               </motion.div>
@@ -294,44 +310,44 @@ export default function IbuszAuthPage() {
                 className="flex flex-col"
               >
                 <div className="mb-7">
-                  <div className="mx-auto w-14 h-14 rounded-2xl bg-[#009A44]/[0.08] border border-[#009A44]/10 flex items-center justify-center mb-5">
-                    <ShieldCheck className="w-7 h-7 text-[#009A44]" />
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#004A8D] to-[#0C6BB5] flex items-center justify-center mb-5 ring-4 ring-[#F39200]/25 shadow-[0_12px_26px_rgba(0,74,141,0.25)]">
+                    <ShieldCheck className="w-7 h-7 text-white" />
                   </div>
-                  <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Kétfaktoros hitelesítés
+                  <h1 className="text-[26px] font-bold text-slate-900 tracking-tight mb-2">
+                    {tx("tfaPageTitle")}
                   </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed">
-                    A fiókodhoz 2FA kötelező. Írd be az Authenticator alkalmazásod által generált
-                    <strong className="font-semibold text-zinc-800"> 6 számjegyű kódot</strong>
-                    , vagy használd a biztonsági mentett kódot.
+                  <p className="text-[15px] text-slate-500 leading-relaxed">
+                    {tx("tfaPageBody")}{" "}
+                    <strong className="font-semibold text-slate-800">{tx("tfaPageBody2")}</strong>
+                    {tx("tfaPageBody3")}
                   </p>
                 </div>
 
-                <div className="bg-white border border-zinc-200 rounded-2xl p-4 mb-6 flex items-center gap-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="w-11 h-11 rounded-xl bg-[#009A44]/[0.06] border border-[#009A44]/10 flex items-center justify-center shrink-0">
-                    <Mail className="w-5 h-5 text-[#009A44]" />
+                <div className="bg-slate-50/80 border border-slate-200 rounded-2xl p-4 mb-6 flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-xl bg-white border border-[#004A8D]/15 flex items-center justify-center shrink-0 shadow-sm">
+                    <Mail className="w-5 h-5 text-[#004A8D]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 mb-0.5">
-                      Belépő fiók
+                    <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400 mb-0.5">
+                      {tx("signingInAs")}
                     </div>
-                    <div className="text-[15px] font-semibold text-zinc-900 truncate">
-                      {email || "Betöltés..."}
+                    <div className="text-[15px] font-semibold text-slate-900 truncate">
+                      {email || tx("loading")}
                     </div>
                   </div>
-                  <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#009A44]/[0.07] border border-[#009A44]/10 text-[#009A44] text-[11px] font-bold tracking-wide">
+                  <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#F39200]/10 border border-[#F39200]/25 text-[#C77700] text-[11px] font-bold tracking-wide">
                     <KeyRound className="w-3.5 h-3.5" /> 2FA
                   </span>
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-[13px] font-semibold text-zinc-800 mb-2 pl-0.5">
-                    {useBackup ? "Biztonsági kód (Backup code)" : "Authenticator kód (6 szám)"}
+                  <label className="block text-[13px] font-semibold text-slate-800 mb-2 pl-0.5">
+                    {useBackup ? tx("backupCode") : tx("authCode")}
                   </label>
                   <input
                     type="text"
                     autoComplete="one-time-code"
-                    inputMode="numeric"
+                    inputMode={useBackup ? "text" : "numeric"}
                     value={code}
                     onChange={(e) => {
                       let v = e.target.value;
@@ -339,8 +355,8 @@ export default function IbuszAuthPage() {
                       else v = v.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 16);
                       setCode(v);
                     }}
-                    placeholder={useBackup ? "pl. A1B2-C3D4-E5" : "000000"}
-                    className="w-full h-[52px] px-4 bg-white border border-zinc-200 rounded-xl text-[18px] text-center tracking-[0.45em] text-zinc-900 placeholder:text-zinc-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#009A44]/20 focus:border-[#009A44]/50 transition-all"
+                    placeholder={useBackup ? tx("backupPh") : "000000"}
+                    className="w-full h-[54px] px-4 bg-white border border-slate-200 rounded-2xl text-[18px] text-center tracking-[0.45em] text-slate-900 placeholder:text-slate-300 font-mono font-bold focus:outline-none focus:ring-4 focus:ring-[#004A8D]/10 focus:border-[#004A8D] transition-all"
                   />
                 </div>
 
@@ -353,10 +369,10 @@ export default function IbuszAuthPage() {
                       setUseBackup(e.target.checked);
                       setCode("");
                     }}
-                    className="w-4 h-4 rounded border-zinc-300 text-[#009A44] focus:ring-[#009A44]/30"
+                    className="w-4 h-4 rounded border-slate-300 text-[#004A8D] focus:ring-[#004A8D]/30"
                   />
-                  <label htmlFor="2fa-backup" className="text-[13px] font-medium text-zinc-600">
-                    Biztonsági kód használata (ha nincs hozzáférés az Authenticator apphoz)
+                  <label htmlFor="2fa-backup" className="text-[13px] font-medium text-slate-600">
+                    {tx("useBackupLogin")}
                   </label>
                 </div>
 
@@ -369,9 +385,11 @@ export default function IbuszAuthPage() {
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden mb-5"
                     >
-                      <div className="flex items-start gap-3 px-4 py-3.5 bg-red-50 border border-red-100 rounded-xl">
-                        <AlertTriangle className="w-4.5 h-4.5 text-red-500 shrink-0 mt-0.5" />
-                        <p className="text-[13px] text-red-700 font-medium leading-relaxed">{error}</p>
+                      <div className="flex items-start gap-3 px-4 py-3.5 bg-red-50 border border-red-100 rounded-2xl">
+                        <AlertTriangle className="w-[18px] h-[18px] text-red-500 shrink-0 mt-0.5" />
+                        <p className="text-[13px] text-red-700 font-medium leading-relaxed">
+                          {errorText(error, "errWrongCode")}
+                        </p>
                       </div>
                     </motion.div>
                   )}
@@ -380,17 +398,19 @@ export default function IbuszAuthPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full h-[54px] rounded-xl bg-[#009A44] hover:bg-[#0B1F47] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(0,180,216,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(0,180,216,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  className="w-full h-[54px] rounded-2xl bg-gradient-to-r from-[#004A8D] to-[#0C6BB5] hover:from-[#00386B] hover:to-[#004A8D] text-white text-[14px] font-semibold shadow-[0_12px_28px_rgba(0,74,141,0.3)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <>
-                      <Loader2 className="w-4.5 h-4.5 animate-spin" />
-                      Feldolgozás...
+                      <Loader2 className="w-[18px] h-[18px] animate-spin" />
+                      {tx("processing")}
                     </>
                   ) : (
                     <>
-                      Ellenőrzés &amp; Belépés
-                      <ArrowRight className="w-4.5 h-4.5" />
+                      {tx("verifyAndSignIn")}
+                      <span className="w-6 h-6 rounded-full bg-[#F39200] flex items-center justify-center">
+                        <ArrowRight className="w-3.5 h-3.5 text-white" />
+                      </span>
                     </>
                   )}
                 </button>
@@ -400,10 +420,10 @@ export default function IbuszAuthPage() {
         </div>
       </div>
 
-      <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-          <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
-          <span className="tracking-wider">IBUSZ HUNGARY KFT. Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
+      <div className="w-full border-t border-slate-200/70 bg-white/70 backdrop-blur-md mt-auto">
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-slate-400 font-medium">
+          <span>© {new Date().getFullYear()} Pannon Transfer. {tx("rights")}</span>
+          <span className="tracking-wider hidden sm:inline">{tx("authFooter")}</span>
         </div>
       </div>
     </div>

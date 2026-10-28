@@ -1,18 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Loader2,
-  AlertTriangle,
-  CheckCircle2,
-  ShieldCheck,
-  ArrowRight,
-  KeyRound,
-  Mail,
-  ArrowLeft,
-} from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle2, ShieldCheck, ArrowRight, KeyRound, Mail, ArrowLeft } from "lucide-react";
+import { translateSdAuthMessage, useSdLang } from "../i18n";
+import { SD_PATTERN, SD_SUPPORT, SdLangSwitch, SdLogos, sdCard, sdPrimaryBtn } from "../ui";
 
 function extractTokenFromUrl(): string {
   if (typeof window === "undefined") return "";
@@ -32,23 +26,23 @@ function extractTokenFromUrl(): string {
 
 export default function SchaefflerDebrecenAuthPage() {
   const router = useRouter();
+  const { lang, setLang, tx } = useSdLang();
   const [rawToken, setRawToken] = useState("");
-  const [state, setState] = useState<
-    "loading" | "invalid" | "twofactor" | "done" | "redirecting"
-  >("loading");
+  const [state, setState] = useState<"loading" | "invalid" | "twofactor" | "done">("loading");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [useBackup, setUseBackup] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   useEffect(() => {
     const t = extractTokenFromUrl();
-    setRawToken(t);
     if (!t) {
-      setState("invalid");
-      return;
+      const id = window.setTimeout(() => setState("invalid"), 0);
+      return () => window.clearTimeout(id);
     }
+    const idToken = window.setTimeout(() => setRawToken(t), 0);
     let cancelled = false;
     (async () => {
       try {
@@ -61,7 +55,7 @@ export default function SchaefflerDebrecenAuthPage() {
         const json = await res.json().catch(() => null);
         if (!res.ok || !json?.success) {
           setState("invalid");
-          setError(json?.message || "Érvénytelen vagy lejárt link.");
+          setServerError(json?.message || "");
         } else if (json.needTwoFactor) {
           setEmail(json.email || "");
           setState("twofactor");
@@ -72,20 +66,27 @@ export default function SchaefflerDebrecenAuthPage() {
       } catch {
         if (!cancelled) {
           setState("invalid");
-          setError("Hálózati hiba történt.");
+          setServerError("__network__");
         }
       }
     })();
     return () => {
       cancelled = true;
+      window.clearTimeout(idToken);
     };
-  }, [rawToken, router]);
+  }, [router]);
+
+  const invalidMessage = () => {
+    if (serverError === "__network__") return tx("networkError");
+    if (!serverError) return tx("linkInvalidBody");
+    return translateSdAuthMessage(lang, serverError, tx("linkInvalidShort"));
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (code.replace(/\s+/g, "").length < 4) {
-      setError(useBackup ? "A biztonsági kód túl rövid." : "Az Authenticator kód 6 számjegyből áll.");
+      setError(useBackup ? tx("tfaEnterBackup") : tx("tfaEnter6"));
       return;
     }
     setSubmitting(true);
@@ -93,53 +94,49 @@ export default function SchaefflerDebrecenAuthPage() {
       const res = await fetch("/api/schaefflerdebrecen-auth/magic-login/verify-2fa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: rawToken,
-          code,
-          useBackup,
-        }),
+        body: JSON.stringify({ token: rawToken, code, useBackup }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        setError(json?.message || "Helytelen kód.");
+        setError(translateSdAuthMessage(lang, json?.message, tx("errIncorrectCode")));
       } else {
         setState("done");
         setTimeout(() => router.push("/schaefflerdebrecen"), 2500);
       }
     } catch {
-      setError("Hálózati hiba történt.");
+      setError(tx("networkError"));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen bg-[#FAFBFC] text-zinc-900 flex flex-col">
-      <div className="w-full border-b border-zinc-200/70 bg-white/60 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#009A44] to-[#007335] flex items-center justify-center shadow-sm">
-              <span className="text-white font-black text-sm tracking-tighter">C</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-zinc-900 leading-none">SCHAEFFLER DEBRECEN Portál</span>
-              <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">Pannon Transfer · Egyedi bejelentkezés</span>
-            </div>
+    <div className="relative min-h-screen bg-[#F3F6F4] text-[#0E1A14] flex flex-col">
+      <div className="w-full bg-[#0B3D2A] relative">
+        <div className={`absolute inset-0 ${SD_PATTERN}`} aria-hidden />
+        <div className="absolute inset-x-0 bottom-0 h-[3px] bg-[#00893D]" aria-hidden />
+        <div className="relative max-w-6xl mx-auto px-6 h-[76px] flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <SdLogos onDark />
+            <span className="hidden md:block text-[11px] text-white/70 tracking-wide ml-1 truncate">{tx("authBarTag")}</span>
           </div>
-          <a
-            href="/"
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Vissza a főoldalra
-          </a>
+          <div className="flex items-center gap-3">
+            <SdLangSwitch lang={lang} onChange={setLang} label={tx("language")} onDark />
+            <Link
+              href="/"
+              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {tx("backToHome")}
+            </Link>
+          </div>
         </div>
       </div>
 
       <div className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
-        <div className="w-full max-w-[440px]">
+        <div className="w-full max-w-[460px]">
           <AnimatePresence mode="wait">
-            {state === "loading" || state === "redirecting" ? (
+            {state === "loading" && (
               <motion.div
                 key="loading"
                 initial={{ opacity: 0, y: 6 }}
@@ -148,12 +145,10 @@ export default function SchaefflerDebrecenAuthPage() {
                 transition={{ duration: 0.25 }}
                 className="flex flex-col items-center py-20 gap-5"
               >
-                <Loader2 className="w-8 h-8 text-[#009A44] animate-spin" />
-                <p className="text-sm text-zinc-500 font-medium">
-                  {state === "redirecting" ? "Átirányítás..." : "Belépési link ellenőrzése..."}
-                </p>
+                <Loader2 className="w-8 h-8 text-[#00893D] animate-spin" />
+                <p className="text-sm text-[#5C6B63] font-medium">{tx("verifyingLink")}</p>
               </motion.div>
-            ) : null}
+            )}
 
             {state === "invalid" && (
               <motion.div
@@ -162,48 +157,41 @@ export default function SchaefflerDebrecenAuthPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.25 }}
-                className="flex flex-col"
+                className={`${sdCard} p-7 sm:p-9 flex flex-col`}
               >
-                <div className="text-center mb-8">
+                <div className="text-center mb-7">
                   <div className="mx-auto w-14 h-14 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center mb-5">
                     <AlertTriangle className="w-7 h-7 text-red-500" />
                   </div>
-                  <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Hozzáférés megtagadva
-                  </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed max-w-sm mx-auto">
-                    {error ||
-                      "Ez az egyedi link nem létezik, lejárt, vagy már felhasználták. Kérjük, használd a legújabb emailben küldött linket, vagy kérj új meghívót."}
-                  </p>
+                  <h1 className="text-[25px] font-bold text-[#0E1A14] tracking-tight mb-2">{tx("accessDenied")}</h1>
+                  <p className="text-[14.5px] text-[#5C6B63] leading-relaxed max-w-sm mx-auto">{invalidMessage()}</p>
                 </div>
 
-                <div className="bg-white border border-zinc-200 rounded-2xl p-5 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-zinc-500 mb-2.5">
-                    Új meghívó igénylése
-                  </div>
+                <div className="bg-[#F6F9F7] border border-[#E1E7E3] rounded-xl p-5 mb-5">
+                  <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#7B8A82] mb-2.5">{tx("requestNewInvite")}</div>
                   <a
-                    href="mailto:balog.sebastian@pannonguard.hu"
-                    className="inline-flex items-center gap-2 text-[15px] font-semibold text-[#009A44] hover:text-[#003A99] transition-colors"
+                    href={`mailto:${SD_SUPPORT.email}`}
+                    className="inline-flex items-center gap-2 text-[15px] font-semibold text-[#00893D] hover:text-[#007335] transition-colors"
                   >
                     <Mail className="w-4 h-4" />
-                    balog.sebastian@pannonguard.hu
+                    {SD_SUPPORT.email}
                   </a>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <a
-                    href="mailto:balog.sebastian@pannonguard.hu?subject=SCHAEFFLER%20DEBRECEN%20Port%C3%A1l%20-%20%C3%9Aj%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
-                    className="flex-1 h-12 rounded-xl bg-white hover:bg-zinc-50 text-zinc-900 text-[14px] font-semibold border border-zinc-200 transition-colors inline-flex items-center justify-center gap-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                    href={`mailto:${SD_SUPPORT.email}?subject=Schaeffler%20Debrecen%20Portal%20-%20New%20sign-in%20link`}
+                    className="flex-1 h-12 rounded-xl bg-white hover:bg-[#F3F6F4] text-[#0E1A14] text-[14px] font-semibold border border-[#DCE3DF] transition-colors inline-flex items-center justify-center gap-2"
                   >
                     <Mail className="w-4 h-4" />
-                    Új belépési link kérése
+                    {tx("requestNewLink")}
                   </a>
-                  <a
+                  <Link
                     href="/"
-                    className="flex-1 h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-[14px] font-semibold transition-colors inline-flex items-center justify-center gap-2"
+                    className="flex-1 h-12 rounded-xl bg-[#0B3D2A] hover:bg-[#082C1F] text-white text-[14px] font-semibold transition-colors inline-flex items-center justify-center gap-2"
                   >
-                    Vissza a főoldalra
-                  </a>
+                    {tx("backToHome")}
+                  </Link>
                 </div>
               </motion.div>
             )}
@@ -218,49 +206,45 @@ export default function SchaefflerDebrecenAuthPage() {
                 className="flex flex-col items-center justify-center py-8 w-full"
               >
                 <div className="relative flex items-center justify-center w-full max-w-sm mb-12 px-4">
-                  {/* Pannon Transfer side */}
-                  <motion.div 
+                  <motion.div
                     initial={{ x: -20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.2, duration: 0.6 }}
                     className="flex flex-col items-center"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-zinc-900 flex items-center justify-center shadow-lg mb-4">
+                    <div className="w-16 h-16 rounded-2xl bg-[#0B3D2A] flex items-center justify-center shadow-lg mb-4">
                       <span className="text-white font-black text-xl tracking-tighter">PT</span>
                     </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase text-center w-32">Pannon Transfer</span>
+                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#7B8A82] uppercase text-center w-24">Pannon Transfer</span>
                   </motion.div>
-
-                  {/* Arrow Transition */}
-                  <motion.div 
+                  <motion.div
                     initial={{ scaleX: 0, opacity: 0 }}
                     animate={{ scaleX: 1, opacity: 1 }}
                     transition={{ delay: 0.8, duration: 0.6 }}
                     style={{ transformOrigin: "left center" }}
-                    className="flex-1 mx-4 h-[2px] bg-gradient-to-r from-zinc-200 via-[#009A44]/50 to-[#009A44] relative mt-[-24px]"
+                    className="flex-1 mx-4 h-[2px] bg-gradient-to-r from-[#DCE3DF] via-[#00893D]/50 to-[#00893D] relative mt-[-24px]"
                   >
-                    <motion.div 
+                    <motion.div
                       initial={{ left: "0%", opacity: 0, scale: 0 }}
                       animate={{ left: "100%", opacity: 1, scale: 1 }}
                       transition={{ delay: 1.4, duration: 0.8, ease: "easeInOut" }}
-                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#009A44] shadow-[0_0_12px_4px_rgba(0,180,216,0.4)]"
+                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#00893D] shadow-[0_0_12px_4px_rgba(0,137,61,0.35)]"
                     />
                   </motion.div>
-
-                  {/* SCHAEFFLER DEBRECEN side */}
-                  <motion.div 
+                  <motion.div
                     initial={{ x: 20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.5, duration: 0.6 }}
                     className="flex flex-col items-center"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#009A44] to-[#007335] flex items-center justify-center shadow-xl shadow-[#009A44]/20 mb-4">
-                      <span className="text-white font-black text-xl tracking-tighter">C</span>
+                    <div className="w-16 h-16 rounded-2xl bg-[#00893D] flex items-center justify-center shadow-xl shadow-[#00893D]/20 mb-4">
+                      <span className="text-white font-black text-xl tracking-tighter">S</span>
                     </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#009A44] uppercase text-center w-32">SCHAEFFLER DEBRECEN Portál</span>
+                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#00893D] uppercase text-center w-24">
+                      Schaeffler {tx("portalWord")}
+                    </span>
                   </motion.div>
                 </div>
-
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -269,15 +253,11 @@ export default function SchaefflerDebrecenAuthPage() {
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">
-                      Sikeres hitelesítés
-                    </h1>
+                    <h1 className="text-[20px] font-bold text-[#0E1A14] tracking-tight">{tx("authSuccess")}</h1>
                   </div>
-                  <div className="flex items-center gap-2.5 px-4 py-2 bg-zinc-100 rounded-full">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#009A44]" />
-                    <p className="text-[13px] text-zinc-600 font-medium">
-                      Biztonságos kapcsolat felépítése...
-                    </p>
+                  <div className="flex items-center gap-2.5 px-4 py-2 bg-white border border-[#E1E7E3] rounded-full">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00893D]" />
+                    <p className="text-[13px] text-[#5C6B63] font-medium">{tx("authEstablishing")}</p>
                   </div>
                 </motion.div>
               </motion.div>
@@ -291,47 +271,40 @@ export default function SchaefflerDebrecenAuthPage() {
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.25 }}
                 onSubmit={submit}
-                className="flex flex-col"
+                className={`${sdCard} p-7 sm:p-9 flex flex-col`}
               >
-                <div className="mb-7">
-                  <div className="mx-auto w-14 h-14 rounded-2xl bg-[#009A44]/[0.08] border border-[#009A44]/10 flex items-center justify-center mb-5">
-                    <ShieldCheck className="w-7 h-7 text-[#009A44]" />
+                <div className="mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-[#E7F4EC] border border-[#CBE6D6] flex items-center justify-center mb-5">
+                    <ShieldCheck className="w-6 h-6 text-[#00893D]" />
                   </div>
-                  <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Kétfaktoros hitelesítés
-                  </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed">
-                    A fiókodhoz 2FA kötelező. Írd be az Authenticator alkalmazásod által generált
-                    <strong className="font-semibold text-zinc-800"> 6 számjegyű kódot</strong>
-                    , vagy használd a biztonsági mentett kódot.
+                  <h1 className="text-[25px] font-bold text-[#0E1A14] tracking-tight mb-2">{tx("tfaTitle")}</h1>
+                  <p className="text-[14.5px] text-[#5C6B63] leading-relaxed">
+                    <strong className="font-semibold text-[#0E1A14]">{tx("tfaRequiredLead")}</strong> {tx("tfaIntroA")}{" "}
+                    <strong className="font-semibold text-[#0E1A14]">{tx("tfaIntroB")}</strong> {tx("tfaIntroC")}
                   </p>
                 </div>
 
-                <div className="bg-white border border-zinc-200 rounded-2xl p-4 mb-6 flex items-center gap-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="w-11 h-11 rounded-xl bg-[#009A44]/[0.06] border border-[#009A44]/10 flex items-center justify-center shrink-0">
-                    <Mail className="w-5 h-5 text-[#009A44]" />
+                <div className="bg-[#F6F9F7] border border-[#E1E7E3] rounded-xl p-4 mb-6 flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-xl bg-white border border-[#CBE6D6] flex items-center justify-center shrink-0">
+                    <Mail className="w-5 h-5 text-[#00893D]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 mb-0.5">
-                      Belépő fiók
-                    </div>
-                    <div className="text-[15px] font-semibold text-zinc-900 truncate">
-                      {email || "Betöltés..."}
-                    </div>
+                    <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7B8A82] mb-0.5">{tx("signingInAs")}</div>
+                    <div className="text-[15px] font-semibold text-[#0E1A14] truncate">{email || tx("loading")}</div>
                   </div>
-                  <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#009A44]/[0.07] border border-[#009A44]/10 text-[#009A44] text-[11px] font-bold tracking-wide">
+                  <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#E7F4EC] border border-[#CBE6D6] text-[#007335] text-[11px] font-bold tracking-wide">
                     <KeyRound className="w-3.5 h-3.5" /> 2FA
                   </span>
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-[13px] font-semibold text-zinc-800 mb-2 pl-0.5">
-                    {useBackup ? "Biztonsági kód (Backup code)" : "Authenticator kód (6 szám)"}
+                  <label className="block text-[13px] font-semibold text-[#31413A] mb-2 pl-0.5">
+                    {useBackup ? tx("tfaBackupLabel") : tx("tfaCodeLabel")}
                   </label>
                   <input
                     type="text"
                     autoComplete="one-time-code"
-                    inputMode="numeric"
+                    inputMode={useBackup ? "text" : "numeric"}
                     value={code}
                     onChange={(e) => {
                       let v = e.target.value;
@@ -339,24 +312,24 @@ export default function SchaefflerDebrecenAuthPage() {
                       else v = v.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 16);
                       setCode(v);
                     }}
-                    placeholder={useBackup ? "pl. A1B2-C3D4-E5" : "000000"}
-                    className="w-full h-[52px] px-4 bg-white border border-zinc-200 rounded-xl text-[18px] text-center tracking-[0.45em] text-zinc-900 placeholder:text-zinc-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#009A44]/20 focus:border-[#009A44]/50 transition-all"
+                    placeholder={useBackup ? tx("tfaBackupPh") : "000000"}
+                    className="w-full h-[54px] px-4 bg-white border border-[#DCE3DF] rounded-xl text-[18px] text-center tracking-[0.45em] text-[#0E1A14] placeholder:text-[#9AA7A0] font-mono font-bold focus:outline-none focus:ring-4 focus:ring-[#00893D]/10 focus:border-[#00893D]/70 transition-all"
                   />
                 </div>
 
                 <div className="mb-5 flex items-center gap-2.5 pl-0.5">
                   <input
-                    id="2fa-backup"
+                    id="sd-2fa-backup"
                     type="checkbox"
                     checked={useBackup}
                     onChange={(e) => {
                       setUseBackup(e.target.checked);
                       setCode("");
                     }}
-                    className="w-4 h-4 rounded border-zinc-300 text-[#009A44] focus:ring-[#009A44]/30"
+                    className="w-4 h-4 rounded border-[#C5CFC9] text-[#00893D] focus:ring-[#00893D]/30"
                   />
-                  <label htmlFor="2fa-backup" className="text-[13px] font-medium text-zinc-600">
-                    Biztonsági kód használata (ha nincs hozzáférés az Authenticator apphoz)
+                  <label htmlFor="sd-2fa-backup" className="text-[13px] font-medium text-[#5C6B63]">
+                    {tx("tfaUseBackup")}
                   </label>
                 </div>
 
@@ -370,27 +343,23 @@ export default function SchaefflerDebrecenAuthPage() {
                       className="overflow-hidden mb-5"
                     >
                       <div className="flex items-start gap-3 px-4 py-3.5 bg-red-50 border border-red-100 rounded-xl">
-                        <AlertTriangle className="w-4.5 h-4.5 text-red-500 shrink-0 mt-0.5" />
+                        <AlertTriangle className="w-[18px] h-[18px] text-red-500 shrink-0 mt-0.5" />
                         <p className="text-[13px] text-red-700 font-medium leading-relaxed">{error}</p>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full h-[54px] rounded-xl bg-[#009A44] hover:bg-[#0B1F47] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(0,180,216,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(0,180,216,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
-                >
+                <button type="submit" disabled={submitting} className={sdPrimaryBtn}>
                   {submitting ? (
                     <>
-                      <Loader2 className="w-4.5 h-4.5 animate-spin" />
-                      Feldolgozás...
+                      <Loader2 className="w-[18px] h-[18px] animate-spin" />
+                      {tx("processing")}
                     </>
                   ) : (
                     <>
-                      Ellenőrzés &amp; Belépés
-                      <ArrowRight className="w-4.5 h-4.5" />
+                      {tx("verifySignIn")}
+                      <ArrowRight className="w-[18px] h-[18px]" />
                     </>
                   )}
                 </button>
@@ -400,10 +369,12 @@ export default function SchaefflerDebrecenAuthPage() {
         </div>
       </div>
 
-      <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-          <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
-          <span className="tracking-wider">SCHAEFFLER DEBRECEN Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
+      <div className="w-full border-t border-[#E1E7E3] bg-white/70 backdrop-blur-md mt-auto">
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-[#7B8A82] font-medium">
+          <span>
+            © {new Date().getFullYear()} Pannon Transfer. {tx("rights")}
+          </span>
+          <span className="tracking-wider hidden sm:inline">{tx("footerPersonalLink")}</span>
         </div>
       </div>
     </div>

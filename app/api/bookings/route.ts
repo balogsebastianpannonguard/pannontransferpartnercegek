@@ -11,14 +11,14 @@ import {
   type CreateBookingData,
 } from "@/lib/bookings";
 import { sendEmail } from "@/lib/email";
-import { buildCatlBookingConfirmationEmail } from "@/lib/catl-email-layout";
+import { buildPortalBookingConfirmation } from "@/lib/portal-booking-emails";
 import {
   buildCustomerConfirmationEmail,
   buildNiCustomerConfirmationEmail,
   buildDispatcherNotificationEmail,
 } from "@/lib/email-templates";
 import { getDb } from "@/lib/mongodb";
-import { normalizePortalLanguage } from "@/lib/portal-language";
+import { normalizePortalLanguage, normalizeBookingLanguage } from "@/lib/portal-language";
 import {
   LOCATION_SUPPORT_EMAIL,
   buildNiConfirmationRecipients,
@@ -124,7 +124,11 @@ export async function POST(request: Request) {
       travelers: body.travelers,
       luggage: body.luggage,
       comment: body.comment,
-      ...(session.portal === "ni" ? { language: normalizePortalLanguage(body.language) } : {}),
+      ...(session.portal === "ni"
+        ? { language: normalizePortalLanguage(body.language) }
+        : normalizeBookingLanguage(body.language)
+          ? { language: normalizeBookingLanguage(body.language) }
+          : {}),
     };
 
     const validation = await validateTravelConditions(bookingData);
@@ -158,38 +162,44 @@ export async function POST(request: Request) {
       comment: createdBooking.comment,
       price: createdBooking.price,
       trackUrl,
-      language: createdBooking.language,
+      language: createdBooking.language === "en" ? ("en" as const) : ("hu" as const),
     };
+
+    const portalEmail =
+      session.portal === "ni"
+        ? null
+        : buildPortalBookingConfirmation(session.portal, {
+            origin: getRequestOrigin(request),
+            bookingCode: createdBooking.bookingCode,
+            travelerName: createdBooking.travelerName,
+            travelerEmail: createdBooking.travelerEmail,
+            travelerPhone: createdBooking.travelerPhone,
+            pickupDate: createdBooking.pickupDate,
+            pickupTime: createdBooking.pickupTime,
+            fromAddress: createdBooking.fromAddress,
+            toAddress: createdBooking.toAddress,
+            flightNumber: createdBooking.flightNumber,
+            travelers: createdBooking.travelers,
+            luggage: createdBooking.luggage,
+            transferType: createdBooking.transferType,
+            secondTravelerEmail: createdBooking.secondTravelerEmail,
+            secondTravelerPhone: createdBooking.secondTravelerPhone,
+            comment: createdBooking.comment,
+            language: createdBooking.language ?? "hu",
+          });
 
     const customerHtml =
       session.portal === "ni"
         ? buildNiCustomerConfirmationEmail(emailParams)
-        : session.portal === "catl"
-          ? buildCatlBookingConfirmationEmail({
-              origin: getRequestOrigin(request),
-              bookingCode: createdBooking.bookingCode,
-              travelerName: createdBooking.travelerName,
-              travelerEmail: createdBooking.travelerEmail,
-              travelerPhone: createdBooking.travelerPhone,
-              pickupDate: createdBooking.pickupDate,
-              pickupTime: createdBooking.pickupTime,
-              fromAddress: createdBooking.fromAddress,
-              toAddress: createdBooking.toAddress,
-              flightNumber: createdBooking.flightNumber,
-              travelers: createdBooking.travelers,
-              luggage: createdBooking.luggage,
-              transferType: createdBooking.transferType,
-              secondTravelerEmail: createdBooking.secondTravelerEmail,
-              secondTravelerPhone: createdBooking.secondTravelerPhone,
-              comment: createdBooking.comment,
-            })
+        : portalEmail
+          ? portalEmail.html
           : buildCustomerConfirmationEmail(emailParams);
 
     const customerSubject =
       session.portal === "ni" && createdBooking.language === "en"
         ? `Booking confirmation - #${createdBooking.bookingCode}`
-        : session.portal === "catl"
-          ? `Booking confirmation - #${createdBooking.bookingCode} | CATL x Pannon Transfer`
+        : portalEmail
+          ? portalEmail.subject
           : `Foglalás visszaigazolása - #${createdBooking.bookingCode}`;
 
     if (session.portal === "ni") {

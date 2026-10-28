@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const challenge = verifyIbuszLoginChallenge(challengeToken);
     if (!challenge) {
       return NextResponse.json(
-        { success: false, message: "Érvénytelen vagy lejárt kihívás. Kezd újra a bejelentkezést." },
+        { success: false, message: "Érvénytelen vagy lejárt kihívás. Kezdje újra a bejelentkezést." },
         { status: 410 }
       );
     }
@@ -39,8 +39,8 @@ export async function POST(request: Request) {
         {
           success: false,
           message: useBackup
-            ? "Kérjük, adj meg egy érvényes biztonsági mentett kódot."
-            : "Kérjük, adj meg az Authenticator által generált 6 számjegyű kódot.",
+            ? "Kérjük, adjon meg egy érvényes biztonsági kódot."
+            : "Kérjük, adja meg az Authenticator alkalmazás által generált 6 számjegyű kódot.",
         },
         { status: 400 }
       );
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Hiba" },
+      { success: false, message: error instanceof Error ? error.message : "Hiba történt." },
       { status: 500 }
     );
   }

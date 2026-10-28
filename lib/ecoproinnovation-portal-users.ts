@@ -8,7 +8,7 @@ import QRCode from "qrcode";
 export const ECOPROINNOVATION_BCRYPT_ROUNDS = 12;
 export const INVITE_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const MAGIC_LOGIN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 nap
-export const TWO_FACTOR_ISSUER = "Pannon Transfer ECOPRO INNOVATION";
+export const TWO_FACTOR_ISSUER = "Pannon Transfer · Ecopro Innovation";
 
 export const ECOPROINNOVATION_SHARED_DB_NAME = "pannontransferfoglalasikozpont";
 

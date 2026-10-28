@@ -113,7 +113,7 @@ export async function POST(
       comment: createdBooking.comment,
       price: createdBooking.price,
       trackUrl,
-      language: createdBooking.language,
+      language: createdBooking.language === "en" ? ("en" as const) : ("hu" as const),
     };
 
     const customerHtml =

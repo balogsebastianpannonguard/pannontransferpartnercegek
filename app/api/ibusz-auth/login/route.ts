@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     }
     if (result.user.requireTwoFactor && !result.user.twoFactorEnabled) {
       return NextResponse.json(
-        { success: false, message: "Ez a fiók igényel kétfaktoros hitelesítést, amely még nincs aktiválva. Kérjük először állítsd be a 2FA-t a meghívó e-mailben kapott linken." },
+        { success: false, message: "Ehhez a fiókhoz kétfaktoros hitelesítés szükséges, amely még nincs aktiválva. Kérjük, először állítsa be a 2FA-t a meghívó e-mailben kapott linken." },
         { status: 403 }
       );
     }
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Hiba" },
+      { success: false, message: error instanceof Error ? error.message : "Hiba történt." },
       { status: 500 }
     );
   }

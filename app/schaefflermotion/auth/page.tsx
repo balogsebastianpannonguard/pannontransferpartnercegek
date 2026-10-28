@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Loader2,
   AlertTriangle,
-  CheckCircle2,
-  ShieldCheck,
-  ArrowRight,
-  KeyRound,
-  Mail,
   ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  KeyRound,
+  Loader2,
+  Mail,
 } from "lucide-react";
+import { useMxLang } from "../lang";
+import { makeTx, translateAuthMessage } from "../booking-i18n";
+import { MxBackdrop, MxLangSwitch, PannonChip, SchaefflerChip, SUPPORT } from "../components/mx-ui";
 
 function extractTokenFromUrl(): string {
   if (typeof window === "undefined") return "";
@@ -32,24 +35,32 @@ function extractTokenFromUrl(): string {
 
 export default function SchaefflerMotionAuthPage() {
   const router = useRouter();
-  const [rawToken, setRawToken] = useState("");
-  const [state, setState] = useState<
-    "loading" | "invalid" | "twofactor" | "done" | "redirecting"
-  >("loading");
+  const [lang, setLang] = useMxLang();
+  const tx = makeTx(lang);
+
+  const tokenRef = useRef("");
+  const [state, setState] = useState<"loading" | "invalid" | "twofactor" | "done">("loading");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [useBackup, setUseBackup] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorRaw, setErrorRaw] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
+
+  const error = errorKey ? tx(errorKey) : errorRaw ? translateAuthMessage(lang, errorRaw, "authLinkInvalid") : null;
 
   useEffect(() => {
     const t = extractTokenFromUrl();
-    setRawToken(t);
-    if (!t) {
-      setState("invalid");
-      return;
-    }
+    tokenRef.current = t;
     let cancelled = false;
+    if (!t) {
+      Promise.resolve().then(() => {
+        if (!cancelled) setState("invalid");
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
     (async () => {
       try {
         const res = await fetch("/api/schaefflermotion-auth/magic-login", {
@@ -61,7 +72,8 @@ export default function SchaefflerMotionAuthPage() {
         const json = await res.json().catch(() => null);
         if (!res.ok || !json?.success) {
           setState("invalid");
-          setError(json?.message || "Érvénytelen vagy lejárt link.");
+          if (json?.message) setErrorRaw(json.message);
+          else setErrorKey("authLinkInvalid");
         } else if (json.needTwoFactor) {
           setEmail(json.email || "");
           setState("twofactor");
@@ -72,20 +84,21 @@ export default function SchaefflerMotionAuthPage() {
       } catch {
         if (!cancelled) {
           setState("invalid");
-          setError("Hálózati hiba történt.");
+          setErrorKey("networkError");
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [rawToken, router]);
+  }, [router]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setErrorRaw(null);
+    setErrorKey(null);
     if (code.replace(/\s+/g, "").length < 4) {
-      setError(useBackup ? "A biztonsági kód túl rövid." : "Az Authenticator kód 6 számjegyből áll.");
+      setErrorKey(useBackup ? "authBackupShort" : "authCodeSixDigits");
       return;
     }
     setSubmitting(true);
@@ -93,245 +106,126 @@ export default function SchaefflerMotionAuthPage() {
       const res = await fetch("/api/schaefflermotion-auth/magic-login/verify-2fa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: rawToken,
-          code,
-          useBackup,
-        }),
+        body: JSON.stringify({ token: tokenRef.current, code, useBackup }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        setError(json?.message || "Helytelen kód.");
+        if (json?.message) setErrorRaw(json.message);
+        else setErrorKey("authIncorrect");
       } else {
         setState("done");
         setTimeout(() => router.push("/schaefflermotion"), 2500);
       }
     } catch {
-      setError("Hálózati hiba történt.");
+      setErrorKey("networkError");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const label = "block font-mono text-[10.5px] font-bold tracking-[0.2em] uppercase text-slate-400 mb-2";
+
   return (
-    <div className="relative min-h-screen bg-[#FAFBFC] text-zinc-900 flex flex-col">
-      <div className="w-full border-b border-zinc-200/70 bg-white/60 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#009A44] to-[#007335] flex items-center justify-center shadow-sm">
-              <span className="text-white font-black text-sm tracking-tighter">C</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-zinc-900 leading-none">SCHAEFFLER MOTION Portál</span>
-              <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">Pannon Transfer · Egyedi bejelentkezés</span>
-            </div>
-          </div>
-          <a
+    <div className="relative min-h-screen text-slate-300 flex flex-col bg-[#0B100E] overflow-x-hidden">
+      <MxBackdrop />
+      <div className="relative z-10 h-[3px] w-full bg-[linear-gradient(90deg,#00893D,#3DDC84_55%,transparent)]" />
+      <header className="relative z-10 max-w-[1240px] w-full mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <PannonChip className="h-9" />
+          <span className="w-px h-6 bg-white/15" aria-hidden />
+          <SchaefflerChip className="h-9" />
+          <span className="hidden md:block font-mono text-[11px] tracking-[0.2em] uppercase text-[#3DDC84] ml-2">
+            {tx("authPersonalTag")}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link
             href="/"
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+            className="hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded-[5px] text-[12px] font-semibold text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Vissza a főoldalra
-          </a>
+            {tx("backHome")}
+          </Link>
+          <MxLangSwitch lang={lang} onChange={setLang} />
         </div>
-      </div>
+      </header>
 
-      <div className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
-        <div className="w-full max-w-[440px]">
+      <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-10">
+        <div className="relative w-full max-w-[460px] rounded-[10px] border border-white/10 bg-[#111815]/90 backdrop-blur p-7 sm:p-9 shadow-[0_30px_80px_rgba(0,0,0,0.5)]">
+          <span className="absolute -top-px left-6 right-6 h-px bg-gradient-to-r from-transparent via-[#3DDC84] to-transparent" />
           <AnimatePresence mode="wait">
-            {state === "loading" || state === "redirecting" ? (
+            {state === "loading" && (
               <motion.div
                 key="loading"
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                className="flex flex-col items-center py-20 gap-5"
+                className="flex flex-col items-center py-14 gap-5"
               >
-                <Loader2 className="w-8 h-8 text-[#009A44] animate-spin" />
-                <p className="text-sm text-zinc-500 font-medium">
-                  {state === "redirecting" ? "Átirányítás..." : "Belépési link ellenőrzése..."}
-                </p>
-              </motion.div>
-            ) : null}
-
-            {state === "invalid" && (
-              <motion.div
-                key="invalid"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                className="flex flex-col"
-              >
-                <div className="text-center mb-8">
-                  <div className="mx-auto w-14 h-14 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center mb-5">
-                    <AlertTriangle className="w-7 h-7 text-red-500" />
-                  </div>
-                  <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Hozzáférés megtagadva
-                  </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed max-w-sm mx-auto">
-                    {error ||
-                      "Ez az egyedi link nem létezik, lejárt, vagy már felhasználták. Kérjük, használd a legújabb emailben küldött linket, vagy kérj új meghívót."}
-                  </p>
-                </div>
-
-                <div className="bg-white border border-zinc-200 rounded-2xl p-5 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-zinc-500 mb-2.5">
-                    Új meghívó igénylése
-                  </div>
-                  <a
-                    href="mailto:balog.sebastian@pannonguard.hu"
-                    className="inline-flex items-center gap-2 text-[15px] font-semibold text-[#009A44] hover:text-[#003A99] transition-colors"
-                  >
-                    <Mail className="w-4 h-4" />
-                    balog.sebastian@pannonguard.hu
-                  </a>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <a
-                    href="mailto:balog.sebastian@pannonguard.hu?subject=SCHAEFFLER%20MOTION%20Port%C3%A1l%20-%20%C3%9Aj%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
-                    className="flex-1 h-12 rounded-xl bg-white hover:bg-zinc-50 text-zinc-900 text-[14px] font-semibold border border-zinc-200 transition-colors inline-flex items-center justify-center gap-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-                  >
-                    <Mail className="w-4 h-4" />
-                    Új belépési link kérése
-                  </a>
-                  <a
-                    href="/"
-                    className="flex-1 h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-[14px] font-semibold transition-colors inline-flex items-center justify-center gap-2"
-                  >
-                    Vissza a főoldalra
-                  </a>
-                </div>
+                <Loader2 className="w-8 h-8 text-[#3DDC84] animate-spin" />
+                <p className="font-mono text-[12px] tracking-wide text-slate-400">{tx("authVerifyingLink")}</p>
               </motion.div>
             )}
 
-            {state === "done" && (
-              <motion.div
-                key="done"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.05 }}
-                transition={{ duration: 0.5 }}
-                className="flex flex-col items-center justify-center py-8 w-full"
-              >
-                <div className="relative flex items-center justify-center w-full max-w-sm mb-12 px-4">
-                  {/* Pannon Transfer side */}
-                  <motion.div 
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.6 }}
-                    className="flex flex-col items-center"
-                  >
-                    <div className="w-16 h-16 rounded-2xl bg-zinc-900 flex items-center justify-center shadow-lg mb-4">
-                      <span className="text-white font-black text-xl tracking-tighter">PT</span>
-                    </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase text-center w-32">Pannon Transfer</span>
-                  </motion.div>
-
-                  {/* Arrow Transition */}
-                  <motion.div 
-                    initial={{ scaleX: 0, opacity: 0 }}
-                    animate={{ scaleX: 1, opacity: 1 }}
-                    transition={{ delay: 0.8, duration: 0.6 }}
-                    style={{ transformOrigin: "left center" }}
-                    className="flex-1 mx-4 h-[2px] bg-gradient-to-r from-zinc-200 via-[#009A44]/50 to-[#009A44] relative mt-[-24px]"
-                  >
-                    <motion.div 
-                      initial={{ left: "0%", opacity: 0, scale: 0 }}
-                      animate={{ left: "100%", opacity: 1, scale: 1 }}
-                      transition={{ delay: 1.4, duration: 0.8, ease: "easeInOut" }}
-                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#009A44] shadow-[0_0_12px_4px_rgba(0,180,216,0.4)]"
-                    />
-                  </motion.div>
-
-                  {/* SCHAEFFLER MOTION side */}
-                  <motion.div 
-                    initial={{ x: 20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.5, duration: 0.6 }}
-                    className="flex flex-col items-center"
-                  >
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#009A44] to-[#007335] flex items-center justify-center shadow-xl shadow-[#009A44]/20 mb-4">
-                      <span className="text-white font-black text-xl tracking-tighter">C</span>
-                    </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#009A44] uppercase text-center w-32">SCHAEFFLER MOTION Portál</span>
-                  </motion.div>
+            {state === "invalid" && (
+              <motion.div key="invalid" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="flex flex-col">
+                <div className="mb-7">
+                  <div className="w-12 h-12 rounded-[6px] bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-5">
+                    <AlertTriangle className="w-6 h-6 text-red-400" />
+                  </div>
+                  <h1 className="text-[26px] font-semibold text-white tracking-tight mb-2">{tx("authDeniedTitle")}</h1>
+                  <p className="text-[14.5px] text-slate-400 leading-relaxed">{error || tx("authDeniedText")}</p>
                 </div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.6, duration: 0.4 }}
-                  className="flex flex-col items-center"
+                <div className="rounded-[6px] border border-white/10 bg-white/[0.02] p-5 mb-5">
+                  <div className="font-mono text-[10.5px] font-bold uppercase tracking-[0.2em] text-[#3DDC84] mb-3">{tx("authRequestNew")}</div>
+                  <div className="text-[14px] font-semibold text-white mb-2">{SUPPORT.name} · {tx("supportRole")}</div>
+                  <a href={`mailto:${SUPPORT.email}`} className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#3DDC84] hover:underline">
+                    <Mail className="w-4 h-4" />
+                    {SUPPORT.email}
+                  </a>
+                </div>
+
+                <a
+                  href={`mailto:${SUPPORT.email}?subject=${encodeURIComponent(tx("authSubjectNew"))}`}
+                  className="h-12 rounded-[6px] bg-[#00893D] hover:bg-[#00A04A] text-white text-[12.5px] font-bold tracking-[0.14em] uppercase transition-colors inline-flex items-center justify-center gap-2"
                 >
-                  <div className="flex items-center gap-2 mb-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">
-                      Sikeres hitelesítés
-                    </h1>
-                  </div>
-                  <div className="flex items-center gap-2.5 px-4 py-2 bg-zinc-100 rounded-full">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#009A44]" />
-                    <p className="text-[13px] text-zinc-600 font-medium">
-                      Biztonságos kapcsolat felépítése...
-                    </p>
-                  </div>
-                </motion.div>
+                  <Mail className="w-4 h-4" />
+                  {tx("authRequestLink")}
+                </a>
               </motion.div>
             )}
 
             {state === "twofactor" && (
-              <motion.form
-                key="2fa"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                onSubmit={submit}
-                className="flex flex-col"
-              >
-                <div className="mb-7">
-                  <div className="mx-auto w-14 h-14 rounded-2xl bg-[#009A44]/[0.08] border border-[#009A44]/10 flex items-center justify-center mb-5">
-                    <ShieldCheck className="w-7 h-7 text-[#009A44]" />
+              <motion.form key="2fa" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} onSubmit={submit} className="flex flex-col">
+                <div className="mb-6">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-[#00893D]/15 border border-[#00893D]/40 text-[#3DDC84] font-mono text-[10.5px] font-bold tracking-[0.18em] uppercase mb-4">
+                    <KeyRound className="w-3.5 h-3.5" />
+                    2FA
                   </div>
-                  <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Kétfaktoros hitelesítés
-                  </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed">
-                    A fiókodhoz 2FA kötelező. Írd be az Authenticator alkalmazásod által generált
-                    <strong className="font-semibold text-zinc-800"> 6 számjegyű kódot</strong>
-                    , vagy használd a biztonsági mentett kódot.
-                  </p>
+                  <h1 className="text-[26px] font-semibold text-white tracking-tight mb-2">{tx("authTwoFactorTitle")}</h1>
+                  <p className="text-[14.5px] text-slate-400 leading-relaxed">{tx("authTwoFactorText")}</p>
                 </div>
 
-                <div className="bg-white border border-zinc-200 rounded-2xl p-4 mb-6 flex items-center gap-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="w-11 h-11 rounded-xl bg-[#009A44]/[0.06] border border-[#009A44]/10 flex items-center justify-center shrink-0">
-                    <Mail className="w-5 h-5 text-[#009A44]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 mb-0.5">
-                      Belépő fiók
+                {email && (
+                  <div className="rounded-[6px] border border-white/10 bg-white/[0.02] p-4 mb-5 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-[5px] bg-[#00893D]/15 border border-[#00893D]/40 flex items-center justify-center shrink-0">
+                      <Mail className="w-5 h-5 text-[#3DDC84]" />
                     </div>
-                    <div className="text-[15px] font-semibold text-zinc-900 truncate">
-                      {email || "Betöltés..."}
+                    <div className="min-w-0">
+                      <div className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-0.5">{tx("signingInAs")}</div>
+                      <div className="text-[14.5px] font-semibold text-white truncate">{email}</div>
                     </div>
                   </div>
-                  <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#009A44]/[0.07] border border-[#009A44]/10 text-[#009A44] text-[11px] font-bold tracking-wide">
-                    <KeyRound className="w-3.5 h-3.5" /> 2FA
-                  </span>
-                </div>
+                )}
 
                 <div className="mb-4">
-                  <label className="block text-[13px] font-semibold text-zinc-800 mb-2 pl-0.5">
-                    {useBackup ? "Biztonsági kód (Backup code)" : "Authenticator kód (6 szám)"}
-                  </label>
+                  <label htmlFor="mx-auth-code" className={label}>{useBackup ? tx("backupCode") : tx("authCode")}</label>
                   <input
+                    id="mx-auth-code"
                     type="text"
                     autoComplete="one-time-code"
-                    inputMode="numeric"
+                    inputMode={useBackup ? "text" : "numeric"}
                     value={code}
                     onChange={(e) => {
                       let v = e.target.value;
@@ -339,39 +233,33 @@ export default function SchaefflerMotionAuthPage() {
                       else v = v.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 16);
                       setCode(v);
                     }}
-                    placeholder={useBackup ? "pl. A1B2-C3D4-E5" : "000000"}
-                    className="w-full h-[52px] px-4 bg-white border border-zinc-200 rounded-xl text-[18px] text-center tracking-[0.45em] text-zinc-900 placeholder:text-zinc-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#009A44]/20 focus:border-[#009A44]/50 transition-all"
+                    placeholder={useBackup ? tx("backupPh") : "000000"}
+                    className="w-full h-[54px] px-4 bg-[#0E1511] border border-white/12 rounded-[6px] text-[20px] text-center tracking-[0.45em] text-white placeholder:text-slate-700 font-mono font-bold focus:outline-none focus:ring-4 focus:ring-[#00893D]/20 focus:border-[#3DDC84]/70 transition-all"
                   />
                 </div>
 
-                <div className="mb-5 flex items-center gap-2.5 pl-0.5">
+                <label htmlFor="mx-auth-backup" className="mb-5 flex items-center gap-2.5 cursor-pointer">
                   <input
-                    id="2fa-backup"
+                    id="mx-auth-backup"
                     type="checkbox"
                     checked={useBackup}
                     onChange={(e) => {
                       setUseBackup(e.target.checked);
                       setCode("");
+                      setErrorKey(null);
+                      setErrorRaw(null);
                     }}
-                    className="w-4 h-4 rounded border-zinc-300 text-[#009A44] focus:ring-[#009A44]/30"
+                    className="w-4 h-4 rounded-[3px] accent-[#00893D]"
                   />
-                  <label htmlFor="2fa-backup" className="text-[13px] font-medium text-zinc-600">
-                    Biztonsági kód használata (ha nincs hozzáférés az Authenticator apphoz)
-                  </label>
-                </div>
+                  <span className="text-[13px] font-medium text-slate-400">{tx("useBackup")}</span>
+                </label>
 
                 <AnimatePresence>
                   {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6, height: 0 }}
-                      animate={{ opacity: 1, y: 0, height: "auto" }}
-                      exit={{ opacity: 0, y: -6, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden mb-5"
-                    >
-                      <div className="flex items-start gap-3 px-4 py-3.5 bg-red-50 border border-red-100 rounded-xl">
-                        <AlertTriangle className="w-4.5 h-4.5 text-red-500 shrink-0 mt-0.5" />
-                        <p className="text-[13px] text-red-700 font-medium leading-relaxed">{error}</p>
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-5" role="alert">
+                      <div className="flex items-start gap-3 px-4 py-3.5 bg-red-500/[0.08] border border-red-500/30 rounded-[6px]">
+                        <AlertTriangle className="w-[18px] h-[18px] text-red-400 shrink-0 mt-0.5" />
+                        <p className="text-[13px] text-red-300 font-medium leading-relaxed">{error}</p>
                       </div>
                     </motion.div>
                   )}
@@ -380,32 +268,42 @@ export default function SchaefflerMotionAuthPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full h-[54px] rounded-xl bg-[#009A44] hover:bg-[#0B1F47] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(0,180,216,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(0,180,216,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  className="w-full h-[52px] rounded-[6px] bg-[#00893D] hover:bg-[#00A04A] text-white text-[13px] font-bold tracking-[0.14em] uppercase shadow-[0_10px_30px_rgba(0,137,61,0.35)] transition-all disabled:opacity-60 inline-flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <>
-                      <Loader2 className="w-4.5 h-4.5 animate-spin" />
-                      Feldolgozás...
+                      <Loader2 className="w-[18px] h-[18px] animate-spin" />
+                      {tx("processing")}
                     </>
                   ) : (
                     <>
-                      Ellenőrzés &amp; Belépés
-                      <ArrowRight className="w-4.5 h-4.5" />
+                      {tx("verifyAndSignIn")}
+                      <ArrowRight className="w-[18px] h-[18px]" />
                     </>
                   )}
                 </button>
               </motion.form>
             )}
+
+            {state === "done" && (
+              <motion.div key="done" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center text-center py-8">
+                <div className="w-16 h-16 rounded-[8px] bg-[#00893D]/15 border border-[#00893D]/40 flex items-center justify-center mb-6">
+                  <CheckCircle2 className="w-9 h-9 text-[#3DDC84]" />
+                </div>
+                <h1 className="text-[24px] font-semibold text-white tracking-tight mb-2">{tx("authDoneTitle")}</h1>
+                <div className="flex items-center gap-2.5 px-4 py-2 border border-white/10 rounded-[5px] bg-white/[0.03] mt-3">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#3DDC84]" />
+                  <p className="font-mono text-[12px] text-slate-400">{tx("authDoneText")}</p>
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
-      </div>
+      </main>
 
-      <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-          <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
-          <span className="tracking-wider">SCHAEFFLER MOTION Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
-        </div>
-      </div>
+      <footer className="relative z-10 max-w-[1240px] w-full mx-auto px-5 sm:px-8 py-5 border-t border-white/[0.06] text-[11.5px] text-slate-500 text-center sm:text-left">
+        © {new Date().getFullYear()} Pannon Transfer. {tx("rights")}
+      </footer>
     </div>
   );
 }

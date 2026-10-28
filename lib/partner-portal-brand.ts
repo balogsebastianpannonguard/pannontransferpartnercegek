@@ -24,6 +24,7 @@ type PartnerPortalBrand = {
 const DEFAULT_LANGUAGES: Language[] = ["hu", "en"];
 const CN_LANGUAGES: Language[] = ["hu", "en", "zh"];
 const CATL_LANGUAGES: Language[] = ["en", "zh"];
+const ECOPRO_LANGUAGES: Language[] = ["hu", "ko"];
 
 export const PARTNER_PORTAL_BRANDS: Record<PartnerPortalKey, PartnerPortalBrand> = {
   catl: {
@@ -39,7 +40,7 @@ export const PARTNER_PORTAL_BRANDS: Record<PartnerPortalKey, PartnerPortalBrand>
   },
   ecoproinnovation: {
     key: "ecoproinnovation",
-    allowedLanguages: CN_LANGUAGES,
+    allowedLanguages: ECOPRO_LANGUAGES,
     navLabel: "Ecopro Innovation Transfer Desk",
     navSubline: "Dedicated Ecopro Innovation Portal",
     deskLabel: "Ecopro Innovation Booking Desk",
@@ -50,7 +51,7 @@ export const PARTNER_PORTAL_BRANDS: Record<PartnerPortalKey, PartnerPortalBrand>
   },
   ecoprobm: {
     key: "ecoprobm",
-    allowedLanguages: CN_LANGUAGES,
+    allowedLanguages: ECOPRO_LANGUAGES,
     navLabel: "Ecopro BM Transfer Desk",
     navSubline: "Dedicated Ecopro BM Portal",
     deskLabel: "Ecopro BM Booking Desk",

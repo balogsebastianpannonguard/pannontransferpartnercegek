@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const challenge = verifyEcoproBmLoginChallenge(challengeToken);
     if (!challenge) {
       return NextResponse.json(
-        { success: false, message: "Érvénytelen vagy lejárt kihívás. Kezd újra a bejelentkezést." },
+        { success: false, message: "Érvénytelen vagy lejárt kihívás. Kérjük, kezdje újra a bejelentkezést." },
         { status: 410 }
       );
     }
@@ -39,8 +39,8 @@ export async function POST(request: Request) {
         {
           success: false,
           message: useBackup
-            ? "Kérjük, adj meg egy érvényes biztonsági mentett kódot."
-            : "Kérjük, adj meg az Authenticator által generált 6 számjegyű kódot.",
+            ? "Kérjük, adjon meg egy érvényes mentett biztonsági kódot."
+            : "Kérjük, adja meg az Authenticator alkalmazás által generált 6 számjegyű kódot.",
         },
         { status: 400 }
       );
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
       success: true,
       user: {
         email: user.email,
-        company: "ECOPRO BM Hungary Kft.",
+        company: "Ecopro BM",
         role: "partner",
         requireTwoFactor: !!user.requireTwoFactor,
         twoFactorEnabled: !!user.twoFactorEnabled,

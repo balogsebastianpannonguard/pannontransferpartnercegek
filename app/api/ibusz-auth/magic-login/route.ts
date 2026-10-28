@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       const maybeExpired = await findIbuszUserByMagicLoginToken(token, true);
       if (maybeExpired) {
         return NextResponse.json(
-          { success: false, message: "Ez az egyedi belépési link lejárt. Kérj új meghívót a Pannon Transfer Ügyvezetőtől." },
+          { success: false, message: "Ez az egyedi belépési link lejárt. Kérjen új meghívót a Pannon Transfertől." },
           { status: 410 }
         );
       }
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
     if (!user.isActivated) {
       return NextResponse.json(
-        { success: false, message: "Ez a fiók még nincs aktiválva — használd a jelszóbeállítási linket." },
+        { success: false, message: "Ez a fiók még nincs aktiválva — kérjük, használja a meghívóban kapott jelszóbeállító linket." },
         { status: 400 }
       );
     }
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         {
           success: false,
           message:
-            "A fiókodhoz kétfaktoros hitelesítés be van kérve, de még nincs aktiválva. Kérj új meghívót és vedd fel újra a 2FA beállítását.",
+            "A fiókjához kétfaktoros hitelesítés van előírva, de még nincs aktiválva. Kérjen új meghívót, és állítsa be újra a 2FA-t.",
         },
         { status: 403 }
       );
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Hiba" },
+      { success: false, message: error instanceof Error ? error.message : "Hiba történt." },
       { status: 500 }
     );
   }

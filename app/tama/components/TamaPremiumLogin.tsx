@@ -3,27 +3,40 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mail,
-  Lock,
+  AlertTriangle,
+  ArrowRight,
+  Check,
+  CheckCircle2,
   Eye,
   EyeOff,
-  ShieldCheck,
-  Check,
-  ArrowRight,
-  Loader2,
-  AlertTriangle,
   KeyRound,
-  CheckCircle2,
+  Leaf,
+  Loader2,
+  Lock,
+  Mail,
 } from "lucide-react";
+import { useTamaLang } from "../lang";
+import { authText, translateAuthMessage } from "../auth-i18n";
+import {
+  AuthFrame,
+  SUPPORT,
+  authCard,
+  authInput,
+  authPrimaryBtn,
+  authSecondaryBtn,
+  serifFont,
+} from "../ui";
 
 interface Props {
-  _onSuccess: (user: any) => void;
+  _onSuccess: (user: { email: string; company?: string; role?: string }) => void;
 }
 
 type State = "login" | "twofactor" | "done";
 
 export default function TamaPremiumLogin({ _onSuccess }: Props) {
-  // 1. lépés states
+  const [lang, setLang] = useTamaLang();
+  const tx = (key: string, params?: Record<string, string | number>) => authText(lang, key, params);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -31,10 +44,8 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
   const [step1Loading, setStep1Loading] = useState(false);
   const [step1Error, setStep1Error] = useState<string | null>(null);
 
-  // Állapot (1. lépés login form, 2. lépés 2FA)
   const [state, setState] = useState<State>("login");
 
-  // 2. lépés 2FA states
   const [challengeToken, setChallengeToken] = useState("");
   const [twoFaEmail, setTwoFaEmail] = useState("");
   const [twoFaCode, setTwoFaCode] = useState("");
@@ -45,7 +56,7 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setStep1Error("Kérjük, adja meg az e-mail címet és a jelszót.");
+      setStep1Error(tx("enterCreds"));
       return;
     }
     setStep1Error(null);
@@ -59,10 +70,9 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        setStep1Error(json?.message || "Sikertelen bejelentkezés.");
+        setStep1Error(translateAuthMessage(lang, json?.message, "signInFailed"));
         return;
       }
-      // Ha 2FA kell → 2. lépés
       if (json.needTwoFactor) {
         setChallengeToken(json.challengeToken || "");
         setTwoFaEmail(json.email || email);
@@ -72,15 +82,14 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
         setState("twofactor");
         return;
       }
-      // Nincs 2FA → közvetlen belépés
       if (json?.user) {
         setState("done");
-          setTimeout(() => _onSuccess(json.user), 2500);
+        setTimeout(() => _onSuccess(json.user), 2200);
         return;
       }
-      setStep1Error("Váratlan hiba történt a bejelentkezés során.");
+      setStep1Error(tx("signInUnexpected"));
     } catch {
-      setStep1Error("Hálózati hiba történt. Kérjük, próbálja újra.");
+      setStep1Error(tx("networkError"));
     } finally {
       setStep1Loading(false);
     }
@@ -88,15 +97,9 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
 
   const handleStep2Submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = twoFaUseBackup
-      ? twoFaCode.trim().toUpperCase()
-      : twoFaCode.replace(/\s+/g, "");
+    const clean = twoFaUseBackup ? twoFaCode.trim().toUpperCase() : twoFaCode.replace(/\s+/g, "");
     if (!clean || (twoFaUseBackup ? clean.length < 6 : clean.length !== 6)) {
-      setStep2Error(
-        twoFaUseBackup
-          ? "Kérjük, adja meg a biztonsági mentett kódot."
-          : "Kérjük, adja meg az Authenticator által generált 6 számjegyű kódot."
-      );
+      setStep2Error(twoFaUseBackup ? tx("enterBackup") : tx("enter6"));
       return;
     }
     setStep2Error(null);
@@ -105,25 +108,21 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
       const res = await fetch("/api/tama-auth/login/verify-2fa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          challengeToken,
-          code: clean,
-          useBackup: twoFaUseBackup,
-        }),
+        body: JSON.stringify({ challengeToken, code: clean, useBackup: twoFaUseBackup }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        setStep2Error(json?.message || "Hibás 2FA kód.");
+        setStep2Error(translateAuthMessage(lang, json?.message, "incorrect2fa"));
         return;
       }
       if (json?.user) {
         setState("done");
-          setTimeout(() => _onSuccess(json.user), 2500);
+        setTimeout(() => _onSuccess(json.user), 2200);
         return;
       }
-      setStep2Error("Váratlan hiba történt.");
+      setStep2Error(tx("unexpectedError"));
     } catch {
-      setStep2Error("Hálózati hiba történt. Kérjük, próbálja újra.");
+      setStep2Error(tx("networkError"));
     } finally {
       setStep2Loading(false);
     }
@@ -138,441 +137,328 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
     setStep2Loading(false);
   };
 
+  const errorBox = (message: string | null) => (
+    <AnimatePresence>
+      {message && (
+        <motion.div
+          initial={{ opacity: 0, y: -6, height: 0 }}
+          animate={{ opacity: 1, y: 0, height: "auto" }}
+          exit={{ opacity: 0, y: -6, height: 0 }}
+          transition={{ duration: 0.2 }}
+          className="overflow-hidden mb-5"
+        >
+          <div role="alert" className="flex items-start gap-3 px-4 py-3.5 bg-red-50 border border-red-200 rounded-2xl">
+            <AlertTriangle className="w-[18px] h-[18px] text-red-500 shrink-0 mt-0.5" />
+            <p className="text-[13px] text-red-700 font-medium leading-relaxed">{message}</p>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
-    <div className="relative min-h-screen bg-[#041218] text-zinc-900 flex flex-col overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] right-[-5%] w-[42rem] h-[42rem] rounded-full bg-[#12D6DF]/15 blur-[140px]" />
-        <div className="absolute bottom-[-12%] left-[-8%] w-[34rem] h-[34rem] rounded-full bg-[#29D391]/10 blur-[130px]" />
-        <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(to_right,#67e8f9_1px,transparent_1px),linear-gradient(to_bottom,#67e8f9_1px,transparent_1px)] bg-[size:44px_44px]" />
-      </div>
-
-      <div className="w-full border-b border-white/10 bg-[#041218]/70 backdrop-blur-xl relative z-10">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#12D6DF] to-[#29D391] flex items-center justify-center shadow-[0_0_20px_rgba(18,214,223,0.25)]">
-              <span className="text-white font-black text-sm tracking-tighter">C</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-white leading-none">TAMA Hungary Kft. Portál</span>
-              <span className="text-[11px] text-slate-400 mt-0.5 tracking-wide">
-                Pannon Transfer · Dedikált Partnerbejelentkezés
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16 relative z-10">
-        <div className="w-full max-w-6xl grid lg:grid-cols-[1fr_460px] gap-10 items-center">
-          <div className="hidden lg:block text-white">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#12D6DF]/10 border border-[#12D6DF]/20 mb-6">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#12D6DF]" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#12D6DF]">TAMA Hungary Kft. Access Layer</span>
-            </div>
-            <h1 className="text-5xl font-bold tracking-tight leading-[1.05] mb-5">
-              Saját TAMA Hungary Kft. belépési élmény, külön partnerkapuval.
-            </h1>
-            <p className="text-slate-300/80 text-lg leading-relaxed max-w-xl mb-8">
-              Itt mar a belépés is az TAMA Hungary Kft. portal része: külön arculat, kétfaktoros védelem,
-              és ugyanaz a dedikált partnerfolyamat, mint amit az TAMA Hungary Kft. meghívásoknál kialakítottunk.
-            </p>
-            <div className="grid grid-cols-2 gap-4 max-w-2xl">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold mb-2">Portal scope</div>
-                <div className="text-xl font-semibold">TAMA Hungary Kft. corporate access</div>
-                <p className="text-sm text-slate-400 mt-2">Kulon meghivo, kulon session, kulon foglalasi kor.</p>
+    <AuthFrame
+      lang={lang}
+      onLang={setLang}
+      panelEyebrow={tx("loginEyebrow")}
+      panelTitle={tx("loginSideTitle")}
+      panelText={tx("loginSideText")}
+      footerNote={tx("brandSub")}
+    >
+      <AnimatePresence mode="wait">
+        {state === "login" && (
+          <motion.form
+            key="login"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.25 }}
+            onSubmit={handleStep1Submit}
+            className="flex flex-col"
+          >
+            <div className="mb-7">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#7B9824] to-[#4B6A0E] flex items-center justify-center mb-5 shadow-[0_12px_28px_rgba(75,106,14,0.3)]">
+                <Lock className="w-6 h-6 text-white" />
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold mb-2">Security</div>
-                <div className="text-xl font-semibold">2FA ready</div>
-                <p className="text-sm text-slate-400 mt-2">Authenticator es backup kodos belépési folyamat.</p>
-              </div>
+              <h1 className="text-[30px] leading-tight text-[#26301B] mb-2.5" style={serifFont}>
+                {tx("loginTitle")}
+              </h1>
+              <p className="text-[15px] text-[#5B6450] leading-relaxed">{tx("loginLead")}</p>
             </div>
-          </div>
-          <div className="w-full max-w-[460px] justify-self-center">
-          <AnimatePresence mode="wait">
-            {state === "login" && (
-              <motion.form
-                key="login"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                onSubmit={handleStep1Submit}
-                className="flex flex-col"
-              >
-                <div className="mb-7 text-center">
-                  <div className="mx-auto w-16 h-16 rounded-2xl bg-[#5CA700]/[0.08] border border-[#5CA700]/10 flex items-center justify-center mb-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                    <ShieldCheck className="w-8 h-8 text-[#5CA700]" />
-                  </div>
-                  <h1 className="text-[28px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Jelentkezz be a TAMA Hungary Kft. Portálba
-                  </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed max-w-md mx-auto">
-                    Add meg a céges email címedet és a fiókodhoz társított jelszót.
-                    Ha a fiókodhoz kétfaktoros hitelesítés (2FA) tartozik, a következő lépésben kérjük be azt.
-                  </p>
-                </div>
 
-                <div className="bg-white border border-zinc-200 rounded-2xl p-4 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 mb-1.5">
-                    Tudnivalók
-                  </div>
-                  <ul className="text-[13px] text-zinc-700 leading-relaxed space-y-1.5">
-                    <li>• A bejelentkezéshez használd a Pannon Transfer által kiosztott céges címet.</li>
-                    <li>• 2FA kötelezőség esetén az Authenticator app 6 számjegyű kódját vagy backup kódot add meg.</li>
-                    <li>• Belépési problémák esetén vedd fel a kapcsolatot az ügyfélszolgálattal.</li>
-                  </ul>
-                </div>
+            <div className="rounded-2xl bg-[#FBF8EC] border border-[#EEE5C6] p-4 mb-6">
+              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#8B917D] mb-2">
+                <Leaf className="w-3.5 h-3.5 text-[#7B9824]" />
+                {tx("goodToKnow")}
+              </div>
+              <ul className="text-[13px] text-[#4A5340] leading-relaxed space-y-1.5">
+                <li className="flex gap-2"><span className="text-[#C9A24D]">•</span>{tx("tip1")}</li>
+                <li className="flex gap-2"><span className="text-[#C9A24D]">•</span>{tx("tip2")}</li>
+                <li className="flex gap-2"><span className="text-[#C9A24D]">•</span>{tx("tip3")}</li>
+              </ul>
+            </div>
 
-                <div className="space-y-4 mb-5">
-                  <div className="space-y-2">
-                    <label className="text-[12px] font-semibold text-zinc-700 ml-1">
-                      E-mail cím
-                    </label>
-                    <div className={`relative flex items-center bg-white border transition-all duration-200 rounded-xl overflow-hidden ${
-                      step1Error ? "border-red-300 ring-1 ring-red-200" : "border-zinc-200 focus-within:border-[#5CA700]/60 focus-within:ring-2 focus-within:ring-[#5CA700]/15"
-                    }`}>
-                      <Mail className={`absolute left-4 w-[18px] h-[18px] ${step1Error ? "text-red-500" : "text-zinc-500"}`} />
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => {
-                          setEmail(e.target.value);
-                          if (step1Error) setStep1Error(null);
-                        }}
-                        placeholder="neve@ceg.hu"
-                        className="w-full bg-transparent pl-12 pr-4 py-3.5 text-[15px] text-zinc-900 placeholder:text-zinc-400 font-medium outline-none"
-                        autoComplete="email"
-                        spellCheck={false}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between ml-1 mr-1">
-                      <label className="text-[12px] font-semibold text-zinc-700">
-                        Jelszó
-                      </label>
-                    </div>
-                    <div className={`relative flex items-center bg-white border transition-all duration-200 rounded-xl overflow-hidden ${
-                      step1Error ? "border-red-300 ring-1 ring-red-200" : "border-zinc-200 focus-within:border-[#5CA700]/60 focus-within:ring-2 focus-within:ring-[#5CA700]/15"
-                    }`}>
-                      <Lock className={`absolute left-4 w-[18px] h-[18px] ${step1Error ? "text-red-500" : "text-zinc-500"}`} />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => {
-                          setPassword(e.target.value);
-                          if (step1Error) setStep1Error(null);
-                        }}
-                        placeholder="••••••••"
-                        className="w-full bg-transparent pl-12 pr-12 py-3.5 text-[15px] text-zinc-900 placeholder:text-zinc-400 font-medium outline-none"
-                        autoComplete="current-password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-2 w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-800 transition-colors rounded-lg"
-                        tabIndex={-1}
-                      >
-                        {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 cursor-pointer group w-fit ml-1 mb-5">
-                  <div
-                    className={`w-4 h-4 rounded flex items-center justify-center border transition-all duration-200 ${
-                      remember
-                        ? "bg-[#5CA700] border-[#5CA700]"
-                        : "bg-white border-zinc-300 group-hover:border-zinc-400"
-                    }`}
-                    onClick={() => setRemember((v) => !v)}
-                  >
-                    {remember && <Check className="w-3 h-3 text-white" />}
-                  </div>
-                  <span
-                    className="text-[13px] text-zinc-700 font-medium select-none"
-                    onClick={() => setRemember((v) => !v)}
-                  >
-                    Emlékezzen rám ezen az eszközön (7 nap)
-                  </span>
-                </div>
-
-                <AnimatePresence>
-                  {step1Error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6, height: 0 }}
-                      animate={{ opacity: 1, y: 0, height: "auto" }}
-                      exit={{ opacity: 0, y: -6, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden mb-5"
-                    >
-                      <div className="flex items-start gap-3 px-4 py-3.5 bg-red-50 border border-red-100 rounded-xl">
-                        <AlertTriangle className="w-4.5 h-4.5 text-red-500 shrink-0 mt-0.5" />
-                        <p className="text-[13px] text-red-700 font-medium leading-relaxed">{step1Error}</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <button
-                  type="submit"
-                  disabled={step1Loading}
-                  className="w-full h-[54px] rounded-xl bg-[#5CA700] hover:bg-[#0B1F47] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(0,180,216,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(0,180,216,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
-                >
-                  {step1Loading ? (
-                    <>
-                      <Loader2 className="w-[18px] h-[18px] animate-spin" />
-                      Ellenőrzés...
-                    </>
-                  ) : (
-                    <>
-                      Bejelentkezés
-                      <ArrowRight className="w-[18px] h-[18px]" />
-                    </>
-                  )}
-                </button>
-
-                <p className="mt-7 text-center text-[12px] text-zinc-500 leading-relaxed">
-                  Még nincs hozzáférésed, vagy elfelejtetted a jelszavad?{" "}
-                  <a
-                    href="mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Hungary%20Kft.%20Port%C3%A1l%20-%20Hozz%C3%A1f%C3%A9r%C3%A9s%20k%C3%A9r%C3%A9se"
-                    className="text-[#5CA700] font-semibold hover:underline"
-                  >
-                    Ügyfélszolgálat
-                  </a>
-                </p>
-              </motion.form>
-            )}
-
-            {state === "twofactor" && (
-              <motion.form
-                key="2fa"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                onSubmit={handleStep2Submit}
-                className="flex flex-col"
-              >
-                <div className="mb-7">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#5CA700]/[0.07] border border-[#5CA700]/10 text-[#5CA700] text-[11px] font-bold tracking-widest uppercase mb-4">
-                    <KeyRound className="w-3.5 h-3.5" />
-                    2. lépés · Kétfaktoros hitelesítés
-                  </div>
-                  <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Erősítsd meg a bejelentkezést
-                  </h1>
-                  <p className="text-[15px] text-zinc-500 leading-relaxed">
-                    A fiókodhoz <strong className="font-semibold text-zinc-800">2FA kötelező</strong>.
-                    Írd be az Authenticator alkalmazásod által generált
-                    <strong className="font-semibold text-zinc-800"> 6 számjegyű kódot</strong>,
-                    vagy használd a biztonsági mentett kódot.
-                  </p>
-                </div>
-
-                <div className="bg-white border border-zinc-200 rounded-2xl p-4 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-[#5CA700]/[0.06] border border-[#5CA700]/10 flex items-center justify-center shrink-0">
-                      <Mail className="w-5 h-5 text-[#5CA700]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 mb-0.5">
-                        Bejelentkező fiók
-                      </div>
-                      <div className="text-[15px] font-semibold text-zinc-900 truncate">
-                        {twoFaEmail || email}
-                      </div>
-                    </div>
-                    <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#5CA700]/[0.07] border border-[#5CA700]/10 text-[#5CA700] text-[11px] font-bold tracking-wide">
-                      <KeyRound className="w-3.5 h-3.5" /> 2FA
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-[13px] font-semibold text-zinc-800 mb-2 pl-0.5">
-                    {twoFaUseBackup ? "Biztonsági kód (Backup code)" : "Authenticator kód (6 szám)"}
-                  </label>
+            <div className="space-y-4 mb-5">
+              <div className="space-y-2">
+                <label htmlFor="tama-login-email" className="text-[12px] font-bold text-[#4A5340] ml-1">
+                  {tx("emailLabel")}
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#9CA08A]" />
                   <input
-                    type="text"
-                    autoComplete="one-time-code"
-                    inputMode={twoFaUseBackup ? "text" : "numeric"}
-                    value={twoFaCode}
+                    id="tama-login-email"
+                    type="email"
+                    value={email}
                     onChange={(e) => {
-                      let v = e.target.value;
-                      if (!twoFaUseBackup) v = v.replace(/\D/g, "").slice(0, 6);
-                      else v = v.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 16);
-                      setTwoFaCode(v);
-                      if (step2Error) setStep2Error(null);
+                      setEmail(e.target.value);
+                      if (step1Error) setStep1Error(null);
                     }}
-                    placeholder={twoFaUseBackup ? "pl. A1B2-C3D4-E5" : "000000"}
-                    className="w-full h-[54px] px-4 bg-white border border-zinc-200 rounded-xl text-[18px] text-center tracking-[0.45em] text-zinc-900 placeholder:text-zinc-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-[#5CA700]/20 focus:border-[#5CA700]/50 transition-all"
+                    placeholder={tx("emailPh")}
+                    className={`${authInput} pl-12 ${step1Error ? "!border-red-400 !ring-4 !ring-red-500/10" : ""}`}
+                    autoComplete="email"
+                    spellCheck={false}
                   />
                 </div>
+              </div>
 
-                <div className="mb-5 flex items-center gap-2.5 pl-0.5">
+              <div className="space-y-2">
+                <label htmlFor="tama-login-password" className="text-[12px] font-bold text-[#4A5340] ml-1">
+                  {tx("passwordLabel")}
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#9CA08A]" />
                   <input
-                    id="2fa-backup-login"
-                    type="checkbox"
-                    checked={twoFaUseBackup}
+                    id="tama-login-password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
                     onChange={(e) => {
-                      setTwoFaUseBackup(e.target.checked);
-                      setTwoFaCode("");
-                      if (step2Error) setStep2Error(null);
+                      setPassword(e.target.value);
+                      if (step1Error) setStep1Error(null);
                     }}
-                    className="w-4 h-4 rounded border-zinc-300 text-[#5CA700] focus:ring-[#5CA700]/30"
+                    placeholder="••••••••"
+                    className={`${authInput} pl-12 pr-12 ${step1Error ? "!border-red-400 !ring-4 !ring-red-500/10" : ""}`}
+                    autoComplete="current-password"
                   />
-                  <label htmlFor="2fa-backup-login" className="text-[13px] font-medium text-zinc-600">
-                    Biztonsági kód használata (ha nincs hozzáférés az Authenticator apphoz)
-                  </label>
-                </div>
-
-                <AnimatePresence>
-                  {step2Error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6, height: 0 }}
-                      animate={{ opacity: 1, y: 0, height: "auto" }}
-                      exit={{ opacity: 0, y: -6, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden mb-5"
-                    >
-                      <div className="flex items-start gap-3 px-4 py-3.5 bg-red-50 border border-red-100 rounded-xl">
-                        <AlertTriangle className="w-4.5 h-4.5 text-red-500 shrink-0 mt-0.5" />
-                        <p className="text-[13px] text-red-700 font-medium leading-relaxed">{step2Error}</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     type="button"
-                    onClick={goBackToLogin}
-                    disabled={step2Loading}
-                    className="sm:flex-1 h-[54px] rounded-xl bg-white hover:bg-zinc-50 text-zinc-900 text-[14px] font-semibold border border-zinc-200 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-[#8B917D] hover:text-[#26301B] transition-colors rounded-full hover:bg-[#F1EDDD]"
+                    tabIndex={-1}
+                    aria-label={showPassword ? tx("hidePwd") : tx("showPwd")}
                   >
-                    ← Vissza
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={step2Loading}
-                    className="sm:flex-[2] h-[54px] rounded-xl bg-[#5CA700] hover:bg-[#0B1F47] text-white text-[14px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_rgba(0,180,216,0.18)] hover:shadow-[0_1px_2px_rgba(15,23,42,0.06),0_12px_32px_rgba(0,180,216,0.24)] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
-                  >
-                    {step2Loading ? (
-                      <>
-                        <Loader2 className="w-[18px] h-[18px] animate-spin" />
-                        Feldolgozás...
-                      </>
-                    ) : (
-                      <>
-                        Ellenőrzés &amp; Belépés
-                        <ArrowRight className="w-[18px] h-[18px]" />
-                      </>
-                    )}
+                    {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
                   </button>
                 </div>
-              </motion.form>
-            )}
+              </div>
+            </div>
 
-            {state === "done" && (
-              <motion.div
-                key="done"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.05 }}
-                transition={{ duration: 0.5 }}
-                className="flex flex-col items-center justify-center py-8 w-full"
+            <button
+              type="button"
+              onClick={() => setRemember((v) => !v)}
+              className="flex items-center gap-3 w-fit ml-1 mb-5 group"
+              aria-pressed={remember}
+            >
+              <span
+                className={`w-[18px] h-[18px] rounded-md flex items-center justify-center border transition-all duration-200 ${
+                  remember ? "bg-[#5F8016] border-[#5F8016]" : "bg-white border-[#CFC7A8] group-hover:border-[#9CA08A]"
+                }`}
               >
-                <div className="relative flex items-center justify-center w-full max-w-sm mb-12 px-4">
-                  {/* Pannon Transfer side */}
-                  <motion.div 
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.6 }}
-                    className="flex flex-col items-center"
-                  >
-                    <div className="w-16 h-16 rounded-2xl bg-zinc-900 flex items-center justify-center shadow-lg mb-4">
-                      <span className="text-white font-black text-xl tracking-tighter">PT</span>
-                    </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase text-center w-24">Pannon Transfer</span>
-                  </motion.div>
+                {remember && <Check className="w-3 h-3 text-white" />}
+              </span>
+              <span className="text-[13px] text-[#4A5340] font-medium select-none">{tx("remember")}</span>
+            </button>
 
-                  {/* Arrow Transition */}
-                  <motion.div 
-                    initial={{ scaleX: 0, opacity: 0 }}
-                    animate={{ scaleX: 1, opacity: 1 }}
-                    transition={{ delay: 0.8, duration: 0.6 }}
-                    style={{ transformOrigin: "left center" }}
-                    className="flex-1 mx-4 h-[2px] bg-gradient-to-r from-zinc-200 via-[#5CA700]/50 to-[#5CA700] relative mt-[-24px]"
-                  >
-                    <motion.div 
-                      initial={{ left: "0%", opacity: 0, scale: 0 }}
-                      animate={{ left: "100%", opacity: 1, scale: 1 }}
-                      transition={{ delay: 1.4, duration: 0.8, ease: "easeInOut" }}
-                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#5CA700] shadow-[0_0_12px_4px_rgba(0,180,216,0.4)]"
-                    />
-                  </motion.div>
+            {errorBox(step1Error)}
 
-                  {/* TAMA Hungary Kft. side */}
-                  <motion.div 
-                    initial={{ x: 20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.5, duration: 0.6 }}
-                    className="flex flex-col items-center"
-                  >
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#5CA700] to-[#47840B] flex items-center justify-center shadow-xl shadow-[#5CA700]/20 mb-4">
-                      <span className="text-white font-black text-xl tracking-tighter">C</span>
-                    </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#5CA700] uppercase text-center w-24">TAMA Hungary Kft. Portál</span>
-                  </motion.div>
-                </div>
+            <button type="submit" disabled={step1Loading} className={authPrimaryBtn}>
+              {step1Loading ? (
+                <>
+                  <Loader2 className="w-[18px] h-[18px] animate-spin" />
+                  {tx("verifying")}
+                </>
+              ) : (
+                <>
+                  {tx("signIn")}
+                  <ArrowRight className="w-[18px] h-[18px]" />
+                </>
+              )}
+            </button>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.6, duration: 0.4 }}
-                  className="flex flex-col items-center"
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">
-                      Sikeres hitelesítés
-                    </h1>
-                  </div>
-                  <div className="flex items-center gap-2.5 px-4 py-2 bg-zinc-100 rounded-full">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5CA700]" />
-                    <p className="text-[13px] text-zinc-600 font-medium">
-                      Biztonságos kapcsolat felépítése...
-                    </p>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-      </div>
+            <p className="mt-7 text-center text-[12px] text-[#8B917D] leading-relaxed">
+              {tx("noAccess")}{" "}
+              <a
+                href={`mailto:${SUPPORT.email}?subject=${encodeURIComponent(tx("accessRequestSubject"))}`}
+                className="text-[#4B6A0E] font-semibold hover:underline"
+              >
+                {tx("support")}
+              </a>
+            </p>
+          </motion.form>
+        )}
 
-      <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[11px] text-zinc-500 font-medium">
-              © {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.
-            </span>
-          </div>
-          <a
-            href="mailto:balog.sebastian@pannonguard.hu"
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[12px] font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+        {state === "twofactor" && (
+          <motion.form
+            key="2fa"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.25 }}
+            onSubmit={handleStep2Submit}
+            className="flex flex-col"
           >
-            <Mail className="w-3.5 h-3.5" />
-            Ügyfélszolgálat
-          </a>
-        </div>
-      </div>
-    </div>
+            <div className="mb-7">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EAF1D3] border border-[#CFDDA0] text-[#3E560C] text-[11px] font-bold tracking-widest uppercase mb-4">
+                <KeyRound className="w-3.5 h-3.5" />
+                {tx("step2Pill")}
+              </div>
+              <h1 className="text-[28px] leading-tight text-[#26301B] mb-2.5" style={serifFont}>
+                {tx("confirmTitle")}
+              </h1>
+              <p className="text-[15px] text-[#5B6450] leading-relaxed">{tx("confirmLead")}</p>
+            </div>
+
+            <div className={`${authCard} p-4 mb-6 !rounded-2xl !shadow-none`}>
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-xl bg-[#EAF1D3] border border-[#CFDDA0] flex items-center justify-center shrink-0">
+                  <Mail className="w-5 h-5 text-[#5F8016]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8B917D] mb-0.5">{tx("signingInAs")}</div>
+                  <div className="text-[15px] font-semibold text-[#26301B] truncate">{twoFaEmail || email}</div>
+                </div>
+                <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#EAF1D3] border border-[#CFDDA0] text-[#3E560C] text-[11px] font-bold tracking-wide">
+                  <KeyRound className="w-3.5 h-3.5" /> 2FA
+                </span>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label htmlFor="tama-2fa-code" className="block text-[13px] font-bold text-[#4A5340] mb-2 pl-1">
+                {twoFaUseBackup ? tx("backupLabel") : tx("codeLabel")}
+              </label>
+              <input
+                id="tama-2fa-code"
+                type="text"
+                autoComplete="one-time-code"
+                inputMode={twoFaUseBackup ? "text" : "numeric"}
+                value={twoFaCode}
+                onChange={(e) => {
+                  let v = e.target.value;
+                  if (!twoFaUseBackup) v = v.replace(/\D/g, "").slice(0, 6);
+                  else v = v.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 16);
+                  setTwoFaCode(v);
+                  if (step2Error) setStep2Error(null);
+                }}
+                placeholder={twoFaUseBackup ? tx("backupPh") : tx("codePh")}
+                className={`${authInput} text-center text-[18px] tracking-[0.45em] font-mono font-bold`}
+              />
+            </div>
+
+            <label className="mb-5 flex items-center gap-2.5 pl-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={twoFaUseBackup}
+                onChange={(e) => {
+                  setTwoFaUseBackup(e.target.checked);
+                  setTwoFaCode("");
+                  if (step2Error) setStep2Error(null);
+                }}
+                className="w-4 h-4 rounded border-[#CFC7A8] accent-[#5F8016]"
+              />
+              <span className="text-[13px] font-medium text-[#5B6450]">{tx("useBackup")}</span>
+            </label>
+
+            {errorBox(step2Error)}
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button type="button" onClick={goBackToLogin} disabled={step2Loading} className={`${authSecondaryBtn} sm:flex-1`}>
+                ← {tx("back")}
+              </button>
+              <button type="submit" disabled={step2Loading} className={`${authPrimaryBtn} sm:flex-[2]`}>
+                {step2Loading ? (
+                  <>
+                    <Loader2 className="w-[18px] h-[18px] animate-spin" />
+                    {tx("processing")}
+                  </>
+                ) : (
+                  <>
+                    {tx("verifyAndSignIn")}
+                    <ArrowRight className="w-[18px] h-[18px]" />
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.form>
+        )}
+
+        {state === "done" && (
+          <motion.div
+            key="done"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05 }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center justify-center py-8 w-full"
+          >
+            <div className="relative flex items-center justify-center w-full max-w-sm mb-12 px-4">
+              <motion.div
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+                className="flex flex-col items-center"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-[#26301B] flex items-center justify-center shadow-lg mb-4">
+                  <span className="text-white font-black text-xl tracking-tighter">PT</span>
+                </div>
+                <span className="text-[10px] font-bold tracking-[0.2em] text-[#8B917D] uppercase text-center w-24">Pannon Transfer</span>
+              </motion.div>
+
+              <motion.div
+                initial={{ scaleX: 0, opacity: 0 }}
+                animate={{ scaleX: 1, opacity: 1 }}
+                transition={{ delay: 0.8, duration: 0.6 }}
+                style={{ transformOrigin: "left center" }}
+                className="flex-1 mx-4 h-[2px] bg-gradient-to-r from-[#E4DDC7] via-[#7B9824]/60 to-[#5F8016] relative mt-[-24px]"
+              >
+                <motion.div
+                  initial={{ left: "0%", opacity: 0, scale: 0 }}
+                  animate={{ left: "100%", opacity: 1, scale: 1 }}
+                  transition={{ delay: 1.3, duration: 0.7, ease: "easeInOut" }}
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#5F8016] shadow-[0_0_12px_4px_rgba(95,128,22,0.4)]"
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ x: 20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.6 }}
+                className="flex flex-col items-center"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#7B9824] to-[#4B6A0E] flex items-center justify-center shadow-xl shadow-[#5F8016]/25 mb-4">
+                  <Leaf className="w-7 h-7 text-white" />
+                </div>
+                <span className="text-[10px] font-bold tracking-[0.2em] text-[#5F8016] uppercase text-center w-24">TAMA</span>
+              </motion.div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.4, duration: 0.4 }}
+              className="flex flex-col items-center"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle2 className="w-5 h-5 text-[#5F8016]" />
+                <h1 className="text-[20px] text-[#26301B]" style={serifFont}>{tx("authSuccess")}</h1>
+              </div>
+              <div className="flex items-center gap-2.5 px-4 py-2 bg-[#F1EDDD] rounded-full">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5F8016]" />
+                <p className="text-[13px] text-[#5B6450] font-medium">{tx("secureConnection")}</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </AuthFrame>
   );
 }

@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 
     if (!user.twoFactorSecret) {
       return NextResponse.json(
-        { success: false, message: "A kétfaktoros hitelesítés még nem lett inicializálva a fiókodhoz." },
+        { success: false, message: "A kétfaktoros hitelesítés még nem lett inicializálva a fiókjához." },
         { status: 400 }
       );
     }
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
     if (!valid) {
       return NextResponse.json(
-        { success: false, message: "A kód helytelen. Próbáld újra 30 mp múlva, vagy használd az egyik mentett backup kódot." },
+        { success: false, message: "A kód helytelen. Próbálja újra 30 másodperc múlva, vagy használja az egyik mentett biztonsági kódot." },
         { status: 401 }
       );
     }
@@ -79,13 +79,13 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: usedBackup
-        ? "Backup kód elfogadva! A kétfaktoros hitelesítés aktiválva — emailben küldjük az egyedi belépési linket."
-        : "Kétfaktoros hitelesítés aktiválva! Hamarosan kapsz egy emailt az egyedi belépési linkkel.",
+        ? "Biztonsági kód elfogadva! A kétfaktoros hitelesítés aktiválva — e-mailben küldjük az egyedi belépési linket."
+        : "Kétfaktoros hitelesítés aktiválva! Hamarosan e-mailt kap az egyedi belépési linkkel.",
       usedBackup,
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Hiba" },
+      { success: false, message: error instanceof Error ? error.message : "Hiba történt." },
       { status: 500 }
     );
   }

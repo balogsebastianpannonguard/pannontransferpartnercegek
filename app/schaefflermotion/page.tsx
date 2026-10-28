@@ -1,62 +1,240 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  MapPin,
-  Users,
-  Briefcase,
+  ArrowDown,
   ArrowRight,
-  ShieldCheck,
-  Building2,
-  Phone,
-  Mail,
-  CreditCard,
+  Briefcase,
   Building,
-  Plane,
-  Map,
-  Plus,
-  Minus,
-  Luggage,
-  LogOut,
-  UserCircle,
-  Loader2,
-  XCircle,
+  Calendar,
+  Check,
   CheckCircle2,
+  Clock,
+  CreditCard,
   ListOrdered,
+  Loader2,
+  Luggage,
+  Mail,
+  Map,
+  MapPin,
+  MessageSquare,
+  Minus,
+  Phone,
+  Plane,
+  Plus,
+  ShieldCheck,
+  UserPlus,
+  Users,
+  XCircle,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useLanguage } from "../context/LanguageContext";
+import { useRouter } from "next/navigation";
+import { getTravelConditions } from "@/lib/travel-conditions";
 import SchaefflerMotionPremiumLogin from "./components/SchaefflerMotionPremiumLogin";
-import { getPartnerPortalBrand } from "@/lib/partner-portal-brand";
+import { MxBackdrop, MxFooter, MxHeader, PannonChip, SchaefflerChip } from "./components/mx-ui";
+import { MX_LOCALE, useMxLang } from "./lang";
+import { makeTx, translateServerMessage } from "./booking-i18n";
 
-interface SchaefflerMotionPortalUser {
+interface PortalUser {
   email: string;
   company?: string;
   role?: string;
 }
 
+type TransferType = "standard" | "executive";
+type PlaceType = "airport" | "other";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CONDITIONS = getTravelConditions("schaefflermotion");
+const COMPANY = "Schaeffler Motion";
+
+const inputShell = (invalid: boolean) =>
+  `group w-full rounded-[6px] bg-[#0E1511] border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 ${
+    invalid
+      ? "border-red-500/60 ring-4 ring-red-500/10"
+      : "border-white/12 hover:border-white/25 focus-within:border-[#3DDC84]/70 focus-within:ring-4 focus-within:ring-[#00893D]/20"
+  }`;
+const inputBase =
+  "bg-transparent border-none outline-none w-full text-[15px] font-medium text-white placeholder:text-slate-600";
+const iconCls = (invalid: boolean) =>
+  `w-4 h-4 shrink-0 transition-colors ${invalid ? "text-red-400" : "text-slate-500 group-focus-within:text-[#3DDC84]"}`;
+
+function todayLocal(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function Label({
+  htmlFor,
+  children,
+  required,
+  optionalText,
+}: {
+  htmlFor?: string;
+  children: React.ReactNode;
+  required?: boolean;
+  optionalText?: string;
+}) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className="flex items-center gap-1.5 font-mono text-[10.5px] font-bold tracking-[0.2em] uppercase text-slate-400 mb-2"
+    >
+      <span>{children}</span>
+      {required && <span className="text-[#3DDC84]">*</span>}
+      {optionalText && <span className="normal-case tracking-normal font-sans font-medium text-slate-600">· {optionalText}</span>}
+    </label>
+  );
+}
+
+function FieldError({ id, message }: { id: string; message: string | null }) {
+  return (
+    <AnimatePresence initial={false}>
+      {message && (
+        <motion.p
+          id={id}
+          role="alert"
+          initial={{ opacity: 0, y: -4, height: 0 }}
+          animate={{ opacity: 1, y: 0, height: "auto" }}
+          exit={{ opacity: 0, y: -4, height: 0 }}
+          transition={{ duration: 0.18 }}
+          className="mt-2 text-[12px] text-red-400 font-medium flex items-center gap-1.5 overflow-hidden"
+        >
+          <XCircle className="w-3.5 h-3.5 shrink-0" />
+          {message}
+        </motion.p>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function SectionHeader({ index, icon, title, subtitle }: { index: number; icon: React.ReactNode; title: string; subtitle: string }) {
+  return (
+    <div className="flex items-start gap-4 mb-7 pb-5 border-b border-white/[0.07]">
+      <div className="shrink-0 font-mono text-[34px] leading-none font-bold text-[#00893D]/70 tabular-nums select-none">
+        {String(index).padStart(2, "0")}
+      </div>
+      <div className="min-w-0 flex-1">
+        <h2 className="text-white font-semibold text-[18px] tracking-tight leading-tight flex items-center gap-2.5">
+          <span className="text-[#3DDC84]">{icon}</span>
+          {title}
+        </h2>
+        <p className="text-[13px] text-slate-500 mt-1">{subtitle}</p>
+      </div>
+    </div>
+  );
+}
+
+function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+  label,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { id: T; label: string; icon: React.ReactNode }[];
+  label: string;
+}) {
+  return (
+    <div role="group" aria-label={label} className="grid grid-cols-2 border border-white/12 rounded-[6px] overflow-hidden bg-[#0A0F0D]">
+      {options.map((o) => {
+        const selected = value === o.id;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onChange(o.id)}
+            className={`flex items-center justify-center gap-2 py-2.5 text-[12.5px] font-bold tracking-wide transition-all duration-200 ${
+              selected ? "bg-[#00893D] text-white" : "text-slate-400 hover:text-white hover:bg-white/[0.05]"
+            }`}
+          >
+            {o.icon}
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Counter({
+  id,
+  icon,
+  value,
+  min,
+  max,
+  onChange,
+  decreaseLabel,
+  increaseLabel,
+}: {
+  id: string;
+  icon: React.ReactNode;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+  decreaseLabel: string;
+  increaseLabel: string;
+}) {
+  const btn =
+    "w-10 h-10 rounded-[5px] bg-white/[0.04] border border-white/12 flex items-center justify-center text-slate-200 transition-all hover:bg-[#00893D]/25 hover:border-[#3DDC84]/50 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/[0.04] disabled:hover:border-white/12";
+  return (
+    <div className="w-full rounded-[6px] bg-[#0E1511] border border-white/12 px-3 py-2.5 flex items-center justify-between">
+      <div className="flex items-center gap-3 pl-1.5 text-slate-500">
+        {icon}
+        <output id={id} className="text-xl font-bold text-white tabular-nums min-w-6 font-mono">
+          {value}
+        </output>
+      </div>
+      <div className="flex items-center gap-2">
+        <button type="button" aria-label={decreaseLabel} disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))} className={btn}>
+          <Minus className="w-4 h-4" />
+        </button>
+        <button type="button" aria-label={increaseLabel} disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))} className={btn}>
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SummaryRow({ label, children, done }: { label: string; children: React.ReactNode; done: boolean }) {
+  return (
+    <div className="flex gap-3 py-3.5 border-b border-white/[0.06] last:border-b-0">
+      <span
+        className={`mt-0.5 w-4 h-4 shrink-0 rounded-[3px] border flex items-center justify-center transition-colors ${
+          done ? "bg-[#00893D] border-[#3DDC84]" : "border-white/20"
+        }`}
+        aria-hidden
+      >
+        {done && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="font-mono text-[10px] font-bold tracking-[0.2em] uppercase text-slate-500">{label}</div>
+        <div className="text-[13.5px] font-semibold text-slate-100 mt-0.5 break-words">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function SchaefflerMotionLandingPage() {
-  const { t, language, setLanguage, availableLanguages } = useLanguage();
-  const pathname = usePathname();
   const router = useRouter();
-  const portalBrand = getPartnerPortalBrand("schaefflermotion");
+  const [lang, setLang] = useMxLang();
+  const tx = makeTx(lang);
+
   const [scrolled, setScrolled] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-  const [authedUser, setAuthedUser] = useState<SchaefflerMotionPortalUser | null>(
-    null,
-  );
-  const [portalBooting, setPortalBooting] = useState(true);
+  const [authedUser, setAuthedUser] = useState<PortalUser | null>(null);
+  const [bootDone, setBootDone] = useState(false);
 
   const [formLoading, setFormLoading] = useState(false);
   const [submitErrors, setSubmitErrors] = useState<string[]>([]);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [lastBookingCode, setLastBookingCode] = useState<string | null>(null);
-  const [showValidationInline, setShowValidationInline] = useState(false);
-  const [blurredFields, setBlurredFields] = useState<Record<string, boolean>>(
-    {},
-  );
+  const [attempted, setAttempted] = useState(false);
+  const [blurred, setBlurred] = useState<Record<string, boolean>>({});
 
   const [travelerEmail, setTravelerEmail] = useState("");
   const [travelerName, setTravelerName] = useState("");
@@ -65,42 +243,35 @@ export default function SchaefflerMotionLandingPage() {
   const [secondTravelerPhone, setSecondTravelerPhone] = useState("");
   const [fromAddress, setFromAddress] = useState("");
   const [toAddress, setToAddress] = useState("");
+  const [flightNumber, setFlightNumber] = useState("");
   const [pickupDate, setPickupDate] = useState("");
   const [pickupTime, setPickupTime] = useState("");
   const [commentText, setCommentText] = useState("");
 
   const [paymentMethod, setPaymentMethod] = useState<"card" | "bank">("card");
-  const [fromType, setFromType] = useState<"airport" | "other">("airport");
-  const [toType, setToType] = useState<"airport" | "other">("other");
+  const [fromType, setFromType] = useState<PlaceType>("airport");
+  const [toType, setToType] = useState<PlaceType>("other");
   const [travelers, setTravelers] = useState(1);
   const [luggage, setLuggage] = useState(1);
-  const [transferType, setTransferType] = useState<"standard" | "executive">(
-    "executive",
-  );
+  const [transferType, setTransferType] = useState<TransferType>("standard");
 
   useEffect(() => {
-    if (authedUser) {
-      setPortalBooting(true);
-      const t = setTimeout(() => {
-        setPortalBooting(false);
-      }, 1800);
-      return () => clearTimeout(t);
-    }
-  }, [authedUser]);
+    if (!authedUser || bootDone) return;
+    const timer = setTimeout(() => setBootDone(true), 1800);
+    return () => clearTimeout(timer);
+  }, [authedUser, bootDone]);
+
+  const portalBooting = !!authedUser && !bootDone;
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const res = await fetch("/api/schaefflermotion-auth/session", {
-          cache: "no-store",
-        });
+        const res = await fetch("/api/schaefflermotion-auth/session", { cache: "no-store" });
         if (!active) return;
         if (res.ok) {
           const json = await res.json();
-          if (json?.success && json?.user) {
-            setAuthedUser(json.user);
-          }
+          if (json?.success && json?.user) setAuthedUser(json.user);
         }
       } catch {}
       if (active) setAuthChecked(true);
@@ -111,11 +282,10 @@ export default function SchaefflerMotionLandingPage() {
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const handleLogout = async () => {
@@ -123,72 +293,66 @@ export default function SchaefflerMotionLandingPage() {
       await fetch("/api/schaefflermotion-auth/logout", { method: "POST" });
     } catch {}
     setAuthedUser(null);
+    setBootDone(false);
   };
 
-  const requiredFields: Record<string, { value: string; label: string }> = {
-    travelerEmail: { value: travelerEmail, label: "Email" },
-    travelerName: { value: travelerName, label: "Név" },
-    travelerPhone: { value: travelerPhone, label: "Telefonszám" },
-    fromAddress: { value: fromAddress, label: "Felvételi cím" },
-    toAddress: { value: toAddress, label: "Érkezési cím" },
-    pickupDate: { value: pickupDate, label: "Dátum" },
-    pickupTime: { value: pickupTime, label: "Időpont" },
+  const maxPax = CONDITIONS.maxPax[transferType];
+  const maxLuggage = travelers * CONDITIONS.maxLuggagePerPax[transferType];
+
+  const changeTransferType = (next: TransferType) => {
+    setTransferType(next);
+    const nextTravelers = Math.min(travelers, CONDITIONS.maxPax[next]);
+    setTravelers(nextTravelers);
+    setLuggage((l) => Math.min(l, nextTravelers * CONDITIONS.maxLuggagePerPax[next]));
   };
 
-  const getFieldError = (fieldKey: string): string | null => {
-    if (!submitErrors.length && !showValidationInline) return null;
-    const field = requiredFields[fieldKey];
-    if (!field) return null;
-    if (showValidationInline || submitErrors.length > 0) {
-      if (!field.value.trim()) {
-        return `${field.label} megadása kötelező`;
-      }
+  const changeTravelers = (next: number) => {
+    setTravelers(next);
+    setLuggage((l) => Math.min(l, next * CONDITIONS.maxLuggagePerPax[transferType]));
+  };
+
+  const fieldLabels: Record<string, string> = {
+    travelerEmail: tx("fEmail"),
+    travelerName: tx("fName"),
+    travelerPhone: tx("fPhone"),
+    fromAddress: tx("fFromAddress"),
+    toAddress: tx("fToAddress"),
+    flightNumber: tx("fFlight"),
+    pickupDate: tx("fDate"),
+    pickupTime: tx("fTime"),
+  };
+  const fieldValues: Record<string, string> = {
+    travelerEmail,
+    travelerName,
+    travelerPhone,
+    fromAddress,
+    toAddress,
+    flightNumber,
+    pickupDate,
+    pickupTime,
+  };
+
+  const fieldError = (key: string, force = false): string | null => {
+    if (!force && !attempted && !blurred[key]) return null;
+    const value = (fieldValues[key] || "").trim();
+    if (!value) {
+      const label = fieldLabels[key];
+      return tx("errRequired", { field: label });
     }
-    for (const err of submitErrors) {
-      const lowerErr = err.toLowerCase();
-      const lowerLabel = field.label.toLowerCase();
-      if (
-        lowerErr.includes(lowerLabel) ||
-        (fieldKey === "travelerEmail" &&
-          (lowerErr.includes("email") || lowerErr.includes("e-mail"))) ||
-        (fieldKey === "travelerPhone" &&
-          (lowerErr.includes("phone") || lowerErr.includes("telefonszám"))) ||
-        (fieldKey === "fromAddress" &&
-          (lowerErr.includes("from") ||
-            lowerErr.includes("honnan") ||
-            lowerErr.includes("indulási"))) ||
-        (fieldKey === "toAddress" &&
-          (lowerErr.includes("to") ||
-            lowerErr.includes("hova") ||
-            lowerErr.includes("érkezési"))) ||
-        (fieldKey === "pickupDate" &&
-          (lowerErr.includes("date") || lowerErr.includes("dátum"))) ||
-        (fieldKey === "pickupTime" &&
-          (lowerErr.includes("time") ||
-            lowerErr.includes("idő") ||
-            lowerErr.includes("időpont")))
-      ) {
-        return err;
-      }
-    }
+    if (key === "travelerEmail" && !EMAIL_REGEX.test(value)) return tx("errEmail");
     return null;
   };
 
-  const isFieldInvalid = (fieldKey: string): boolean => {
-    const inlineCheck =
-      showValidationInline &&
-      blurredFields[fieldKey] &&
-      requiredFields[fieldKey] &&
-      !requiredFields[fieldKey].value.trim();
-    const submitCheck =
-      submitErrors.length > 0 && getFieldError(fieldKey) !== null;
-    return inlineCheck || submitCheck;
-  };
+  const validKeys = Object.keys(fieldValues).filter((key) => {
+    const value = fieldValues[key].trim();
+    if (!value) return false;
+    if (key === "travelerEmail") return EMAIL_REGEX.test(value);
+    return true;
+  });
+  const requiredTotal = Object.keys(fieldValues).length;
+  const progressPct = Math.round((validKeys.length / requiredTotal) * 100);
 
-  const handleBlur = (fieldKey: string) => {
-    setBlurredFields((prev) => ({ ...prev, [fieldKey]: true }));
-    setShowValidationInline(true);
-  };
+  const markBlurred = (key: string) => setBlurred((prev) => ({ ...prev, [key]: true }));
 
   const resetForm = () => {
     setTravelerEmail("");
@@ -198,6 +362,7 @@ export default function SchaefflerMotionLandingPage() {
     setSecondTravelerPhone("");
     setFromAddress("");
     setToAddress("");
+    setFlightNumber("");
     setPickupDate("");
     setPickupTime("");
     setCommentText("");
@@ -206,56 +371,55 @@ export default function SchaefflerMotionLandingPage() {
     setToType("other");
     setTravelers(1);
     setLuggage(1);
-    setTransferType("executive");
+    setTransferType("standard");
     setSubmitErrors([]);
     setSubmitSuccess(false);
     setLastBookingCode(null);
-    setShowValidationInline(false);
-    setBlurredFields({});
+    setAttempted(false);
+    setBlurred({});
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (formLoading) return;
     setSubmitErrors([]);
-    setShowValidationInline(true);
-    Object.keys(requiredFields).forEach((key) => {
-      setBlurredFields((prev) => ({ ...prev, [key]: true }));
-    });
-    const missing = Object.entries(requiredFields).filter(
-      ([, v]) => !v.value.trim(),
-    );
-    if (missing.length > 0) {
-      const errs = missing.map(([, v]) => `${v.label} megadása kötelező`);
-      setSubmitErrors(errs);
+    setAttempted(true);
+
+    const problems = Object.keys(fieldValues)
+      .filter((key) => fieldError(key, true) !== null)
+      .map((key) => `field:${key}`);
+    if (problems.length > 0) {
+      setSubmitErrors(problems);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+
     setFormLoading(true);
     try {
       const payload = {
-        travelerEmail,
-        travelerName,
-        travelerPhone,
-        secondTravelerEmail: secondTravelerEmail || undefined,
-        secondTravelerPhone: secondTravelerPhone || undefined,
-        companyName: "Schaeffler Motion",
+        travelerEmail: travelerEmail.trim(),
+        travelerName: travelerName.trim(),
+        travelerPhone: travelerPhone.trim(),
+        secondTravelerEmail: secondTravelerEmail.trim() || undefined,
+        secondTravelerPhone: secondTravelerPhone.trim() || undefined,
+        companyName: COMPANY,
         paymentMethod,
         transferType,
         fromType,
-        fromAddress,
+        fromAddress: fromAddress.trim(),
         toType,
-        toAddress,
+        toAddress: toAddress.trim(),
+        flightNumber: flightNumber.trim(),
         pickupDate,
         pickupTime,
         travelers,
         luggage,
-        comment: commentText || undefined,
+        comment: commentText.trim() || undefined,
+        language: lang,
       };
       const res = await fetch("/api/bookings", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-partner-portal": "schaefflermotion",
-        },
+        headers: { "Content-Type": "application/json", "x-partner-portal": "schaefflermotion" },
         credentials: "include",
         body: JSON.stringify(payload),
       });
@@ -266,88 +430,63 @@ export default function SchaefflerMotionLandingPage() {
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else if (res.status === 400) {
         const errs: string[] =
-          data?.errors && Array.isArray(data.errors)
-            ? data.errors
-            : ["Érvénytelen adatok, kérjük ellenőrizze az űrlapot"];
+          data?.errors && Array.isArray(data.errors) && data.errors.length
+            ? data.errors.map((m: string) => `srv:${m}`)
+            : ["i18n:errInvalid"];
         setSubmitErrors(errs);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else if (res.status === 401) {
         router.push("/schaefflermotion/auth");
       } else if (res.status === 500) {
-        setSubmitErrors(["Szerver hiba történt, kérjük próbálja újra"]);
+        setSubmitErrors(["i18n:errServer"]);
       } else {
-        setSubmitErrors([
-          data?.message || "Váratlan hiba történt, kérjük próbálja újra",
-        ]);
+        setSubmitErrors(["i18n:errUnexpected"]);
       }
     } catch {
-      setSubmitErrors(["Hálózati hiba történt, kérjük próbálja újra"]);
+      setSubmitErrors(["i18n:errNetwork"]);
     } finally {
       setFormLoading(false);
     }
   };
 
+  const renderSubmitError = (token: string): string => {
+    if (token.startsWith("field:")) return fieldError(token.slice(6), true) || "";
+    if (token.startsWith("srv:")) return translateServerMessage(lang, token.slice(4));
+    if (token.startsWith("i18n:")) return tx(token.slice(5));
+    return token;
+  };
+
+  const visibleSubmitErrors = submitErrors.filter((e) => !e.startsWith("field:") || !!fieldError(e.slice(6), true));
+
+  const minDate = useMemo(() => todayLocal(), []);
+  const errorId = (key: string) => `err-${key}`;
+  const describedBy = (key: string) => (fieldError(key) ? errorId(key) : undefined);
+
+  const prettyDate = (d: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+    if (!m) return d;
+    return new Intl.DateTimeFormat(MX_LOCALE[lang], { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(
+      new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))),
+    );
+  };
+
   if (!authChecked) {
     return (
-      <div className="relative min-h-screen bg-[#FAFBFC] text-zinc-900 flex flex-col">
-        <div className="w-full border-b border-zinc-200/70 bg-white/60 backdrop-blur-md">
-          <div className="max-w-6xl mx-auto px-6 h-16 flex items-center">
+      <div className="relative min-h-screen bg-[#0B100E] text-slate-300 flex flex-col">
+        <MxBackdrop />
+        <div className="relative z-10 h-[3px] w-full bg-[linear-gradient(90deg,#00893D,#3DDC84_55%,transparent)]" />
+        <div className="relative z-10 flex-1 flex items-center justify-center px-4">
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#009A44] to-[#007335] flex items-center justify-center shadow-sm">
-                <span className="text-white font-black text-sm tracking-tighter">
-                  C
-                </span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[15px] font-bold text-zinc-900 leading-none">
-                  SCHAEFFLER MOTION Portál
-                </span>
-                <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">
-                  Pannon Transfer · Hozzáférés ellenőrzése
-                </span>
-              </div>
+              <PannonChip className="h-10" />
+              <span className="w-px h-6 bg-white/15" />
+              <SchaefflerChip className="h-10" />
             </div>
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center px-4 py-12 sm:py-16">
-          <div className="w-full max-w-[440px]">
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className="flex flex-col items-center py-20 gap-5"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-[#009A44]/[0.08] border border-[#009A44]/10 flex items-center justify-center shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                <Building2 className="w-7 h-7 text-[#009A44] animate-pulse" />
-              </div>
-              <div className="flex items-center gap-2.5">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 1.2,
-                    ease: "linear",
-                  }}
-                  className="w-5 h-5 rounded-full border-2 border-zinc-200 border-t-[#009A44]"
-                />
-                <p className="text-[14px] text-zinc-600 font-semibold tracking-wide">
-                  Hozzáférés és munkamenet ellenőrzése...
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-        <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
-          <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-            <span>
-              © {new Date().getFullYear()} Pannon Transfer · Minden jog
-              fenntartva.
-            </span>
-            <span className="tracking-wider">
-              SCHAEFFLER MOTION Dedikált Ügyfélportál · Kizárólagos linkalapú
-              hozzáférés
-            </span>
-          </div>
+            <div className="flex items-center gap-3 font-mono text-[12px] tracking-[0.12em] text-slate-400">
+              <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.1, ease: "linear" }} className="w-4 h-4 rounded-full border-2 border-white/10 border-t-[#3DDC84]" />
+              {tx("checkingAccess")}
+            </div>
+          </motion.div>
         </div>
       </div>
     );
@@ -359,108 +498,34 @@ export default function SchaefflerMotionLandingPage() {
 
   if (portalBooting) {
     return (
-      <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center overflow-hidden font-sans">
-        {/* Deep cinematic background glow */}
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 0.4 }}
-          transition={{ duration: 3, ease: "easeOut" }}
-          className="absolute w-[800px] h-[800px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#009A44]/20 via-transparent to-transparent rounded-full blur-[100px] pointer-events-none"
-        />
-
-        {/* Ambient floating particles */}
-        <motion.div
-          animate={{ y: [0, -20, 0], opacity: [0.1, 0.4, 0.1] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/4 left-1/4 w-1 h-1 bg-[#007335] rounded-full blur-[1px]"
-        />
-        <motion.div
-          animate={{ y: [0, 20, 0], opacity: [0.1, 0.3, 0.1] }}
-          transition={{
-            duration: 7,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 1,
-          }}
-          className="absolute bottom-1/3 right-1/4 w-1.5 h-1.5 bg-[#009A44] rounded-full blur-[2px]"
-        />
-
+      <div className="fixed inset-0 z-[100] bg-[#0B100E] flex flex-col items-center justify-center overflow-hidden font-sans">
+        <MxBackdrop />
         <div className="relative z-10 flex flex-col items-center">
-          {/* Elegant Spinning Rings */}
-          <div className="relative w-40 h-40 flex items-center justify-center mb-10">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 12, ease: "linear", repeat: Infinity }}
-              className="absolute inset-0 rounded-full border-[1px] border-white/[0.03] border-t-[#007335]/60 border-r-[#009A44]/40"
-            />
-            <motion.div
-              animate={{ rotate: -360 }}
-              transition={{ duration: 16, ease: "linear", repeat: Infinity }}
-              className="absolute inset-[-16px] rounded-full border-[1px] border-white/[0.02] border-b-[#007335]/30 border-l-[#009A44]/50"
-            />
-
-            {/* Inner Core */}
-            <div className="absolute inset-2 bg-[#020617] rounded-full shadow-[inset_0_0_20px_rgba(0,180,216,0.1)] flex items-center justify-center">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
-                className="w-14 h-14 bg-gradient-to-br from-[#009A44] to-[#007335] rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(0,180,216,0.4)] relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-white/20 mix-blend-overlay" />
-                <span className="text-white font-black text-2xl tracking-tighter relative z-10">
-                  C
-                </span>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Typography */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-            className="text-center"
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="flex items-center gap-4 mb-12"
           >
-            <div className="flex items-center justify-center gap-5 mb-4">
-              <span className="font-serif text-2xl tracking-[0.25em] text-white/90">
-                PANNON
-              </span>
-              <span className="w-[1px] h-6 bg-white/20" />
-              <span className="font-sans font-black text-2xl tracking-[0.2em] text-[#007335]">
-                SCHAEFFLER MOTION
-              </span>
-            </div>
-            <p className="text-[10px] tracking-[0.4em] uppercase text-slate-500 font-medium">
-              Premium Corporate Transfer
-            </p>
+            <PannonChip className="h-12 px-3" imgClass="h-[20px] w-auto" />
+            <span className="w-px h-7 bg-white/20" />
+            <SchaefflerChip className="h-12 px-3" imgClass="h-[17px] w-auto" />
           </motion.div>
-
-          {/* Premium Progress Bar */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-16 w-64"
-          >
-            <div className="h-[2px] w-full bg-white/5 relative overflow-hidden rounded-full">
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }} className="text-center">
+            <p className="font-mono text-[11px] tracking-[0.4em] uppercase text-[#3DDC84] font-bold mb-2">{COMPANY}</p>
+            <p className="text-[10px] tracking-[0.4em] uppercase text-slate-500 font-medium">{tx("premiumTag")}</p>
+          </motion.div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.4 }} className="mt-12 w-72">
+            <div className="h-[3px] w-full bg-white/[0.07] relative overflow-hidden">
               <motion.div
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
-                transition={{
-                  duration: 1.2,
-                  ease: [0.7, 0, 0.3, 1],
-                  delay: 0.4,
-                }}
-                className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-transparent via-[#007335] to-[#007335] shadow-[0_0_12px_rgba(0,180,216,1)]"
+                transition={{ duration: 1.2, ease: [0.7, 0, 0.3, 1], delay: 0.4 }}
+                className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-[#00893D] to-[#3DDC84] shadow-[0_0_14px_rgba(61,220,132,0.9)]"
               />
             </div>
-            <motion.div
-              animate={{ opacity: [0.3, 1, 0.3] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="mt-5 text-center text-[9px] tracking-[0.3em] text-[#007335] uppercase font-bold"
-            >
-              Rendszer előkészítése...
+            <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} className="mt-4 text-center font-mono text-[10px] tracking-[0.28em] text-[#3DDC84] uppercase font-bold">
+              {tx("preparing")}
             </motion.div>
           </motion.div>
         </div>
@@ -468,857 +533,467 @@ export default function SchaefflerMotionLandingPage() {
     );
   }
 
+  const typeLabel = transferType === "standard" ? tx("typeStandard") : tx("typeExecutive");
+  const hasRoute = fromAddress.trim() && toAddress.trim();
+
   return (
-    <div className="min-h-screen bg-[#031218] text-slate-300 font-sans selection:bg-[#12D6DF]/30 relative overflow-hidden">
-      {/* Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 right-0 w-[70vw] h-[70vh] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#009A44]/22 via-[#1C5C39]/7 to-transparent blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[50vw] h-[50vh] bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#94D82D]/14 via-transparent to-transparent blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#bbf7d0_1px,transparent_1px),linear-gradient(to_bottom,#bbf7d0_1px,transparent_1px)] bg-[size:48px_48px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,154,68,0.08),transparent_25%),radial-gradient(circle_at_82%_12%,rgba(148,216,45,0.07),transparent_20%)]" />
-        <div className="absolute inset-x-0 top-0 h-[320px] bg-[linear-gradient(180deg,rgba(0,154,68,0.16),rgba(3,18,24,0))]" />
-      </div>
+    <div className="min-h-screen bg-[#0B100E] text-slate-300 font-sans selection:bg-[#00893D]/40 relative overflow-x-clip">
+      <MxBackdrop />
 
-      {/* Navbar */}
-      <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled
-            ? "bg-[#031218]/85 backdrop-blur-xl border-b border-[#12D6DF]/10 shadow-sm"
-            : "bg-transparent border-b border-white/5"
-        }`}
-      >
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-12 h-20 flex justify-between items-center">
-          <div className="flex items-center gap-5 md:gap-8 h-full">
-            <div className="flex flex-col justify-center">
-              <span className="font-serif font-bold text-lg md:text-xl tracking-widest text-white leading-none">
-                PANNON
-              </span>
-              <span className="font-serif font-bold text-[10px] md:text-xs tracking-[0.25em] text-[#D4AF37] leading-tight mt-1">
-                TRANSFER
-              </span>
+      <MxHeader lang={lang} onLangChange={setLang} email={authedUser.email} scrolled={scrolled} active="booking" onLogout={handleLogout} />
+
+      <main id="booking" className="relative z-10 pt-[112px] lg:pt-[92px] pb-24 px-4 sm:px-6">
+        <div className="max-w-[1240px] mx-auto w-full">
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="mb-9 pt-6">
+            <div className="inline-flex items-center gap-2.5 font-mono text-[11px] font-bold tracking-[0.24em] uppercase text-[#3DDC84] mb-4">
+              <span className="w-2 h-2 bg-[#3DDC84] rounded-[1px] shadow-[0_0_10px_rgba(61,220,132,0.9)]" />
+              {tx("heroEyebrow")}
             </div>
-
-            <div className="w-px h-8 bg-white/20 transform rotate-12"></div>
-
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#12D6DF] via-[#00B7C7] to-[#29D391] flex items-center justify-center shadow-[0_0_30px_rgba(18,214,223,0.24)] ring-1 ring-white/10">
-                <Building2 className="w-4 h-4 text-white" />
-              </div>
-              <div className="flex flex-col justify-center">
-                <span className="font-bold text-lg md:text-xl tracking-tight text-white leading-none flex items-center gap-2">
-                  SCHAEFFLER MOTION{" "}
-                  <span className="text-[#12D6DF] text-sm hidden sm:inline">
-                    Mobility Desk
-                  </span>
-                </span>
-                <span className="text-[10px] font-medium tracking-[0.24em] text-slate-400 uppercase mt-1">
-                  Dedicated Schaeffler Motion Portal
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="hidden lg:flex items-center gap-8 h-full">
-            <div className="flex items-center gap-8 h-full">
-              <Link
-                href="#booking"
-                className={`text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 ${pathname === "/schaefflermotion/bookings" ? "text-slate-500 border-transparent" : "text-slate-200 border-[#12D6DF]"}`}
-              >
-                {t("nav", "booking")}
-              </Link>
-              <Link
-                href="/schaefflermotion/bookings"
-                className={`text-sm font-medium tracking-[0.12em] uppercase hover:text-white transition-colors h-full flex items-center border-b-2 ${pathname === "/schaefflermotion/bookings" ? "text-white border-[#29D391]" : "text-slate-300 border-transparent hover:border-[#12D6DF]/30"}`}
-              >
-                Foglalásaim
-              </Link>
-            </div>
-
-            <div className="w-px h-5 bg-white/10 mx-2"></div>
-
-            <div className="flex items-center gap-1">
-              {availableLanguages.map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => setLanguage(lang)}
-                  className={`w-8 h-8 rounded flex items-center justify-center text-[11px] font-bold tracking-wider transition-all duration-200 ${
-                    language === lang
-                      ? "bg-[#12D6DF] text-[#031218] shadow-sm"
-                      : "text-slate-400 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  {lang.toUpperCase()}
-                </button>
-              ))}
-            </div>
-
-            <div className="w-px h-5 bg-white/10 mx-2"></div>
-
-            <div className="flex items-center gap-3 pl-2">
-              <div className="hidden xl:flex flex-col items-end">
-                <span className="text-[12px] font-semibold text-white leading-none truncate max-w-[180px]">
-                  {authedUser.email}
-                </span>
-                <Link
-                  href="/schaefflermotion/bookings"
-                  className="text-[10px] font-medium text-[#12D6DF] hover:text-[#29D391] transition-colors mt-1 flex items-center gap-1"
-                >
-                  <ListOrdered className="w-3 h-3" />
-                  Foglalásaim
-                </Link>
-              </div>
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#12D6DF] to-[#29D391] flex items-center justify-center shadow-[0_0_20px_rgba(18,214,223,0.35)] shrink-0 ring-1 ring-white/10">
-                <UserCircle className="w-5 h-5 text-white" />
-              </div>
-              <button
-                onClick={handleLogout}
-                title="Kijelentkezés"
-                className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all shrink-0"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <section
-        id="booking"
-        className="relative pt-32 pb-24 px-6 min-h-screen flex items-start justify-center z-10"
-      >
-        <div className="max-w-[1200px] mx-auto w-full">
-          {/* Header Title for the Form */}
-          <div className="text-center mb-12 flex justify-center w-full">
-            <img
-              src="/partners/schaefflermotion/hero-alt.png"
-              alt="Schaeffler Motion Logo"
-              className="h-16 sm:h-20 md:h-28 object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500"
-            />
-          </div>
+            <h1 className="text-[36px] sm:text-[52px] font-semibold tracking-[-0.03em] text-white leading-[1.04]">{tx("heroTitle")}</h1>
+            <p className="mt-4 text-[15px] sm:text-[16px] text-slate-400 max-w-2xl leading-relaxed">{tx("heroSubtitle")}</p>
+          </motion.div>
 
           {submitSuccess ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="bg-[#0B1221] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-800 overflow-hidden relative max-w-2xl mx-auto"
+              className="relative overflow-hidden rounded-[10px] bg-[#111815]/95 border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.55)] max-w-[760px] mx-auto"
             >
-              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-emerald-500 to-transparent" />
-              <div className="p-10 md:p-16 flex flex-col items-center text-center">
+              <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#00893D] via-[#3DDC84] to-transparent" />
+              <div className="p-8 sm:p-14 flex flex-col items-center text-center">
                 <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
+                  initial={{ scale: 0, rotate: -90 }}
                   animate={{ scale: 1, rotate: 0 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 200,
-                    damping: 15,
-                    delay: 0.1,
-                  }}
-                  className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-400/10 flex items-center justify-center border-2 border-emerald-500/30 shadow-[0_0_40px_rgba(16,185,129,0.25)] mb-8"
+                  transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+                  className="w-24 h-24 rounded-[14px] bg-[#00893D]/15 flex items-center justify-center border border-[#3DDC84]/40 shadow-[0_0_50px_rgba(0,137,61,0.35)] mb-8"
                 >
-                  <motion.div
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{ pathLength: 1, opacity: 1 }}
-                    transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
-                  >
-                    <CheckCircle2
-                      className="w-14 h-14 text-emerald-400"
-                      strokeWidth={2.5}
-                    />
-                  </motion.div>
+                  <CheckCircle2 className="w-12 h-12 text-[#3DDC84]" strokeWidth={2.2} />
                 </motion.div>
+                <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight mb-3">{tx("okTitle")}</h2>
+                <p className="text-slate-400 text-[15px] mb-8">{tx("okSub")}</p>
 
-                <motion.h2
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-2xl md:text-3xl font-bold text-white mb-3 tracking-tight"
-                >
-                  Foglalása sikeresen elküldve!
-                </motion.h2>
-
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="text-slate-400 text-sm md:text-base mb-6"
-                >
-                  Visszaigazoló e-mail elküldve az Ön email címére
-                </motion.p>
-
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.45 }}
-                  className="mb-8"
-                >
-                  <span className="text-[11px] font-bold tracking-widest uppercase text-slate-500 mb-2 block">
-                    Foglalási kód
-                  </span>
-                  <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-[#009A44]/20 to-[#007335]/15 border border-[#009A44]/30 shadow-[0_0_25px_rgba(0,180,216,0.2)]">
-                    <span className="text-3xl md:text-4xl font-black text-white tracking-wider font-mono">
-                      #{lastBookingCode}
-                    </span>
+                <div className="mb-8">
+                  <span className="font-mono text-[10.5px] font-bold tracking-[0.24em] uppercase text-slate-500 mb-2 block">{tx("okCode")}</span>
+                  <div className="inline-flex items-center px-7 py-3.5 rounded-[8px] bg-[#00893D]/15 border border-[#3DDC84]/40">
+                    <span className="text-3xl sm:text-4xl font-bold text-white tracking-wider font-mono">#{lastBookingCode}</span>
                   </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.55 }}
-                  className="flex items-start gap-2 max-w-md mb-10 p-4 rounded-lg bg-white/[0.03] border border-white/[0.06]"
-                >
-                  <ShieldCheck className="w-4 h-4 text-[#007335] shrink-0 mt-0.5" />
-                  <p className="text-[13px] text-slate-400 text-left leading-relaxed">
-                    Amint a diszpécserünk jóváhagyja, email értesítést küldünk
-                    Önnek
-                  </p>
-                </motion.div>
+                <div className="flex items-start gap-3 max-w-md mb-10 p-4 rounded-[8px] bg-white/[0.03] border border-white/[0.08] text-left">
+                  <ShieldCheck className="w-4 h-4 text-[#3DDC84] shrink-0 mt-0.5" />
+                  <p className="text-[13px] text-slate-400 leading-relaxed">{tx("okNote")}</p>
+                </div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.65 }}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md"
-                >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md">
                   <button
+                    type="button"
                     onClick={() => router.push("/schaefflermotion/bookings")}
-                    className="py-4 px-5 rounded-lg bg-[#009A44] hover:bg-[#0B1F47] text-white font-bold text-sm tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,180,216,0.3)] hover:shadow-[0_0_30px_rgba(0,180,216,0.5)]"
+                    className="py-3.5 px-5 rounded-[6px] bg-[#00893D] hover:bg-[#00A04A] text-white font-bold text-[12.5px] tracking-[0.12em] uppercase transition-all flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(0,137,61,0.4)] active:scale-[0.98]"
                   >
                     <ListOrdered className="w-4 h-4" />
-                    Foglalásaim
+                    {tx("okMyBookings")}
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       resetForm();
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
-                    className="py-4 px-5 rounded-lg bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:border-white/20 text-white font-bold text-sm tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2"
+                    className="py-3.5 px-5 rounded-[6px] border border-white/15 hover:bg-white/[0.06] text-white font-bold text-[12.5px] tracking-[0.12em] uppercase transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                   >
                     <Plus className="w-4 h-4" />
-                    Új foglalás
+                    {tx("okNew")}
                   </button>
-                </motion.div>
+                </div>
               </div>
             </motion.div>
           ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="bg-[linear-gradient(180deg,rgba(7,26,33,0.96),rgba(7,19,27,0.96))] rounded-[28px] shadow-[0_30px_70px_rgba(0,0,0,0.45)] border border-[#12D6DF]/12 overflow-hidden relative max-w-4xl mx-auto backdrop-blur-2xl"
-            >
-              {/* Top accent line */}
-              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#12D6DF] to-[#29D391]" />
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-7 items-start">
+              <motion.form
+                onSubmit={handleSubmit}
+                noValidate
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                className="relative overflow-hidden rounded-[10px] bg-[#111815]/92 backdrop-blur border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.5)]"
+              >
+                <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#00893D] via-[#3DDC84] to-transparent" />
 
-              <div className="p-8 md:p-12 space-y-10">
-                {/* SECTION 1: Personal & Company Info */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-800">
-                    <div className="w-8 h-8 rounded-full bg-[#009A44]/20 flex items-center justify-center text-[#007335] font-bold text-sm border border-[#009A44]/30">
-                      1
-                    </div>
-                    <h3 className="text-white font-semibold text-lg tracking-wide">
-                      Utas és Céges adatok
-                    </h3>
+                <div className="px-6 sm:px-10 pt-7 pb-5 border-b border-white/[0.06] lg:hidden">
+                  <div className="flex items-center justify-between font-mono text-[11px] font-bold tracking-[0.16em] uppercase mb-2.5">
+                    <span className="text-slate-500">{tx("progress")}</span>
+                    <span className="tabular-nums text-[#3DDC84]">
+                      {validKeys.length}/{requiredTotal}
+                    </span>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Email */}
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        Email address of the Traveler{" "}
-                        <span className="text-[#007335]">*</span>
-                      </label>
-                      <div
-                        className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("travelerEmail") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#009A44] focus-within:ring-1 focus-within:ring-[#009A44]/30"}`}
-                      >
-                        <Mail
-                          className={`w-4 h-4 ${isFieldInvalid("travelerEmail") ? "text-red-400" : "text-slate-500"}`}
-                        />
-                        <input
-                          type="email"
-                          value={travelerEmail}
-                          onChange={(e) => setTravelerEmail(e.target.value)}
-                          onBlur={() => handleBlur("travelerEmail")}
-                          placeholder="Email"
-                          className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
-                        />
-                      </div>
-                      {getFieldError("travelerEmail") && (
-                        <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
-                          <XCircle className="w-3 h-3" />
-                          {getFieldError("travelerEmail")}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Name */}
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        Name of the Traveler{" "}
-                        <span className="text-[#007335]">*</span>
-                      </label>
-                      <div
-                        className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("travelerName") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#009A44] focus-within:ring-1 focus-within:ring-[#009A44]/30"}`}
-                      >
-                        <Users
-                          className={`w-4 h-4 ${isFieldInvalid("travelerName") ? "text-red-400" : "text-slate-500"}`}
-                        />
-                        <input
-                          type="text"
-                          value={travelerName}
-                          onChange={(e) => setTravelerName(e.target.value)}
-                          onBlur={() => handleBlur("travelerName")}
-                          placeholder="Full Name"
-                          className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
-                        />
-                      </div>
-                      {getFieldError("travelerName") && (
-                        <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
-                          <XCircle className="w-3 h-3" />
-                          {getFieldError("travelerName")}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Company Name */}
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
-                        Company Name
-                      </label>
-                      <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#009A44] focus-within:ring-1 focus-within:ring-[#009A44]/30 transition-all">
-                        <Briefcase className="w-4 h-4 text-slate-500" />
-                        <input
-                          type="text"
-                          defaultValue="Schaeffler Motion"
-                          readOnly
-                          className="bg-transparent border-none outline-none w-full text-sm font-bold text-white opacity-80 cursor-not-allowed"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Phone Number */}
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        Phone number (only digit / 0123456789){" "}
-                        <span className="text-[#007335]">*</span>
-                      </label>
-                      <div
-                        className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("travelerPhone") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#009A44] focus-within:ring-1 focus-within:ring-[#009A44]/30"}`}
-                      >
-                        <Phone
-                          className={`w-4 h-4 ${isFieldInvalid("travelerPhone") ? "text-red-400" : "text-slate-500"}`}
-                        />
-                        <input
-                          type="tel"
-                          value={travelerPhone}
-                          onChange={(e) => setTravelerPhone(e.target.value)}
-                          onBlur={() => handleBlur("travelerPhone")}
-                          placeholder="+36..."
-                          className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
-                        />
-                      </div>
-                      {getFieldError("travelerPhone") && (
-                        <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
-                          <XCircle className="w-3 h-3" />
-                          {getFieldError("travelerPhone")}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Optional 2nd Traveler */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-800/50">
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
-                        2nd Traveler's email (optional)
-                      </label>
-                      <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#009A44] focus-within:ring-1 focus-within:ring-[#009A44]/30 transition-all">
-                        <Mail className="w-4 h-4 text-slate-500" />
-                        <input
-                          type="email"
-                          value={secondTravelerEmail}
-                          onChange={(e) =>
-                            setSecondTravelerEmail(e.target.value)
-                          }
-                          placeholder="Optional"
-                          className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
-                        2nd Traveler's phone (optional)
-                      </label>
-                      <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 flex items-center gap-3 text-slate-300 focus-within:border-[#009A44] focus-within:ring-1 focus-within:ring-[#009A44]/30 transition-all">
-                        <Phone className="w-4 h-4 text-slate-500" />
-                        <input
-                          type="tel"
-                          value={secondTravelerPhone}
-                          onChange={(e) =>
-                            setSecondTravelerPhone(e.target.value)
-                          }
-                          placeholder="Optional"
-                          className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
-                        />
-                      </div>
-                    </div>
+                  <div className="h-1.5 bg-white/[0.07] overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPct} aria-label={tx("progress")}>
+                    <motion.div initial={false} animate={{ width: `${progressPct}%` }} transition={{ duration: 0.4, ease: "easeOut" }} className="h-full bg-gradient-to-r from-[#00893D] to-[#3DDC84]" />
                   </div>
                 </div>
 
-                {/* SECTION 2: Payment */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-800">
-                    <div className="w-8 h-8 rounded-full bg-[#009A44]/20 flex items-center justify-center text-[#007335] font-bold text-sm border border-[#009A44]/30">
-                      2
-                    </div>
-                    <h3 className="text-white font-semibold text-lg tracking-wide">
-                      Fizetés és Típus
-                    </h3>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Payment Method <span className="text-[#007335]">*</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <button
-                        onClick={() => setPaymentMethod("card")}
-                        className={`py-3.5 px-4 rounded-lg flex items-center justify-center gap-2 border transition-all ${
-                          paymentMethod === "card"
-                            ? "bg-[#009A44]/20 border-[#009A44] text-white"
-                            : "bg-[#151E32] border-slate-700/50 text-slate-400 hover:border-slate-500"
-                        }`}
-                      >
-                        <CreditCard
-                          className={`w-4 h-4 ${paymentMethod === "card" ? "text-[#007335]" : ""}`}
-                        />
-                        <span className="text-sm font-bold">
-                          With credit card at the driver
-                        </span>
-                      </button>
-                      <button
-                        onClick={() => setPaymentMethod("bank")}
-                        className={`py-3.5 px-4 rounded-lg flex items-center justify-center gap-2 border transition-all ${
-                          paymentMethod === "bank"
-                            ? "bg-[#009A44]/20 border-[#009A44] text-white"
-                            : "bg-[#151E32] border-slate-700/50 text-slate-400 hover:border-slate-500"
-                        }`}
-                      >
-                        <Building
-                          className={`w-4 h-4 ${paymentMethod === "bank" ? "text-[#007335]" : ""}`}
-                        />
-                        <span className="text-sm font-bold">
-                          Bank Transaction
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                      Transfer Type <span className="text-[#007335]">*</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <button
-                        onClick={() => setTransferType("standard")}
-                        className={`py-3.5 px-4 rounded-lg flex flex-col items-center justify-center gap-1 border transition-all ${
-                          transferType === "standard"
-                            ? "bg-[#009A44]/20 border-[#009A44] text-white"
-                            : "bg-[#151E32] border-slate-700/50 text-slate-400 hover:border-slate-500"
-                        }`}
-                      >
-                        <span className="text-sm font-bold">Standard</span>
-                        <span className="text-[10px] opacity-70">
-                          Economy Class
-                        </span>
-                      </button>
-                      <button
-                        onClick={() => setTransferType("executive")}
-                        className={`py-3.5 px-4 rounded-lg flex flex-col items-center justify-center gap-1 border transition-all ${
-                          transferType === "executive"
-                            ? "bg-gradient-to-br from-[#009A44]/30 to-[#007335]/20 border-[#009A44] text-white shadow-[0_0_15px_rgba(0,180,216,0.2)]"
-                            : "bg-[#151E32] border-slate-700/50 text-slate-400 hover:border-slate-500"
-                        }`}
-                      >
-                        <span className="text-sm font-bold text-[#007335]">
-                          Executive
-                        </span>
-                        <span className="text-[10px] opacity-70">
-                          Business Class
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SECTION 3: Route Details */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-800">
-                    <div className="w-8 h-8 rounded-full bg-[#009A44]/20 flex items-center justify-center text-[#007335] font-bold text-sm border border-[#009A44]/30">
-                      3
-                    </div>
-                    <h3 className="text-white font-semibold text-lg tracking-wide">
-                      Útvonal részletek
-                    </h3>
-                  </div>
-
-                  {/* FROM */}
-                  <div className="space-y-4 bg-[#0F172A]/50 p-6 rounded-xl border border-slate-800/50">
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
-                        From (Honnan?)
-                      </label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          onClick={() => setFromType("airport")}
-                          className={`py-3 px-4 rounded-lg flex items-center justify-center gap-2 border transition-all ${
-                            fromType === "airport"
-                              ? "bg-white/10 border-white/20 text-white"
-                              : "bg-[#151E32] border-slate-700/50 text-slate-400 hover:border-slate-500"
-                          }`}
-                        >
-                          <Plane className="w-4 h-4" />
-                          <span className="text-sm font-bold">Airport</span>
-                        </button>
-                        <button
-                          onClick={() => setFromType("other")}
-                          className={`py-3 px-4 rounded-lg flex items-center justify-center gap-2 border transition-all ${
-                            fromType === "other"
-                              ? "bg-white/10 border-white/20 text-white"
-                              : "bg-[#151E32] border-slate-700/50 text-slate-400 hover:border-slate-500"
-                          }`}
-                        >
-                          <Map className="w-4 h-4" />
-                          <span className="text-sm font-bold">Other</span>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="space-y-2 pt-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        From Address <span className="text-[#007335]">*</span>
-                      </label>
-                      <div
-                        className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("fromAddress") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#009A44] focus-within:ring-1 focus-within:ring-[#009A44]/30"}`}
-                      >
-                        <MapPin
-                          className={`w-4 h-4 ${isFieldInvalid("fromAddress") ? "text-red-400" : "text-slate-500"}`}
-                        />
-                        <input
-                          type="text"
-                          value={fromAddress}
-                          onChange={(e) => setFromAddress(e.target.value)}
-                          onBlur={() => handleBlur("fromAddress")}
-                          placeholder={
-                            fromType === "airport"
-                              ? "e.g. Budapest Airport (BUD)"
-                              : "e.g. SCHAEFFLER MOTION Debrecen Gyár..."
-                          }
-                          className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
-                        />
-                      </div>
-                      {getFieldError("fromAddress") && (
-                        <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
-                          <XCircle className="w-3 h-3" />
-                          {getFieldError("fromAddress")}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* TO */}
-                  <div className="space-y-4 bg-[#0F172A]/50 p-6 rounded-xl border border-slate-800/50">
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
-                        To (Hova?)
-                      </label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          onClick={() => setToType("airport")}
-                          className={`py-3 px-4 rounded-lg flex items-center justify-center gap-2 border transition-all ${
-                            toType === "airport"
-                              ? "bg-white/10 border-white/20 text-white"
-                              : "bg-[#151E32] border-slate-700/50 text-slate-400 hover:border-slate-500"
-                          }`}
-                        >
-                          <Plane className="w-4 h-4" />
-                          <span className="text-sm font-bold">Airport</span>
-                        </button>
-                        <button
-                          onClick={() => setToType("other")}
-                          className={`py-3 px-4 rounded-lg flex items-center justify-center gap-2 border transition-all ${
-                            toType === "other"
-                              ? "bg-white/10 border-white/20 text-white"
-                              : "bg-[#151E32] border-slate-700/50 text-slate-400 hover:border-slate-500"
-                          }`}
-                        >
-                          <Map className="w-4 h-4" />
-                          <span className="text-sm font-bold">Other</span>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="space-y-2 pt-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        To Address <span className="text-[#007335]">*</span>
-                      </label>
-                      <div
-                        className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center gap-3 text-slate-300 transition-all border ${isFieldInvalid("toAddress") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#009A44] focus-within:ring-1 focus-within:ring-[#009A44]/30"}`}
-                      >
-                        <MapPin
-                          className={`w-4 h-4 ${isFieldInvalid("toAddress") ? "text-red-400" : "text-slate-500"}`}
-                        />
-                        <input
-                          type="text"
-                          value={toAddress}
-                          onChange={(e) => setToAddress(e.target.value)}
-                          onBlur={() => handleBlur("toAddress")}
-                          placeholder={
-                            toType === "airport"
-                              ? "e.g. Budapest Airport (BUD)"
-                              : "e.g. 4031 Debrecen, ..."
-                          }
-                          className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
-                        />
-                      </div>
-                      {getFieldError("toAddress") && (
-                        <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
-                          <XCircle className="w-3 h-3" />
-                          {getFieldError("toAddress")}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Date & Time */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        When (Date) <span className="text-[#007335]">*</span>
-                      </label>
-                      <div
-                        className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center justify-between text-slate-300 transition-all border ${isFieldInvalid("pickupDate") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#009A44] focus-within:ring-1 focus-within:ring-[#009A44]/30"}`}
-                      >
-                        <input
-                          type="date"
-                          value={pickupDate}
-                          onChange={(e) => setPickupDate(e.target.value)}
-                          onBlur={() => handleBlur("pickupDate")}
-                          className="bg-transparent border-none outline-none w-full text-sm font-medium text-white [color-scheme:dark]"
-                        />
-                      </div>
-                      {getFieldError("pickupDate") && (
-                        <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
-                          <XCircle className="w-3 h-3" />
-                          {getFieldError("pickupDate")}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        Time <span className="text-[#007335]">*</span>
-                      </label>
-                      <div
-                        className={`w-full bg-[#151E32] rounded-lg p-3.5 flex items-center justify-between text-slate-300 transition-all border ${isFieldInvalid("pickupTime") ? "border-red-500/70 ring-1 ring-red-500/20 focus-within:border-red-500 focus-within:ring-red-500/30" : "border-slate-700/50 focus-within:border-[#009A44] focus-within:ring-1 focus-within:ring-[#009A44]/30"}`}
-                      >
-                        <input
-                          type="time"
-                          value={pickupTime}
-                          onChange={(e) => setPickupTime(e.target.value)}
-                          onBlur={() => handleBlur("pickupTime")}
-                          className="bg-transparent border-none outline-none w-full text-sm font-medium text-white [color-scheme:dark]"
-                        />
-                      </div>
-                      {getFieldError("pickupTime") && (
-                        <p className="text-[11px] text-red-400 ml-1 font-medium flex items-center gap-1">
-                          <XCircle className="w-3 h-3" />
-                          {getFieldError("pickupTime")}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Counters */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Travelers Counter */}
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        Number of the Travelers{" "}
-                        <span className="text-[#007335]">*</span>
-                      </label>
-                      <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-2.5 flex justify-between items-center text-white">
-                        <div className="flex items-center gap-3 px-2">
-                          <Users className="w-4 h-4 text-slate-500" />
-                          <span className="text-sm font-bold">{travelers}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() =>
-                              setTravelers(Math.max(1, travelers - 1))
-                            }
-                            type="button"
-                            className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-                          >
-                            <Minus className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setTravelers(travelers + 1)}
-                            type="button"
-                            className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Luggage Counter */}
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1 flex gap-1">
-                        Number of the luggage{" "}
-                        <span className="text-[#007335]">*</span>
-                      </label>
-                      <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-2.5 flex justify-between items-center text-white">
-                        <div className="flex items-center gap-3 px-2">
-                          <Luggage className="w-4 h-4 text-slate-500" />
-                          <span className="text-sm font-bold">{luggage}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => setLuggage(Math.max(0, luggage - 1))}
-                            type="button"
-                            className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-                          >
-                            <Minus className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setLuggage(luggage + 1)}
-                            type="button"
-                            className="w-8 h-8 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Comment */}
-                  <div className="space-y-2">
-                    <label className="text-[11px] text-slate-400 font-bold tracking-widest uppercase ml-1">
-                      Comment
-                    </label>
-                    <div className="w-full bg-[#151E32] border border-slate-700/50 rounded-lg p-3.5 focus-within:border-[#009A44] focus-within:ring-1 focus-within:ring-[#009A44]/30 transition-all">
-                      <textarea
-                        rows={3}
-                        value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                        placeholder="Any special requests or instructions..."
-                        className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white resize-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Submit Errors Alert */}
-                <AnimatePresence>
-                  {submitErrors.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8, height: 0 }}
-                      animate={{ opacity: 1, y: 0, height: "auto" }}
-                      exit={{ opacity: 0, y: -8, height: 0 }}
-                      transition={{ duration: 0.25, ease: "easeOut" }}
-                      className="overflow-hidden"
-                    >
-                      <div className="rounded-xl bg-red-500/[0.08] border border-red-500/20 p-5 space-y-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
-                            <XCircle className="w-4 h-4 text-red-400" />
+                <div className="px-6 sm:px-10 py-9 space-y-14">
+                  <AnimatePresence initial={false}>
+                    {visibleSubmitErrors.length > 0 && (
+                      <motion.div key="errors" role="alert" initial={{ opacity: 0, y: -8, height: 0 }} animate={{ opacity: 1, y: 0, height: "auto" }} exit={{ opacity: 0, y: -8, height: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+                        <div className="rounded-[8px] bg-red-500/[0.07] border border-red-500/25 p-5">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-8 h-8 rounded-[5px] bg-red-500/15 flex items-center justify-center shrink-0">
+                              <XCircle className="w-4 h-4 text-red-400" />
+                            </div>
+                            <p className="text-[14px] font-semibold text-red-300">{tx("errFixTitle")}</p>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-bold text-red-300 tracking-wide">
-                              Kérjük javítsa a következő hibákat:
-                            </p>
-                          </div>
+                          <ul className="space-y-1.5 pl-11">
+                            {visibleSubmitErrors.map((err, idx) => (
+                              <li key={idx} className="text-[13px] text-red-300/90 flex items-start gap-2 leading-relaxed">
+                                <span className="w-1.5 h-1.5 bg-red-400/70 mt-2 shrink-0" />
+                                <span>{renderSubmitError(err)}</span>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                        <ul className="space-y-1.5 pl-11">
-                          {submitErrors.map((err, idx) => (
-                            <li
-                              key={idx}
-                              className="text-[12px] text-red-300/90 flex items-start gap-2 leading-relaxed"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-red-400/60 mt-1.5 shrink-0" />
-                              <span>{err}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Submit Button */}
-                <div className="pt-6 border-t border-slate-800">
-                  <button
-                    onClick={handleSubmit}
-                    disabled={formLoading}
-                    className={`w-full rounded-lg font-bold text-sm tracking-widest uppercase transition-all duration-300 flex justify-center items-center gap-3 py-4.5 ${
-                      formLoading
-                        ? "bg-[#009A44]/60 text-white/80 cursor-not-allowed shadow-[0_0_15px_rgba(0,180,216,0.15)]"
-                        : "bg-[#009A44] hover:bg-[#0B1F47] text-white shadow-[0_0_20px_rgba(0,180,216,0.3)] hover:shadow-[0_0_30px_rgba(0,180,216,0.5)]"
-                    }`}
-                  >
-                    {formLoading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Foglalás küldése folyamatban...
-                      </>
-                    ) : (
-                      <>
-                        Foglalás
-                        <ArrowRight className="w-5 h-5" />
-                      </>
+                      </motion.div>
                     )}
-                  </button>
+                  </AnimatePresence>
+
+                  {/* 01 — Traveler & company */}
+                  <section aria-labelledby="sec-traveler">
+                    <div id="sec-traveler">
+                      <SectionHeader index={1} icon={<Users className="w-[18px] h-[18px]" />} title={tx("secTraveler")} subtitle={tx("secTravelerSub")} />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div>
+                        <Label htmlFor="mx-email" required>{tx("fEmail")}</Label>
+                        <div className={inputShell(!!fieldError("travelerEmail"))}>
+                          <Mail className={iconCls(!!fieldError("travelerEmail"))} />
+                          <input id="mx-email" type="email" autoComplete="email" value={travelerEmail} onChange={(e) => setTravelerEmail(e.target.value)} onBlur={() => markBlurred("travelerEmail")} placeholder={tx("fEmailPh")} aria-invalid={!!fieldError("travelerEmail")} aria-describedby={describedBy("travelerEmail")} className={inputBase} />
+                        </div>
+                        <FieldError id={errorId("travelerEmail")} message={fieldError("travelerEmail")} />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="mx-name" required>{tx("fName")}</Label>
+                        <div className={inputShell(!!fieldError("travelerName"))}>
+                          <Users className={iconCls(!!fieldError("travelerName"))} />
+                          <input id="mx-name" type="text" autoComplete="name" value={travelerName} onChange={(e) => setTravelerName(e.target.value)} onBlur={() => markBlurred("travelerName")} placeholder={tx("fNamePh")} aria-invalid={!!fieldError("travelerName")} aria-describedby={describedBy("travelerName")} className={inputBase} />
+                        </div>
+                        <FieldError id={errorId("travelerName")} message={fieldError("travelerName")} />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="mx-company">{tx("fCompany")}</Label>
+                        <div className="w-full rounded-[6px] bg-[#0A0F0D] border border-white/[0.07] px-4 py-3.5 flex items-center gap-3">
+                          <Briefcase className="w-4 h-4 text-slate-600 shrink-0" />
+                          <input id="mx-company" type="text" value={COMPANY} readOnly tabIndex={-1} className="bg-transparent border-none outline-none w-full text-[15px] font-bold text-white/80 cursor-not-allowed" />
+                          <Check className="w-4 h-4 text-[#3DDC84]/80 shrink-0" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="mx-phone" required>{tx("fPhone")}</Label>
+                        <div className={inputShell(!!fieldError("travelerPhone"))}>
+                          <Phone className={iconCls(!!fieldError("travelerPhone"))} />
+                          <input id="mx-phone" type="tel" inputMode="tel" autoComplete="tel" value={travelerPhone} onChange={(e) => setTravelerPhone(e.target.value)} onBlur={() => markBlurred("travelerPhone")} placeholder={tx("fPhonePh")} aria-invalid={!!fieldError("travelerPhone")} aria-describedby={describedBy("travelerPhone")} className={inputBase} />
+                        </div>
+                        <p className="mt-2 text-[12px] text-slate-500">{tx("fPhoneHint")}</p>
+                        <FieldError id={errorId("travelerPhone")} message={fieldError("travelerPhone")} />
+                      </div>
+                    </div>
+
+                    <div className="mt-6 rounded-[8px] bg-[#0A0F0D] border border-white/[0.07] p-5">
+                      <div className="flex items-center gap-2.5 mb-4 font-mono text-[11px] font-bold tracking-[0.18em] uppercase text-slate-400">
+                        <UserPlus className="w-4 h-4 text-[#3DDC84]" />
+                        {tx("secondTraveler")}
+                        <span className="normal-case tracking-normal font-sans font-medium text-slate-600">· {tx("optional")}</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="mx-email2">{tx("fSecondEmail")}</Label>
+                          <div className={inputShell(false)}>
+                            <Mail className={iconCls(false)} />
+                            <input id="mx-email2" type="email" value={secondTravelerEmail} onChange={(e) => setSecondTravelerEmail(e.target.value)} placeholder={tx("optionalPh")} className={inputBase} />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="mx-phone2">{tx("fSecondPhone")}</Label>
+                          <div className={inputShell(false)}>
+                            <Phone className={iconCls(false)} />
+                            <input id="mx-phone2" type="tel" inputMode="tel" value={secondTravelerPhone} onChange={(e) => setSecondTravelerPhone(e.target.value)} placeholder={tx("optionalPh")} className={inputBase} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* 02 — Service & payment */}
+                  <section aria-labelledby="sec-service">
+                    <div id="sec-service">
+                      <SectionHeader index={2} icon={<CreditCard className="w-[18px] h-[18px]" />} title={tx("secService")} subtitle={tx("secServiceSub")} />
+                    </div>
+
+                    <div className="space-y-6">
+                      <div>
+                        <Label required>{tx("fTransferType")}</Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="group" aria-label={tx("fTransferType")}>
+                          {(
+                            [
+                              { id: "standard", title: tx("typeStandard"), sub: tx("typeStandardSub") },
+                              { id: "executive", title: tx("typeExecutive"), sub: tx("typeExecutiveSub") },
+                            ] as { id: TransferType; title: string; sub: string }[]
+                          ).map((opt) => {
+                            const selected = transferType === opt.id;
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                aria-pressed={selected}
+                                onClick={() => changeTransferType(opt.id)}
+                                className={`relative text-left rounded-[8px] border px-5 py-4 transition-all duration-200 active:scale-[0.99] ${
+                                  selected
+                                    ? "bg-[#00893D]/15 border-[#3DDC84]/60 shadow-[0_10px_30px_rgba(0,137,61,0.22)]"
+                                    : "bg-[#0E1511] border-white/12 hover:border-white/30"
+                                }`}
+                              >
+                                <span
+                                  className={`absolute top-4 right-4 w-5 h-5 rounded-[4px] border flex items-center justify-center transition-all ${
+                                    selected ? "bg-[#00893D] border-[#3DDC84] text-white" : "border-white/20 text-transparent"
+                                  }`}
+                                >
+                                  <Check className="w-3 h-3" strokeWidth={3} />
+                                </span>
+                                <span className="block text-[16px] font-bold text-white">{opt.title}</span>
+                                <span className="block text-[12px] text-slate-400 mt-0.5">{opt.sub}</span>
+                                <span className="mt-3 inline-flex items-center gap-1.5 font-mono text-[11px] font-medium text-slate-400">
+                                  <Users className="w-3.5 h-3.5 text-[#3DDC84]" />
+                                  {tx("upToPax", { n: CONDITIONS.maxPax[opt.id] })}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label required>{tx("fPayment")}</Label>
+                        <Segmented<"card" | "bank">
+                          label={tx("fPayment")}
+                          value={paymentMethod}
+                          onChange={setPaymentMethod}
+                          options={[
+                            { id: "card", label: tx("payCard"), icon: <CreditCard className="w-4 h-4" /> },
+                            { id: "bank", label: tx("payBank"), icon: <Building className="w-4 h-4" /> },
+                          ]}
+                        />
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* 03 — Route & schedule */}
+                  <section aria-labelledby="sec-route">
+                    <div id="sec-route">
+                      <SectionHeader index={3} icon={<MapPin className="w-[18px] h-[18px]" />} title={tx("secRoute")} subtitle={tx("secRouteSub")} />
+                    </div>
+
+                    <div className="relative space-y-3">
+                      <div className="rounded-[8px] bg-[#0A0F0D] border border-white/[0.07] p-5 space-y-4">
+                        <div className="flex items-center gap-2.5 font-mono text-[11px] font-bold tracking-[0.18em] uppercase text-slate-400">
+                          <span className="w-2.5 h-2.5 rounded-[2px] bg-[#3DDC84] shadow-[0_0_10px_rgba(61,220,132,0.8)]" />
+                          {tx("fFrom")}
+                        </div>
+                        <Segmented<PlaceType>
+                          label={tx("fFrom")}
+                          value={fromType}
+                          onChange={setFromType}
+                          options={[
+                            { id: "airport", label: tx("typeAirport"), icon: <Plane className="w-4 h-4" /> },
+                            { id: "other", label: tx("typeOther"), icon: <Map className="w-4 h-4" /> },
+                          ]}
+                        />
+                        <div>
+                          <Label htmlFor="mx-from" required>{tx("fFromAddress")}</Label>
+                          <div className={inputShell(!!fieldError("fromAddress"))}>
+                            <MapPin className={iconCls(!!fieldError("fromAddress"))} />
+                            <input id="mx-from" type="text" value={fromAddress} onChange={(e) => setFromAddress(e.target.value)} onBlur={() => markBlurred("fromAddress")} placeholder={fromType === "airport" ? tx("phFromAirport") : tx("phFromOther")} aria-invalid={!!fieldError("fromAddress")} aria-describedby={describedBy("fromAddress")} className={inputBase} />
+                          </div>
+                          <FieldError id={errorId("fromAddress")} message={fieldError("fromAddress")} />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-center -my-1.5 relative z-10" aria-hidden>
+                        <div className="w-9 h-9 rounded-[6px] bg-[#00893D] border-4 border-[#111815] flex items-center justify-center shadow-[0_6px_18px_rgba(0,137,61,0.5)]">
+                          <ArrowDown className="w-4 h-4 text-white" />
+                        </div>
+                      </div>
+
+                      <div className="rounded-[8px] bg-[#0A0F0D] border border-white/[0.07] p-5 space-y-4">
+                        <div className="flex items-center gap-2.5 font-mono text-[11px] font-bold tracking-[0.18em] uppercase text-slate-400">
+                          <span className="w-2.5 h-2.5 rounded-[2px] border-2 border-[#3DDC84]" />
+                          {tx("fTo")}
+                        </div>
+                        <Segmented<PlaceType>
+                          label={tx("fTo")}
+                          value={toType}
+                          onChange={setToType}
+                          options={[
+                            { id: "airport", label: tx("typeAirport"), icon: <Plane className="w-4 h-4" /> },
+                            { id: "other", label: tx("typeOther"), icon: <Map className="w-4 h-4" /> },
+                          ]}
+                        />
+                        <div>
+                          <Label htmlFor="mx-to" required>{tx("fToAddress")}</Label>
+                          <div className={inputShell(!!fieldError("toAddress"))}>
+                            <MapPin className={iconCls(!!fieldError("toAddress"))} />
+                            <input id="mx-to" type="text" value={toAddress} onChange={(e) => setToAddress(e.target.value)} onBlur={() => markBlurred("toAddress")} placeholder={toType === "airport" ? tx("phToAirport") : tx("phToOther")} aria-invalid={!!fieldError("toAddress")} aria-describedby={describedBy("toAddress")} className={inputBase} />
+                          </div>
+                          <FieldError id={errorId("toAddress")} message={fieldError("toAddress")} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6">
+                      <Label htmlFor="mx-flight" required>{tx("fFlight")}</Label>
+                      <div className={inputShell(!!fieldError("flightNumber"))}>
+                        <Plane className={iconCls(!!fieldError("flightNumber"))} />
+                        <input id="mx-flight" type="text" autoCapitalize="characters" autoComplete="off" value={flightNumber} onChange={(e) => setFlightNumber(e.target.value.toUpperCase())} onBlur={() => markBlurred("flightNumber")} placeholder={tx("phFlight")} aria-invalid={!!fieldError("flightNumber")} aria-describedby={describedBy("flightNumber")} className={`${inputBase} uppercase tracking-wide font-mono`} />
+                      </div>
+                      <p className="mt-2 text-[12px] text-slate-500">{tx("flightHint")}</p>
+                      <FieldError id={errorId("flightNumber")} message={fieldError("flightNumber")} />
+                    </div>
+
+                    <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div>
+                        <Label htmlFor="mx-date" required>{tx("fDate")}</Label>
+                        <div className={inputShell(!!fieldError("pickupDate"))}>
+                          <Calendar className={iconCls(!!fieldError("pickupDate"))} />
+                          <input id="mx-date" type="date" min={minDate} value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} onBlur={() => markBlurred("pickupDate")} aria-invalid={!!fieldError("pickupDate")} aria-describedby={describedBy("pickupDate")} className={`${inputBase} [color-scheme:dark]`} />
+                        </div>
+                        <FieldError id={errorId("pickupDate")} message={fieldError("pickupDate")} />
+                      </div>
+                      <div>
+                        <Label htmlFor="mx-time" required>{tx("fTime")}</Label>
+                        <div className={inputShell(!!fieldError("pickupTime"))}>
+                          <Clock className={iconCls(!!fieldError("pickupTime"))} />
+                          <input id="mx-time" type="time" value={pickupTime} onChange={(e) => setPickupTime(e.target.value)} onBlur={() => markBlurred("pickupTime")} aria-invalid={!!fieldError("pickupTime")} aria-describedby={describedBy("pickupTime")} className={`${inputBase} [color-scheme:dark]`} />
+                        </div>
+                        <FieldError id={errorId("pickupTime")} message={fieldError("pickupTime")} />
+                      </div>
+                    </div>
+                    <p className="mt-2.5 text-[12px] text-slate-500 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      {tx("advanceHint", { h: CONDITIONS.minAdvanceHours })}
+                    </p>
+
+                    <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div>
+                        <Label htmlFor="mx-travelers" required>{tx("fTravelers")}</Label>
+                        <Counter id="mx-travelers" icon={<Users className="w-4 h-4" />} value={travelers} min={1} max={maxPax} onChange={changeTravelers} decreaseLabel={tx("decrease")} increaseLabel={tx("increase")} />
+                        <p className="mt-2 text-[12px] text-slate-500">{tx("upToPax", { n: maxPax })}</p>
+                      </div>
+                      <div>
+                        <Label htmlFor="mx-luggage" required>{tx("fLuggage")}</Label>
+                        <Counter id="mx-luggage" icon={<Luggage className="w-4 h-4" />} value={luggage} min={0} max={maxLuggage} onChange={setLuggage} decreaseLabel={tx("decrease")} increaseLabel={tx("increase")} />
+                        <p className="mt-2 text-[12px] text-slate-500">{tx("luggageHint", { n: maxLuggage })}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6">
+                      <Label htmlFor="mx-comment" optionalText={tx("optional")}>{tx("fComment")}</Label>
+                      <div className={`${inputShell(false)} items-start`}>
+                        <MessageSquare className="w-4 h-4 text-slate-500 shrink-0 mt-1 group-focus-within:text-[#3DDC84]" />
+                        <textarea id="mx-comment" rows={3} value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder={tx("phComment")} className={`${inputBase} resize-none`} />
+                      </div>
+                    </div>
+                  </section>
+
+                  <div className="pt-8 border-t border-white/[0.07]">
+                    <button
+                      type="submit"
+                      disabled={formLoading}
+                      className={`w-full rounded-[6px] font-bold text-[13px] tracking-[0.16em] uppercase transition-all duration-300 flex justify-center items-center gap-3 py-4 active:scale-[0.99] ${
+                        formLoading
+                          ? "bg-[#00893D]/60 text-white/80 cursor-not-allowed"
+                          : "bg-[#00893D] hover:bg-[#00A04A] text-white shadow-[0_12px_32px_rgba(0,137,61,0.4)] hover:shadow-[0_16px_40px_rgba(0,137,61,0.55)]"
+                      }`}
+                    >
+                      {formLoading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          {tx("sending")}
+                        </>
+                      ) : (
+                        <>
+                          {tx("submit")}
+                          <ArrowRight className="w-5 h-5" />
+                        </>
+                      )}
+                    </button>
+                    <p className="mt-4 text-center text-[12px] text-slate-500">{tx("submitHint")}</p>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.form>
+
+              <aside className="hidden lg:block sticky top-[100px]">
+                <div className="relative overflow-hidden rounded-[10px] bg-[#111815]/92 backdrop-blur border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+                  <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#00893D] via-[#3DDC84] to-transparent" />
+                  <div className="px-6 pt-7 pb-5 border-b border-white/[0.06]">
+                    <div className="font-mono text-[10.5px] font-bold tracking-[0.24em] uppercase text-[#3DDC84] mb-3">{tx("summaryTitle")}</div>
+                    <div className="flex items-end justify-between mb-2.5">
+                      <span className="text-[12px] text-slate-500">{tx("progress")}</span>
+                      <span className="font-mono text-[22px] font-bold text-white tabular-nums leading-none">
+                        {validKeys.length}
+                        <span className="text-slate-600 text-[15px]">/{requiredTotal}</span>
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-white/[0.07] overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPct} aria-label={tx("progress")}>
+                      <motion.div initial={false} animate={{ width: `${progressPct}%` }} transition={{ duration: 0.4, ease: "easeOut" }} className="h-full bg-gradient-to-r from-[#00893D] to-[#3DDC84] shadow-[0_0_12px_rgba(61,220,132,0.6)]" />
+                    </div>
+                  </div>
+                  <div className="px-6 py-2">
+                    <SummaryRow label={tx("summaryRoute")} done={!!hasRoute}>
+                      {hasRoute ? (
+                        <>
+                          <span className="block truncate">{fromAddress.trim()}</span>
+                          <span className="block text-[#3DDC84] text-[11px] leading-5">↓</span>
+                          <span className="block truncate">{toAddress.trim()}</span>
+                        </>
+                      ) : (
+                        <span className="text-slate-600 font-medium">{tx("summaryEmpty")}</span>
+                      )}
+                    </SummaryRow>
+                    <SummaryRow label={tx("summaryWhen")} done={!!(pickupDate && pickupTime)}>
+                      {pickupDate && pickupTime ? (
+                        <span className="font-mono">
+                          {prettyDate(pickupDate)} · {pickupTime}
+                        </span>
+                      ) : (
+                        <span className="text-slate-600 font-medium">{tx("summaryEmpty")}</span>
+                      )}
+                    </SummaryRow>
+                    <SummaryRow label={tx("fFlight")} done={!!flightNumber.trim()}>
+                      {flightNumber.trim() ? <span className="font-mono tracking-wide">{flightNumber.trim()}</span> : <span className="text-slate-600 font-medium">{tx("summaryEmpty")}</span>}
+                    </SummaryRow>
+                    <SummaryRow label={tx("summaryParty")} done>
+                      <span className="font-mono">
+                        {tx("summaryPax", { n: travelers })} · {tx("summaryBags", { n: luggage })}
+                      </span>
+                    </SummaryRow>
+                    <SummaryRow label={tx("summaryClass")} done>
+                      {typeLabel}
+                    </SummaryRow>
+                  </div>
+                  <div className="px-6 py-5 border-t border-white/[0.06] bg-white/[0.015] flex items-start gap-3">
+                    <ShieldCheck className="w-4 h-4 text-[#3DDC84] shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-slate-500 leading-relaxed">{tx("summaryNote")}</p>
+                  </div>
+                </div>
+              </aside>
+            </div>
           )}
         </div>
-      </section>
+      </main>
 
-      {/* Footer */}
-      <footer className="border-t border-white/5 bg-[#040914] py-10 px-6 z-10 relative">
-        <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="flex flex-col text-center md:text-left">
-              <span className="font-serif font-bold tracking-widest text-slate-400 text-sm leading-none">
-                PANNON <span className="text-[#D4AF37]/80">TRANSFER</span>
-              </span>
-              <span className="text-[9px] text-slate-500 font-medium tracking-[0.2em] mt-1">
-                EXECUTIVE TRAVEL
-              </span>
-            </div>
-            <div className="hidden md:block w-px h-6 bg-white/10"></div>
-            <div className="flex flex-col text-center md:text-left">
-              <span className="font-bold text-white tracking-wide text-sm leading-none flex items-center gap-2">
-                SCHAEFFLER MOTION{" "}
-                <span className="text-xs font-normal text-slate-400">
-                  {t("footer", "portal")}
-                </span>
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-6">
-            <span className="text-xs font-medium text-slate-500">
-              Dedikált ügyfélszolgálat
-            </span>
-          </div>
-        </div>
-      </footer>
+      <MxFooter lang={lang} />
     </div>
   );
 }

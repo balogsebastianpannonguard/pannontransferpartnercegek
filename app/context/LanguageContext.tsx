@@ -26,7 +26,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
 
     if (
       savedLang &&
-      (savedLang === "hu" || savedLang === "en" || savedLang === "zh") &&
+      (savedLang === "hu" || savedLang === "en" || savedLang === "zh" || savedLang === "ko") &&
       allowedLanguages.includes(savedLang)
     ) {
       return savedLang;
@@ -62,7 +62,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const t = (section: keyof typeof translations.hu, key: string, params?: Record<string, string>) => {
-    const dict = translations[language][section] as Record<string, string>;
+    const dict = (translations[language as keyof typeof translations] ?? translations.hu)[section] as Record<string, string>;
     if (!dict) return key;
     
     let text = dict[key] || key;

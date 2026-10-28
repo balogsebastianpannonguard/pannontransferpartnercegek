@@ -65,7 +65,7 @@ export interface Booking {
   luggage: number;
   comment?: string;
   // A foglaláskor használt felületi nyelv (NI portál): az utas minden emailje ezen a nyelven megy ki.
-  language?: 'hu' | 'en';
+  language?: 'hu' | 'en' | 'zh' | 'ko';
   category: BookingCategory;
   status: BookingStatus;
   assignedDriverId?: string;

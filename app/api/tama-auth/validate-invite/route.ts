@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findTamaUserByInviteToken, hashToken, TAMA_SHARED_DB_NAME } from "@/lib/tama-portal-users";
+import { findTamaUserByInviteToken } from "@/lib/tama-portal-users";
 
 export const dynamic = "force-dynamic";
 
@@ -14,18 +14,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // ===== DEBUG LOG a futó Next.js konzolba (localhost:3001 terminál) =====
-    const peek =
-      rawToken.length > 14
-        ? `${rawToken.slice(0, 8)}...${rawToken.slice(-4)} (${rawToken.length} chars)`
-        : rawToken;
-    const hashPreview = await hashToken(rawToken);
-    console.log("\n=== [TAMA Hungary Kft. validate-invite] REQUEST ===");
-    console.log("Shared DB:", TAMA_SHARED_DB_NAME);
-    console.log("Raw token:", peek);
-    console.log("SHA256 hash:", hashPreview);
-    // =========================================================================
-
     // 1) Valid (non-expired) token first
     let user = await findTamaUserByInviteToken(rawToken);
     let expiredButActivated = false;
@@ -39,23 +27,12 @@ export async function POST(request: Request) {
         user = maybeUser;
         expiredButActivated = true;
       } else {
-        console.log("[TAMA Hungary Kft. validate-invite] NINCS TALÁLAT a közös DB-ben -> invalid link.");
-        console.log("====================================================\n");
         return NextResponse.json(
           { success: false, message: "Érvénytelen vagy lejárt link." },
           { status: 404 }
         );
       }
     }
-
-    console.log("[TAMA Hungary Kft. validate-invite] TALÁLAT:", {
-      email: user.email,
-      isActivated: !!user.isActivated,
-      require2FA: !!user.requireTwoFactor,
-      inviteExpiresAt: new Date(user.inviteExpiresAt).toLocaleString("hu-HU"),
-      expiredButActivated,
-    });
-    console.log("====================================================\n");
 
     return NextResponse.json({
       success: true,

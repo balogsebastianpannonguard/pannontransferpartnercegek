@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       inviteExpiresAt: user.inviteExpiresAt,
       expiredButActivated,
       hint: expiredButActivated
-        ? "A link lejárt, de a fiókod már aktív. Lépj be a ECOPRO BM Portálon keresztül."
+        ? "A link lejárt, de a fiók már aktív. Kérjük, lépjen be az Ecopro BM portálon keresztül."
         : null,
     });
   } catch (error) {
