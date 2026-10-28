@@ -1,5 +1,6 @@
 import nodemailer, { Transporter, SendMailOptions } from "nodemailer";
 import { env } from "./env";
+import { logEmail } from "./email-log";
 
 let transporter: Transporter | null = null;
 
@@ -34,6 +35,7 @@ export interface EmailOptions {
   cc?: string | string[];
   bcc?: string | string[];
   replyTo?: string;
+  kind?: string;
   attachments?: Array<{
     filename: string;
     path?: string;
@@ -68,6 +70,19 @@ export async function sendEmail(options: EmailOptions): Promise<{
 
     const info = await mailTransporter.sendMail(mailOptions);
 
+    logEmail({
+      app: "partnercegek",
+      to: options.to,
+      cc: options.cc,
+      from: String(mailOptions.from),
+      subject: options.subject,
+      kind: options.kind,
+      status: "sent",
+      messageId: info.messageId,
+      html: options.html,
+      text: options.text,
+    });
+
     console.log(`[EMAIL SIKERES] E-mail elküldve: ${info.messageId}`);
     console.log(`[EMAIL] Előzetes URL: ${nodemailer.getTestMessageUrl(info)}`);
 
@@ -79,6 +94,18 @@ export async function sendEmail(options: EmailOptions): Promise<{
     const errorMessage =
       error instanceof Error ? error.message : "Ismeretlen hiba történt";
     console.error(`[EMAIL HIBA] E-mail küldés sikertelen: ${errorMessage}`);
+    logEmail({
+      app: "partnercegek",
+      to: options.to,
+      cc: options.cc,
+      from: `"Pannon Transfer" <${env.email.user}>`,
+      subject: options.subject,
+      kind: options.kind,
+      status: "failed",
+      error: errorMessage,
+      html: options.html,
+      text: options.text,
+    });
 
     return {
       success: false,
