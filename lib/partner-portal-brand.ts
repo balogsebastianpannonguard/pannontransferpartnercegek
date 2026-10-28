@@ -2,13 +2,12 @@ import type { Language } from "@/lib/translations";
 
 export type PartnerPortalKey =
   | "catl"
-  | "ecopro"
-  | "eccoino"
-  | "vitesco"
-  | "schaeffler"
-  | "krones"
-  | "enterair"
+  | "ecoproinnovation"
+  | "ecoprobm"
+  | "schaefflermotion"
+  | "schaefflerdebrecen"
   | "tama"
+  | "ibusz"
   | "ni";
 
 type PartnerPortalBrand = {
@@ -37,81 +36,70 @@ export const PARTNER_PORTAL_BRANDS: Record<PartnerPortalKey, PartnerPortalBrand>
       "Dedikalt vallalati foglalasi felulet a CATL delegacios, gyarlatogatasi es napi dolgozoi transzfereihez.",
     heroHighlights: ["Delegacios fokusz", "Kinai nyelvi tamogatas", "Prioritolt repteri utak"],
   },
-  ecopro: {
-    key: "ecopro",
+  ecoproinnovation: {
+    key: "ecoproinnovation",
     allowedLanguages: CN_LANGUAGES,
-    navLabel: "EcoPro Transfer Desk",
-    navSubline: "Dedicated EcoPro Portal",
-    deskLabel: "EcoPro Booking Desk",
-    heroTitle: "EcoPro repteri es vallalati transzfer desk",
+    navLabel: "Ecopro Innovation Transfer Desk",
+    navSubline: "Dedicated Ecopro Innovation Portal",
+    deskLabel: "Ecopro Innovation Booking Desk",
+    heroTitle: "Ecopro Innovation repteri es vallalati transzfer desk",
     heroDescription:
-      "EcoPro-specifikus foglalasi elmeny, kulon gyari es repteri utakra hangolt vallalati kornyezettel.",
+      "Ecopro Innovation-specifikus foglalasi elmeny, kulon gyari es repteri utakra hangolt vallalati kornyezettel.",
     heroHighlights: ["Kinai nyelvi tamogatas", "Repteri workflow", "Ipari vallalati ritmus"],
   },
-  eccoino: {
-    key: "eccoino",
+  ecoprobm: {
+    key: "ecoprobm",
     allowedLanguages: CN_LANGUAGES,
-    navLabel: "Eccoino Mobility Desk",
-    navSubline: "Dedicated Eccoino Portal",
-    deskLabel: "Eccoino Booking Desk",
-    heroTitle: "Eccoino nemzetkozi mobilitasi portal",
+    navLabel: "Ecopro BM Transfer Desk",
+    navSubline: "Dedicated Ecopro BM Portal",
+    deskLabel: "Ecopro BM Booking Desk",
+    heroTitle: "Ecopro BM repteri es vallalati transzfer desk",
     heroDescription:
-      "Az Eccoino felulete a nemzetkozi uzleti utakhoz, bovitett partner ritmussal es kulon kezelt foglalasi folyamattal.",
-    heroHighlights: ["Kinai nyelvi tamogatas", "Nemzetkozi utak", "Kulon partner workflow"],
+      "Ecopro BM-specifikus foglalasi elmeny, kulon gyari es repteri utakra hangolt vallalati kornyezettel.",
+    heroHighlights: ["Kinai nyelvi tamogatas", "Repteri workflow", "Ipari vallalati ritmus"],
   },
-  vitesco: {
-    key: "vitesco",
+  schaefflermotion: {
+    key: "schaefflermotion",
     allowedLanguages: DEFAULT_LANGUAGES,
-    navLabel: "Vitesco Executive Desk",
-    navSubline: "Vitesco Corporate Portal",
-    deskLabel: "Vitesco Booking Desk",
-    heroTitle: "Vitesco executive es gyarlatogatasi transzferek",
+    navLabel: "Schaeffler Motion Mobility Desk",
+    navSubline: "Schaeffler Motion Corporate Portal",
+    deskLabel: "Schaeffler Motion Booking Desk",
+    heroTitle: "Schaeffler Motion gyari es delegacios fuvarok",
     heroDescription:
-      "Kulon Vitesco arculatra hangolt foglalasi oldal vezetoi, partneri es gyarlatogatasi utak szervezesehez.",
-    heroHighlights: ["Executive hangsuly", "Magyar es angol UI", "Autoipari partner ritmus"],
-  },
-  schaeffler: {
-    key: "schaeffler",
-    allowedLanguages: DEFAULT_LANGUAGES,
-    navLabel: "Schaeffler Mobility Desk",
-    navSubline: "Schaeffler Corporate Portal",
-    deskLabel: "Schaeffler Booking Desk",
-    heroTitle: "Schaeffler gyari es delegacios fuvarok",
-    heroDescription:
-      "Sajatos Schaeffler portal kulon partneridentitassal, gyari kiindulasi pontokra es vallalati utakra hangolva.",
+      "Sajatos Schaeffler Motion portal kulon partneridentitassal, gyari kiindulasi pontokra es vallalati utakra hangolva.",
     heroHighlights: ["Gyari pickup fokusz", "Ketnyelvu UI", "Partnerenkent kulon mentes"],
   },
-  krones: {
-    key: "krones",
+  schaefflerdebrecen: {
+    key: "schaefflerdebrecen",
     allowedLanguages: DEFAULT_LANGUAGES,
-    navLabel: "Krones Transit Desk",
-    navSubline: "Krones Operations Portal",
-    deskLabel: "Krones Booking Desk",
-    heroTitle: "Krones uzemi es varosi shuttle koordinacio",
+    navLabel: "Schaeffler Debrecen Mobility Desk",
+    navSubline: "Schaeffler Debrecen Corporate Portal",
+    deskLabel: "Schaeffler Debrecen Booking Desk",
+    heroTitle: "Schaeffler Debrecen gyari es delegacios fuvarok",
     heroDescription:
-      "A Krones portal uzemi es varosi mozgast tamogat, sajat hangulattal es egyedi vallalati mobilitasi kontextussal.",
-    heroHighlights: ["Uzemi transzferek", "Ketnyelvu UI", "Gyartasi ritmusra hangolva"],
+      "Sajatos Schaeffler Debrecen portal kulon partneridentitassal, gyari kiindulasi pontokra es vallalati utakra hangolva.",
+    heroHighlights: ["Gyari pickup fokusz", "Ketnyelvu UI", "Partnerenkent kulon mentes"],
   },
-  enterair: {
-    key: "enterair",
+  ibusz: {
+    key: "ibusz",
     allowedLanguages: DEFAULT_LANGUAGES,
-    navLabel: "Enter Air Crew Desk",
-    navSubline: "Enter Air Crew Portal",
-    deskLabel: "Enter Air Booking Desk",
-    heroTitle: "Enter Air crew es legi transzfer portal",
+    navLabel: "IBUSZ Mobility Desk",
+    navSubline: "IBUSZ Hungary Corporate Portal",
+    deskLabel: "IBUSZ Booking Desk",
+    heroTitle: "IBUSZ Hungary Kft. vallalati transzfer desk",
     heroDescription:
-      "Sajat Enter Air felulet csoportos, crew es repuloteri transzferekhez, kulon stilussal es sajat partnerkarakterrel.",
-    heroHighlights: ["Crew fokusz", "Ketnyelvu UI", "Euro alapu partner logika"],
+      "Dedikalt IBUSZ Hungary Kft. foglalasi felulet kulon partneridentitassal es sajat booking kontextussal.",
+    heroHighlights: ["Utazasszervezoi fokusz", "Ketnyelvu UI", "Partnerenkent kulon mentes"],
   },
   tama: {
     key: "tama",
     allowedLanguages: DEFAULT_LANGUAGES,
-    navLabel: "Tama Route Desk",
-    navSubline: "Tama Logistics Portal",
-    deskLabel: "Tama Booking Desk",
-    heroTitle: "Tama logisztikai utvonal desk",
+    navLabel: "TAMA Route Desk",
+    navSubline: "TAMA Hungary Kft. Logistics Portal",
+    deskLabel: "TAMA Booking Desk",
+    heroTitle: "TAMA Hungary Kft. logisztikai utvonal desk",
     heroDescription:
-      "Tama-specifikus partneroldal a Debrecen, Budapest es Bujfalu kozotti logisztikai vallalati utakhoz.",
+      "TAMA Hungary Kft.-specifikus partneroldal a Debrecen, Budapest es Bujfalu kozotti logisztikai vallalati utakhoz.",
     heroHighlights: ["Logisztikai utak", "Ketnyelvu UI", "Hazai utvonalakra szabva"],
   },
   ni: {

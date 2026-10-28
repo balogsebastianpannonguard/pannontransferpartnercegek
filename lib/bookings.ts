@@ -5,13 +5,12 @@ import { getPartnerPricing, type PartnerPricing, type PricingVehicle } from './p
 
 export type PartnerPortal =
   | 'catl'
-  | 'ecopro'
-  | 'eccoino'
-  | 'vitesco'
-  | 'schaeffler'
-  | 'krones'
-  | 'enterair'
+  | 'ecoproinnovation'
+  | 'ecoprobm'
+  | 'schaefflermotion'
+  | 'schaefflerdebrecen'
   | 'tama'
+  | 'ibusz'
   | 'ni';
 
 export type BookingStatus =
@@ -120,7 +119,7 @@ export function deriveCategory(
   if (transferType === 'executive') {
     return 'vip';
   }
-  if (companyName && companyName !== 'CATL Hungary Kft.') {
+  if (companyName && companyName !== 'CATL' && companyName !== 'CATL Hungary Kft.') {
     return 'partner';
   }
   if (fromType === 'airport' || toType === 'airport') {
@@ -130,12 +129,11 @@ export function deriveCategory(
 }
 
 const PARTNER_COMPANY_MATCHERS: Array<{ key: string; patterns: string[] }> = [
-  { key: 'ecopro', patterns: ['ecopro'] },
-  { key: 'eccoino', patterns: ['eccoino'] },
-  { key: 'vitesco', patterns: ['vitesco'] },
-  { key: 'schaeffler', patterns: ['schaeffler'] },
-  { key: 'krones', patterns: ['krones'] },
-  { key: 'enterair', patterns: ['enter air', 'enterair'] },
+  { key: 'ecoproinnovation', patterns: ['ecopro innovation', 'ecoproinnovation', 'ecopro-innovation'] },
+  { key: 'ecoprobm', patterns: ['ecopro bm', 'ecoprobm', 'ecopro-bm', 'ecopro'] },
+  { key: 'schaefflermotion', patterns: ['schaeffler motion', 'schaefflermotion', 'schaeffler-motion'] },
+  { key: 'schaefflerdebrecen', patterns: ['schaeffler debrecen', 'schaefflerdebrecen', 'schaeffler-debrecen', 'schaeffler'] },
+  { key: 'ibusz', patterns: ['ibusz'] },
   { key: 'tama', patterns: ['tama'] },
   { key: 'ni', patterns: [' ni ', 'national instruments', 'ni '] },
 ];
@@ -542,7 +540,7 @@ export async function createBooking(data: CreateBookingData): Promise<Booking> {
     companyName: data.companyName,
   });
 
-  const companyName = data.companyName || 'CATL Hungary Kft.';
+  const companyName = data.companyName || 'CATL';
   const portal = data.portal || resolveBookingPortal(companyName);
 
   const auditEntry: AuditTrailEntry = {

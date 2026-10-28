@@ -235,7 +235,7 @@ export default function TamaLandingPage() {
         travelerPhone,
         secondTravelerEmail: secondTravelerEmail || undefined,
         secondTravelerPhone: secondTravelerPhone || undefined,
-        companyName: "Tama",
+        companyName: "TAMA Hungary Kft.",
         paymentMethod,
         transferType,
         fromType,
@@ -298,7 +298,7 @@ export default function TamaLandingPage() {
               </div>
               <div className="flex flex-col">
                 <span className="text-[15px] font-bold text-zinc-900 leading-none">
-                  TAMA Portál
+                  TAMA Hungary Kft. Portál
                 </span>
                 <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">
                   Pannon Transfer · Hozzáférés ellenőrzése
@@ -342,7 +342,7 @@ export default function TamaLandingPage() {
               fenntartva.
             </span>
             <span className="tracking-wider">
-              TAMA Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés
+              TAMA Hungary Kft. Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés
             </span>
           </div>
         </div>
@@ -425,7 +425,7 @@ export default function TamaLandingPage() {
               </span>
               <span className="w-[1px] h-6 bg-white/20" />
               <span className="font-sans font-black text-2xl tracking-[0.2em] text-[#47840B]">
-                TAMA
+                TAMA Hungary Kft.
               </span>
             </div>
             <p className="text-[10px] tracking-[0.4em] uppercase text-slate-500 font-medium">
@@ -503,13 +503,13 @@ export default function TamaLandingPage() {
               </div>
               <div className="flex flex-col justify-center">
                 <span className="font-bold text-lg md:text-xl tracking-tight text-white leading-none flex items-center gap-2">
-                  TAMA{" "}
+                  TAMA Hungary Kft.{" "}
                   <span className="text-[#12D6DF] text-sm hidden sm:inline">
                     Mobility Desk
                   </span>
                 </span>
                 <span className="text-[10px] font-medium tracking-[0.24em] text-slate-400 uppercase mt-1">
-                  Dedicated Tama Portal
+                  Dedicated TAMA Hungary Kft. Portal
                 </span>
               </div>
             </div>
@@ -589,7 +589,7 @@ export default function TamaLandingPage() {
           <div className="text-center mb-12 flex justify-center w-full">
             <img
               src="/partners/tama/hero-a.png"
-              alt="Tama Logo"
+              alt="TAMA Hungary Kft. Logo"
               className="h-16 sm:h-20 md:h-28 object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500"
             />
           </div>
@@ -791,7 +791,7 @@ export default function TamaLandingPage() {
                         <Briefcase className="w-4 h-4 text-slate-500" />
                         <input
                           type="text"
-                          defaultValue="Tama"
+                          defaultValue="TAMA Hungary Kft."
                           readOnly
                           className="bg-transparent border-none outline-none w-full text-sm font-bold text-white opacity-80 cursor-not-allowed"
                         />
@@ -1013,7 +1013,7 @@ export default function TamaLandingPage() {
                           placeholder={
                             fromType === "airport"
                               ? "e.g. Budapest Airport (BUD)"
-                              : "e.g. TAMA Debrecen Gyár..."
+                              : "e.g. TAMA Hungary Kft. Debrecen Gyár..."
                           }
                           className="bg-transparent border-none outline-none w-full text-sm font-medium placeholder:text-slate-600 text-white"
                         />
@@ -1302,7 +1302,7 @@ export default function TamaLandingPage() {
             <div className="hidden md:block w-px h-6 bg-white/10"></div>
             <div className="flex flex-col text-center md:text-left">
               <span className="font-bold text-white tracking-wide text-sm leading-none flex items-center gap-2">
-                TAMA{" "}
+                TAMA Hungary Kft.{" "}
                 <span className="text-xs font-normal text-slate-400">
                   {t("footer", "portal")}
                 </span>

@@ -414,7 +414,7 @@ export default function TamaBookingsClient() {
                 <span className="text-white font-black text-sm tracking-tighter">C</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[15px] font-bold text-zinc-900 leading-none">TAMA Portál</span>
+                <span className="text-[15px] font-bold text-zinc-900 leading-none">TAMA Hungary Kft. Portál</span>
                 <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">
                   Pannon Transfer · Hozzáférés ellenőrzése
                 </span>
@@ -449,7 +449,7 @@ export default function TamaBookingsClient() {
         <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
           <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
             <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
-            <span className="tracking-wider">TAMA Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
+            <span className="tracking-wider">TAMA Hungary Kft. Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
           </div>
         </div>
       </div>
@@ -512,7 +512,7 @@ export default function TamaBookingsClient() {
             <div className="flex items-center justify-center gap-5 mb-4">
               <span className="font-serif text-2xl tracking-[0.25em] text-white/90">PANNON</span>
               <span className="w-[1px] h-6 bg-white/20" />
-              <span className="font-sans font-black text-2xl tracking-[0.2em] text-[#47840B]">TAMA</span>
+              <span className="font-sans font-black text-2xl tracking-[0.2em] text-[#47840B]">TAMA Hungary Kft.</span>
             </div>
             <p className="text-[10px] tracking-[0.4em] uppercase text-slate-500 font-medium">
               Premium Corporate Transfer
@@ -583,10 +583,10 @@ export default function TamaBookingsClient() {
               </div>
               <div className="flex flex-col justify-center">
                 <span className="font-bold text-lg md:text-xl tracking-tight text-white leading-none flex items-center gap-2">
-                  TAMA <span className="text-[#12D6DF] text-sm hidden sm:inline">Mobility Desk</span>
+                  TAMA Hungary Kft. <span className="text-[#12D6DF] text-sm hidden sm:inline">Mobility Desk</span>
                 </span>
                 <span className="text-[10px] font-medium tracking-[0.24em] text-slate-400 uppercase mt-1">
-                  Dedicated Tama Portal
+                  Dedicated TAMA Hungary Kft. Portal
                 </span>
               </div>
             </div>
@@ -1257,7 +1257,7 @@ export default function TamaBookingsClient() {
             <div className="hidden md:block w-px h-6 bg-white/10"></div>
             <div className="flex flex-col text-center md:text-left">
               <span className="font-bold text-white tracking-wide text-sm leading-none flex items-center gap-2">
-                TAMA <span className="text-xs font-normal text-slate-400">{t("footer", "portal")}</span>
+                TAMA Hungary Kft. <span className="text-xs font-normal text-slate-400">{t("footer", "portal")}</span>
               </span>
             </div>
           </div>

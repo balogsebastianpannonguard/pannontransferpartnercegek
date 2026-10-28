@@ -153,7 +153,7 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
               <span className="text-white font-black text-sm tracking-tighter">C</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-white leading-none">TAMA Portál</span>
+              <span className="text-[15px] font-bold text-white leading-none">TAMA Hungary Kft. Portál</span>
               <span className="text-[11px] text-slate-400 mt-0.5 tracking-wide">
                 Pannon Transfer · Dedikált Partnerbejelentkezés
               </span>
@@ -167,19 +167,19 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
           <div className="hidden lg:block text-white">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#12D6DF]/10 border border-[#12D6DF]/20 mb-6">
               <ShieldCheck className="w-3.5 h-3.5 text-[#12D6DF]" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#12D6DF]">Tama Access Layer</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#12D6DF]">TAMA Hungary Kft. Access Layer</span>
             </div>
             <h1 className="text-5xl font-bold tracking-tight leading-[1.05] mb-5">
-              Saját Tama belépési élmény, külön partnerkapuval.
+              Saját TAMA Hungary Kft. belépési élmény, külön partnerkapuval.
             </h1>
             <p className="text-slate-300/80 text-lg leading-relaxed max-w-xl mb-8">
-              Itt mar a belépés is az Tama portal része: külön arculat, kétfaktoros védelem,
-              és ugyanaz a dedikált partnerfolyamat, mint amit az Tama meghívásoknál kialakítottunk.
+              Itt mar a belépés is az TAMA Hungary Kft. portal része: külön arculat, kétfaktoros védelem,
+              és ugyanaz a dedikált partnerfolyamat, mint amit az TAMA Hungary Kft. meghívásoknál kialakítottunk.
             </p>
             <div className="grid grid-cols-2 gap-4 max-w-2xl">
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
                 <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-bold mb-2">Portal scope</div>
-                <div className="text-xl font-semibold">Tama corporate access</div>
+                <div className="text-xl font-semibold">TAMA Hungary Kft. corporate access</div>
                 <p className="text-sm text-slate-400 mt-2">Kulon meghivo, kulon session, kulon foglalasi kor.</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl">
@@ -206,7 +206,7 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
                     <ShieldCheck className="w-8 h-8 text-[#5CA700]" />
                   </div>
                   <h1 className="text-[28px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Jelentkezz be a TAMA Portálba
+                    Jelentkezz be a TAMA Hungary Kft. Portálba
                   </h1>
                   <p className="text-[15px] text-zinc-500 leading-relaxed max-w-md mx-auto">
                     Add meg a céges email címedet és a fiókodhoz társított jelszót.
@@ -241,7 +241,7 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
                           setEmail(e.target.value);
                           if (step1Error) setStep1Error(null);
                         }}
-                        placeholder="neve@tama.hu"
+                        placeholder="neve@ceg.hu"
                         className="w-full bg-transparent pl-12 pr-4 py-3.5 text-[15px] text-zinc-900 placeholder:text-zinc-400 font-medium outline-none"
                         autoComplete="email"
                         spellCheck={false}
@@ -339,7 +339,7 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
                 <p className="mt-7 text-center text-[12px] text-zinc-500 leading-relaxed">
                   Még nincs hozzáférésed, vagy elfelejtetted a jelszavad?{" "}
                   <a
-                    href="mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Port%C3%A1l%20-%20Hozz%C3%A1f%C3%A9r%C3%A9s%20k%C3%A9r%C3%A9se"
+                    href="mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Hungary%20Kft.%20Port%C3%A1l%20-%20Hozz%C3%A1f%C3%A9r%C3%A9s%20k%C3%A9r%C3%A9se"
                     className="text-[#5CA700] font-semibold hover:underline"
                   >
                     Ügyfélszolgálat
@@ -517,7 +517,7 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
                     />
                   </motion.div>
 
-                  {/* TAMA side */}
+                  {/* TAMA Hungary Kft. side */}
                   <motion.div 
                     initial={{ x: 20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
@@ -527,7 +527,7 @@ export default function TamaPremiumLogin({ _onSuccess }: Props) {
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#5CA700] to-[#47840B] flex items-center justify-center shadow-xl shadow-[#5CA700]/20 mb-4">
                       <span className="text-white font-black text-xl tracking-tighter">C</span>
                     </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#5CA700] uppercase text-center w-24">TAMA Portál</span>
+                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#5CA700] uppercase text-center w-24">TAMA Hungary Kft. Portál</span>
                   </motion.div>
                 </div>
 

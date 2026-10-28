@@ -98,7 +98,7 @@ function createTerms(
 export const PARTNER_FALLBACK_PRICING: Record<string, Omit<PartnerPricing, "_id" | "createdAt" | "updatedAt">> = {
   catl: {
     partnerKey: "catl",
-    partnerName: "CATL Hungary Kft.",
+    partnerName: "CATL",
     isActive: true,
     vehicles: createVehicles({
       skoda: [60808, 82550],
@@ -110,9 +110,9 @@ export const PARTNER_FALLBACK_PRICING: Record<string, Omit<PartnerPricing, "_id"
     }),
     terms: createTerms(150, 180, 50, 80),
   },
-  ecopro: {
-    partnerKey: "ecopro",
-    partnerName: "EcoPro BM Hungary",
+  ecoproinnovation: {
+    partnerKey: "ecoproinnovation",
+    partnerName: "Ecopro Innovation",
     isActive: true,
     vehicles: createVehicles({
       skoda: [60808, 82550],
@@ -124,35 +124,23 @@ export const PARTNER_FALLBACK_PRICING: Record<string, Omit<PartnerPricing, "_id"
     }),
     terms: createTerms(150, 180, 50, 80),
   },
-  eccoino: {
-    partnerKey: "eccoino",
-    partnerName: "Eccoino",
+  ecoprobm: {
+    partnerKey: "ecoprobm",
+    partnerName: "Ecopro BM",
     isActive: true,
     vehicles: createVehicles({
-      skoda: [55000, 62000],
-      opel_ford: [80000, 90000],
-      v_class: [110000, 125000],
-      s_class: [140000, 160000],
-      man_bus: [160000, 180000],
+      skoda: [60808, 82550],
+      opel_ford: [94107, 95250],
+      v_class: [137541, 154046],
+      s_class: [166497, 186477],
+      man_bus: [173736, 194584],
+      dbDbAirport: { skoda: 18400, opel_ford: 25300, man_bus: 40250 },
     }),
-    terms: createTerms(140, 160, 55, 85),
+    terms: createTerms(150, 180, 50, 80),
   },
-  vitesco: {
-    partnerKey: "vitesco",
-    partnerName: "Vitesco Technologies",
-    isActive: true,
-    vehicles: createVehicles({
-      skoda: [58000, 65000],
-      opel_ford: [85000, 96000],
-      v_class: [115000, 130000],
-      s_class: [145000, 165000],
-      man_bus: [165000, 185000],
-    }),
-    terms: createTerms(135, 165, 50, 75),
-  },
-  schaeffler: {
-    partnerKey: "schaeffler",
-    partnerName: "Schaeffler",
+  schaefflermotion: {
+    partnerKey: "schaefflermotion",
+    partnerName: "Schaeffler Motion",
     isActive: true,
     vehicles: createVehicles({
       skoda: [54000, 60000],
@@ -163,35 +151,35 @@ export const PARTNER_FALLBACK_PRICING: Record<string, Omit<PartnerPricing, "_id"
     }),
     terms: createTerms(140, 160, 50, 80),
   },
-  krones: {
-    partnerKey: "krones",
-    partnerName: "Krones AG",
+  schaefflerdebrecen: {
+    partnerKey: "schaefflerdebrecen",
+    partnerName: "Schaeffler Debrecen",
     isActive: true,
     vehicles: createVehicles({
-      skoda: [56000, 63000],
-      opel_ford: [86000, 97000],
-      v_class: [116000, 131000],
-      s_class: [146000, 166000],
-      man_bus: [166000, 187000],
+      skoda: [54000, 60000],
+      opel_ford: [82000, 92000],
+      v_class: [112000, 127000],
+      s_class: [142000, 162000],
+      man_bus: [162000, 182000],
     }),
-    terms: createTerms(130, 150, 55, 85),
+    terms: createTerms(140, 160, 50, 80),
   },
-  enterair: {
-    partnerKey: "enterair",
-    partnerName: "Enter Air",
+  ibusz: {
+    partnerKey: "ibusz",
+    partnerName: "IBUSZ Hungary Kft.",
     isActive: true,
     vehicles: createVehicles({
-      skoda: [57000, 64000],
-      opel_ford: [84000, 95000],
-      v_class: [114000, 129000],
-      s_class: [144000, 164000],
-      man_bus: [164000, 184000],
+      skoda: [54000, 60000],
+      opel_ford: [82000, 92000],
+      v_class: [112000, 127000],
+      s_class: [142000, 162000],
+      man_bus: [162000, 182000],
     }),
-    terms: createTerms(135, 155, 50, 75),
+    terms: createTerms(140, 160, 50, 80),
   },
   tama: {
     partnerKey: "tama",
-    partnerName: "Tama",
+    partnerName: "TAMA Hungary Kft.",
     isActive: true,
     vehicles: createVehicles({
       skoda: [53000, 59000],

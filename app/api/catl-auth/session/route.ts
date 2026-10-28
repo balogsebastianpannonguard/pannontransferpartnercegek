@@ -14,7 +14,7 @@ export async function GET() {
       user: {
         userId: session.userId,
         email: session.email,
-        company: "CATL Hungary Kft.",
+        company: "CATL",
         role: "partner",
         requireTwoFactor: session.requireTwoFactor,
         twoFactorEnabled: session.twoFactorEnabled,

@@ -84,7 +84,7 @@ export async function POST(request: Request) {
       success: true,
       user: {
         email: user.email,
-        company: "CATL Hungary Kft.",
+        company: "CATL",
         role: "partner",
         requireTwoFactor: !!user.requireTwoFactor,
         twoFactorEnabled: !!user.twoFactorEnabled,

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
         ? `${rawToken.slice(0, 8)}...${rawToken.slice(-4)} (${rawToken.length} chars)`
         : rawToken;
     const hashPreview = await hashToken(rawToken);
-    console.log("\n=== [TAMA validate-invite] REQUEST ===");
+    console.log("\n=== [TAMA Hungary Kft. validate-invite] REQUEST ===");
     console.log("Shared DB:", TAMA_SHARED_DB_NAME);
     console.log("Raw token:", peek);
     console.log("SHA256 hash:", hashPreview);
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         user = maybeUser;
         expiredButActivated = true;
       } else {
-        console.log("[TAMA validate-invite] NINCS TALÁLAT a közös DB-ben -> invalid link.");
+        console.log("[TAMA Hungary Kft. validate-invite] NINCS TALÁLAT a közös DB-ben -> invalid link.");
         console.log("====================================================\n");
         return NextResponse.json(
           { success: false, message: "Érvénytelen vagy lejárt link." },
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       }
     }
 
-    console.log("[TAMA validate-invite] TALÁLAT:", {
+    console.log("[TAMA Hungary Kft. validate-invite] TALÁLAT:", {
       email: user.email,
       isActivated: !!user.isActivated,
       require2FA: !!user.requireTwoFactor,
@@ -65,11 +65,11 @@ export async function POST(request: Request) {
       inviteExpiresAt: user.inviteExpiresAt,
       expiredButActivated,
       hint: expiredButActivated
-        ? "A link lejárt, de a fiókod már aktív. Lépj be a TAMA Portálon keresztül."
+        ? "A link lejárt, de a fiókod már aktív. Lépj be a TAMA Hungary Kft. Portálon keresztül."
         : null,
     });
   } catch (error) {
-    console.error("[TAMA validate-invite] ERROR:", error);
+    console.error("[TAMA Hungary Kft. validate-invite] ERROR:", error);
     return NextResponse.json(
       { success: false, message: error instanceof Error ? error.message : "Hiba" },
       { status: 500 }

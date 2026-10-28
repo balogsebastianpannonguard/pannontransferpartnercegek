@@ -240,7 +240,7 @@ export default function CatlLandingPage() {
         travelerPhone,
         secondTravelerEmail: secondTravelerEmail || undefined,
         secondTravelerPhone: secondTravelerPhone || undefined,
-        companyName: "CATL Hungary Kft.",
+        companyName: "CATL",
         paymentMethod,
         transferType,
         fromType,
@@ -810,7 +810,7 @@ export default function CatlLandingPage() {
                         <Briefcase className="w-4 h-4 text-slate-500" />
                         <input
                           type="text"
-                          defaultValue="CATL Hungary Kft."
+                          defaultValue="CATL"
                           readOnly
                           className="bg-transparent border-none outline-none w-full text-sm font-bold text-white opacity-80 cursor-not-allowed"
                         />

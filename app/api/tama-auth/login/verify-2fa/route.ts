@@ -84,7 +84,7 @@ export async function POST(request: Request) {
       success: true,
       user: {
         email: user.email,
-        company: "Tama",
+        company: "TAMA Hungary Kft.",
         role: "partner",
         requireTwoFactor: !!user.requireTwoFactor,
         twoFactorEnabled: !!user.twoFactorEnabled,

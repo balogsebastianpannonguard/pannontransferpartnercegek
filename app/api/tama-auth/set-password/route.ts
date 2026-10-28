@@ -23,10 +23,10 @@ function buildWelcomeEmail(recipientEmail: string, loginLink: string, twoFactorR
 <tr><td bgcolor="#040914" style="padding:44px 40px; border-bottom:3px solid #5CA700;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:22px;"><tr>
 <td width="64" height="64" align="center" valign="middle" bgcolor="#FFFFFF" style="border-radius:14px;">
-<span style="font-family:-apple-system, sans-serif; font-size:22px; font-weight:900; color:#5CA700;">TAMA</span>
+<span style="font-family:-apple-system, sans-serif; font-size:22px; font-weight:900; color:#5CA700;">TAMA Hungary Kft.</span>
 </td></tr></table>
 <h1 style="margin:0 0 8px 0; font-family:Georgia, serif; color:#FFFFFF; font-size:26px; letter-spacing:.5px;">Üdvözlünk, ${recipientEmail}!</h1>
-<p style="margin:0; font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#60A5FA;">Pannon Transfer Tama Portál</p>
+<p style="margin:0; font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#60A5FA;">Pannon Transfer TAMA Hungary Kft. Portál</p>
 </td></tr>
 <tr><td style="padding:44px 40px;">
 <h2 style="margin:0 0 20px 0; font-family:Georgia, serif; font-size:22px; color:#0F172A;">
@@ -34,7 +34,7 @@ Jelszavad sikeresen beállítva!
 </h2>
 <p style="margin:0 0 10px 0; font-size:15px; line-height:1.7; color:#475569;">
 Kedves Partner!<br><br>
-Köszöntjük a Tama dedikált portálon. A fiókod mostantól aktív.
+Köszöntjük a TAMA Hungary Kft. dedikált portálon. A fiókod mostantól aktív.
 </p>
 <p style="margin:0 0 30px 0; font-size:15px; line-height:1.7; color:#475569;">
 <strong>Kizárólag az alábbi egyedi linken keresztül tudsz belépni</strong> a szolgáltatásokhoz és a dedikált árstruktúrához (publikus bejelentkező oldal NINCS!).
@@ -44,7 +44,7 @@ ${twoFactorRequired ? `<br><br><strong style="color:#0F172A;">2FA / Kétfaktoros
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
 <td align="center" bgcolor="#5CA700" style="border-radius:10px;">
 <a href="${loginLink}" style="display:inline-block; padding:18px 40px; font-size:14px; font-weight:800; color:#FFFFFF; text-decoration:none; letter-spacing:1.5px; text-transform:uppercase; border-radius:10px;">
-Egyedi belépés a Tama Portálra →
+Egyedi belépés a TAMA Hungary Kft. Portálra →
 </a>
 </td></tr></table>
 </td></tr></table>
@@ -55,7 +55,7 @@ Egyedi belépés a Tama Portálra →
 </td>
 <td width="50%" style="padding:20px 0 20px 20px;">
 <p style="margin:0 0 6px 0; font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8;">Hozzáférés típusa</p>
-<p style="margin:0; font-size:14px; font-weight:700; color:#0F172A;">Tama dedikált partner · ${twoFactorRequired ? "2FA kötelező" : "2FA nélkül"}</p>
+<p style="margin:0; font-size:14px; font-weight:700; color:#0F172A;">TAMA Hungary Kft. dedikált partner · ${twoFactorRequired ? "2FA kötelező" : "2FA nélkül"}</p>
 </td>
 </tr></table>
 <p style="margin:0; font-size:13px; line-height:1.6; color:#64748B;">
@@ -64,7 +64,7 @@ Egyedi belépés a Tama Portálra →
 </td></tr>
 <tr><td bgcolor="#F8FAFC" style="padding:30px 40px; border-top:1px solid #E2E8F0;">
 <p style="margin:0; font-size:11px; line-height:1.6; color:#94A3B8; text-align:center;">
-Ezt az üzenetet a Pannon Transfer Tama Portál rendszere küldte.<br>
+Ezt az üzenetet a Pannon Transfer TAMA Hungary Kft. Portál rendszere küldte.<br>
 Kérdés esetén: Vezető fejlesztő - Balog Sebastian Máté (balogh.sebastian@pannonguard.hu, +36 30 665 4135)<br>
 © ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.
 </p>
@@ -72,12 +72,12 @@ Kérdés esetén: Vezető fejlesztő - Balog Sebastian Máté (balogh.sebastian@
 </table></td></tr></table>
 </body></html>`;
   const text = [
-    "Üdvözölünk a Tama Portálon!",
+    "Üdvözölünk a TAMA Hungary Kft. Portálon!",
     "",
     "Jelszavad sikeresen be lett állítva. A fiókod mostantól aktív.",
     twoFactorRequired ? "2FA (kétfaktoros hitelesítés) kötelező a belépéshez." : "2FA nincs bekapcsolva.",
     "",
-    "Kizárólag az alábbi EGYEDI linken keresztül tudsz belépni a Tama Portálra (publikus login nincs):",
+    "Kizárólag az alábbi EGYEDI linken keresztül tudsz belépni a TAMA Hungary Kft. Portálra (publikus login nincs):",
     loginLink,
     "",
     "Belépési fiókod: " + recipientEmail,
@@ -85,7 +85,7 @@ Kérdés esetén: Vezető fejlesztő - Balog Sebastian Máté (balogh.sebastian@
     "A link 30 napig érvényes. Lejárta után kérj új meghívót az ügyvezetődtől.",
     "",
     "Üdvözlettel:",
-    "Pannon Transfer - Tama dedikált portál",
+    "Pannon Transfer - TAMA Hungary Kft. dedikált portál",
     `© ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.`,
   ].join("\n");
   return { html, text };
@@ -161,7 +161,7 @@ export async function POST(request: Request) {
       const magicLink = `${loginBase}/tama/auth?token=${encodeURIComponent(magicRaw)}`;
       const { html, text } = buildWelcomeEmail(res.user.email, magicLink, require2FA);
 
-      console.log("\n=========== TAMA WELCOME EMAIL (TEST MODE) ===========");
+      console.log("\n=========== TAMA Hungary Kft. WELCOME EMAIL (TEST MODE) ===========");
       console.log("Címzett:", res.user.email);
       console.log("2FA kötelező:", require2FA);
       console.log("Egyedi belépési link (magic):", magicLink);
@@ -170,8 +170,8 @@ export async function POST(request: Request) {
       const emailRes = await sendEmail({
         to: res.user.email,
         subject: require2FA
-          ? "Tama Portál – Jelszó beállítva · 2FA kötelező · Egyedi belépési link"
-          : "Tama Portál – Üdvözlünk! Jelszó beállítva · Egyedi belépési link",
+          ? "TAMA Hungary Kft. Portál – Jelszó beállítva · 2FA kötelező · Egyedi belépési link"
+          : "TAMA Hungary Kft. Portál – Üdvözlünk! Jelszó beállítva · Egyedi belépési link",
         html,
         text,
       });
@@ -180,7 +180,7 @@ export async function POST(request: Request) {
         await markTamaWelcomeEmailSent(userId);
       }
     } catch (err) {
-      console.warn("[TAMA welcome email] Nem küldhető el:", err);
+      console.warn("[TAMA Hungary Kft. welcome email] Nem küldhető el:", err);
     }
 
     // ⚠ FONTOS: NEM KAPUNK SESSION COOKIE-T a setup-password végén (történelmi beépítés ellen).

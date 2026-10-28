@@ -122,7 +122,7 @@ export default function TamaAuthPage() {
               <span className="text-white font-black text-sm tracking-tighter">C</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-zinc-900 leading-none">TAMA Portál</span>
+              <span className="text-[15px] font-bold text-zinc-900 leading-none">TAMA Hungary Kft. Portál</span>
               <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">Pannon Transfer · Egyedi bejelentkezés</span>
             </div>
           </div>
@@ -192,7 +192,7 @@ export default function TamaAuthPage() {
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <a
-                    href="mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Port%C3%A1l%20-%20%C3%9Aj%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
+                    href="mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Hungary%20Kft.%20Port%C3%A1l%20-%20%C3%9Aj%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
                     className="flex-1 h-12 rounded-xl bg-white hover:bg-zinc-50 text-zinc-900 text-[14px] font-semibold border border-zinc-200 transition-colors inline-flex items-center justify-center gap-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
                   >
                     <Mail className="w-4 h-4" />
@@ -228,7 +228,7 @@ export default function TamaAuthPage() {
                     <div className="w-16 h-16 rounded-2xl bg-zinc-900 flex items-center justify-center shadow-lg mb-4">
                       <span className="text-white font-black text-xl tracking-tighter">PT</span>
                     </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase text-center w-24">Pannon Transfer</span>
+                    <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase text-center w-32">Pannon Transfer</span>
                   </motion.div>
 
                   {/* Arrow Transition */}
@@ -247,7 +247,7 @@ export default function TamaAuthPage() {
                     />
                   </motion.div>
 
-                  {/* TAMA side */}
+                  {/* TAMA Hungary Kft. side */}
                   <motion.div 
                     initial={{ x: 20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
@@ -257,7 +257,7 @@ export default function TamaAuthPage() {
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#5CA700] to-[#47840B] flex items-center justify-center shadow-xl shadow-[#5CA700]/20 mb-4">
                       <span className="text-white font-black text-xl tracking-tighter">C</span>
                     </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#5CA700] uppercase text-center w-24">TAMA Portál</span>
+                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#5CA700] uppercase text-center w-32">TAMA Hungary Kft. Portál</span>
                   </motion.div>
                 </div>
 
@@ -403,7 +403,7 @@ export default function TamaAuthPage() {
       <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
           <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
-          <span className="tracking-wider">TAMA Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
+          <span className="tracking-wider">TAMA Hungary Kft. Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
         </div>
       </div>
     </div>

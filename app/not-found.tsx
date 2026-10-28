@@ -5,7 +5,7 @@ import { AlertTriangle, Phone, Mail, ShieldOff } from "lucide-react";
 // and for any unmatched path in this app. Intentionally does NOT reveal
 // the partner portal selector, so nobody who lands here by accident can
 // see which companies use this system. All individual partner routes
-// (/catl, /ni, /schaeffler, ...) keep working exactly as before.
+// (/catl, /ni, /tama, ...) keep working exactly as before.
 export const metadata: Metadata = {
   title: "Pannon Transfer Komplexx - Partnerceg",
   description: "Az oldal nem található.",

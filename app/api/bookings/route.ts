@@ -31,21 +31,20 @@ interface StaffEmailRecord {
 }
 
 const DEFAULT_COMPANY_BY_PORTAL: Record<PartnerPortal, string> = {
-  catl: "CATL Hungary Kft.",
-  ecopro: "EcoPro BM Hungary",
-  eccoino: "Eccoino",
-  vitesco: "Vitesco Technologies",
-  schaeffler: "Schaeffler",
-  krones: "Krones AG",
-  enterair: "Enter Air",
-  tama: "Tama",
+  catl: "CATL",
+  ecoproinnovation: "Ecopro Innovation",
+  ecoprobm: "Ecopro BM",
+  schaefflermotion: "Schaeffler Motion",
+  schaefflerdebrecen: "Schaeffler Debrecen",
+  tama: "TAMA Hungary Kft.",
+  ibusz: "IBUSZ Hungary Kft.",
   ni: "National Instruments",
 };
 
 function getRequestedPortal(request: Request): PartnerPortal | null {
   const portal = request.headers.get("x-partner-portal");
   return portal &&
-    ["catl", "ecopro", "eccoino", "vitesco", "schaeffler", "krones", "enterair", "tama", "ni"].includes(portal)
+    ["catl", "ecoproinnovation", "ecoprobm", "schaefflermotion", "schaefflerdebrecen", "tama", "ibusz", "ni"].includes(portal)
     ? (portal as PartnerPortal)
     : null;
 }

@@ -92,7 +92,7 @@ export default function TamaSetupPasswordPage() {
           setAlreadyActivated(!!json.alreadyActivated);
           if (json.alreadyActivated) {
             setError(
-              "Ez a fiók már aktiválva lett. Továbblépéshez használd a TAMA Portálra küldött egyedi bejelentkezési linket, vagy lépj kapcsolatba az ügyvezetővel új meghívóért."
+              "Ez a fiók már aktiválva lett. Továbblépéshez használd a TAMA Hungary Kft. Portálra küldött egyedi bejelentkezési linket, vagy lépj kapcsolatba az ügyvezetővel új meghívóért."
             );
           }
           setState("form");
@@ -121,7 +121,7 @@ export default function TamaSetupPasswordPage() {
     setError(null);
     if (alreadyActivated) {
       window.location.href =
-        "mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Port%C3%A1l%20-%20%C3%9Aj%20egyedi%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se&body=K%C3%A9rek%20egy%20%C3%BAj%20egyedi%20bel%C3%A9p%C3%A9si%20linket%20a%20TAMA%20Port%C3%A1lhoz%20ezen%20c%C3%ADmen:%20" +
+        "mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Hungary%20Kft.%20Port%C3%A1l%20-%20%C3%9Aj%20egyedi%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se&body=K%C3%A9rek%20egy%20%C3%BAj%20egyedi%20bel%C3%A9p%C3%A9si%20linket%20a%20TAMA%20Hungary%20Kft.%20Port%C3%A1lhoz%20ezen%20c%C3%ADmen:%20" +
         encodeURIComponent(email || "");
       return;
     }
@@ -215,7 +215,7 @@ export default function TamaSetupPasswordPage() {
   const downloadBackupCodes = () => {
     if (!tfaBackupCodes) return;
     const content =
-      "TAMA Portál – Kétfaktoros hitelesítés – Biztonsági kódok\n\n" +
+      "TAMA Hungary Kft. Portál – Kétfaktoros hitelesítés – Biztonsági kódok\n\n" +
       `Fiók: ${email || "N/A"}\n` +
       `Dátum: ${new Date().toLocaleString("hu-HU")}\n\n` +
       "Használj egyet-egyet, ha az Authenticator alkalmazásodhoz nincs hozzáférés.\n" +
@@ -224,7 +224,7 @@ export default function TamaSetupPasswordPage() {
       tfaBackupCodes.map((c, i) => `${String(i + 1).padStart(2, "0")}.  ${c}`).join("\n") +
       "\n-------------------------\n\n" +
       "Kérjük, tárold ezeket a kódokat biztonságos helyen.\n" +
-      "© Pannon Transfer Kft. – TAMA Dedikált Ügyfélportál";
+      "© Pannon Transfer Kft. – TAMA Hungary Kft. Dedikált Ügyfélportál";
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -260,7 +260,7 @@ export default function TamaSetupPasswordPage() {
             </div>
             <div className="flex flex-col">
               <span className="text-[15px] font-bold text-zinc-900 leading-none">
-                TAMA Portál
+                TAMA Hungary Kft. Portál
               </span>
               <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">
                 Pannon Transfer · Jelszó beállítása
@@ -354,7 +354,7 @@ export default function TamaSetupPasswordPage() {
                       : "Kérjük, állíts be egy erős jelszót, amelyet csak te ismeresz. " +
                         (require2FA
                           ? "A fiókodhoz további biztonsági lépésként KÉTFACTOROS hitelesítés is be lesz kapcsolva a következő lépésben."
-                          : "Ezzel véglegesíted a TAMA Portál hozzáférést.")}
+                          : "Ezzel véglegesíted a TAMA Hungary Kft. Portál hozzáférést.")}
                   </p>
                 </div>
 
@@ -505,7 +505,7 @@ export default function TamaSetupPasswordPage() {
                         Vedd fel a kapcsolatot az ügyfélszolgálattal az egyedi belépési link
                         újraküldéséhez:{" "}
                         <a
-                          href="mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Port%C3%A1l%20-%20%C3%9Aj%20egyedi%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
+                          href="mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Hungary%20Kft.%20Port%C3%A1l%20-%20%C3%9Aj%20egyedi%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
                           className="font-semibold text-[#5CA700] hover:underline"
                         >
                           balog.sebastian@pannonguard.hu
@@ -742,7 +742,7 @@ export default function TamaSetupPasswordPage() {
                   Hozzáférés beállítva ✔
                 </h1>
                 <p className="text-[15px] text-zinc-500 leading-relaxed max-w-md mb-8">
-                  Köszönjük! A TAMA Portál fiókod már be van állítva.{" "}
+                  Köszönjük! A TAMA Hungary Kft. Portál fiókod már be van állítva.{" "}
                   <strong className="font-semibold text-zinc-800">
                     Hamarosan kapsz egy emailt a(z) {email || "megadott"} címre, amely tartalmazza az egyedi,
                     személyre szabott belépési linket.
@@ -781,7 +781,7 @@ export default function TamaSetupPasswordPage() {
                       Kérés esetén vedd fel a kapcsolatot az ügyfélszolgálattal:{" "}
                       <a
                         href={
-                          "mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Port%C3%A1l%20-%20Welcome%20email%20nem%20%C3%A9rkezett%20meg&body=K%C3%A9rek%20egy%20%C3%BAj%20egyedi%20bel%C3%A9p%C3%A9si%20linket%20a%20TAMA%20Port%C3%A1lhoz%20ezen%20c%C3%ADmen:%20" +
+                          "mailto:balog.sebastian@pannonguard.hu?subject=TAMA%20Hungary%20Kft.%20Port%C3%A1l%20-%20Welcome%20email%20nem%20%C3%A9rkezett%20meg&body=K%C3%A9rek%20egy%20%C3%BAj%20egyedi%20bel%C3%A9p%C3%A9si%20linket%20a%20TAMA%20Hungary%20Kft.%20Port%C3%A1lhoz%20ezen%20c%C3%ADmen:%20" +
                           encodeURIComponent(email)
                         }
                         className="font-semibold text-[#5CA700] hover:underline"
@@ -800,7 +800,7 @@ export default function TamaSetupPasswordPage() {
       <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
           <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
-          <span className="tracking-wider">TAMA Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
+          <span className="tracking-wider">TAMA Hungary Kft. Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
         </div>
       </div>
     </div>

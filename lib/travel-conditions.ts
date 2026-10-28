@@ -18,35 +18,25 @@ export const DEFAULT_TRAVEL_CONDITIONS = {
 
 const PARTNER_TRAVEL_CONDITIONS = {
   catl: DEFAULT_TRAVEL_CONDITIONS,
-  ecopro: {
+  ecoproinnovation: {
     ...DEFAULT_TRAVEL_CONDITIONS,
     minAdvanceHours: 3,
   },
-  eccoino: {
+  ecoprobm: {
     ...DEFAULT_TRAVEL_CONDITIONS,
-    minAdvanceHours: 6,
-    maxAdvanceDays: 240,
+    minAdvanceHours: 3,
   },
-  vitesco: {
+  schaefflermotion: {
     ...DEFAULT_TRAVEL_CONDITIONS,
     minAdvanceHours: 4,
   },
-  schaeffler: {
+  schaefflerdebrecen: {
     ...DEFAULT_TRAVEL_CONDITIONS,
     minAdvanceHours: 4,
   },
-  krones: {
+  ibusz: {
     ...DEFAULT_TRAVEL_CONDITIONS,
-    minAdvanceHours: 5,
-    operatingHoursCity: {
-      start: "04:30",
-      end: "22:30",
-    },
-  },
-  enterair: {
-    ...DEFAULT_TRAVEL_CONDITIONS,
-    minAdvanceHours: 6,
-    maxAdvanceDays: 240,
+    minAdvanceHours: 4,
   },
   tama: {
     ...DEFAULT_TRAVEL_CONDITIONS,

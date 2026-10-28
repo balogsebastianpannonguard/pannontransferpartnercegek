@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 function getRequestedPortal(request: Request): PartnerPortal | null {
   const portal = request.headers.get("x-partner-portal");
   return portal &&
-    ["catl", "ecopro", "eccoino", "vitesco", "schaeffler", "krones", "enterair", "tama", "ni"].includes(portal)
+    ["catl", "ecoproinnovation", "ecoprobm", "schaefflermotion", "schaefflerdebrecen", "tama", "ibusz", "ni"].includes(portal)
     ? (portal as PartnerPortal)
     : null;
 }

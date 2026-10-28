@@ -1,22 +1,20 @@
 import { getCurrentCatlSession } from "./catl-auth";
-import { getCurrentEcoproSession } from "./ecopro-auth";
-import { getCurrentEccoinoSession } from "./eccoino-auth";
-import { getCurrentVitescoSession } from "./vitesco-auth";
-import { getCurrentSchaefflerSession } from "./schaeffler-auth";
-import { getCurrentKronesSession } from "./krones-auth";
-import { getCurrentEnterairSession } from "./enterair-auth";
+import { getCurrentEcoproInnovationSession } from "./ecoproinnovation-auth";
+import { getCurrentEcoproBmSession } from "./ecoprobm-auth";
+import { getCurrentSchaefflerMotionSession } from "./schaefflermotion-auth";
+import { getCurrentSchaefflerDebrecenSession } from "./schaefflerdebrecen-auth";
 import { getCurrentTamaSession } from "./tama-auth";
+import { getCurrentIbuszSession } from "./ibusz-auth";
 import { getCurrentNiSession } from "./ni-auth";
 
 export type PartnerPortal =
   | "catl"
-  | "ecopro"
-  | "eccoino"
-  | "vitesco"
-  | "schaeffler"
-  | "krones"
-  | "enterair"
+  | "ecoproinnovation"
+  | "ecoprobm"
+  | "schaefflermotion"
+  | "schaefflerdebrecen"
   | "tama"
+  | "ibusz"
   | "ni";
 
 export interface PartnerSession {
@@ -46,81 +44,55 @@ export async function getCurrentPartnerSessionForPortal(
     };
   }
 
-  if (portal === "ecopro") {
-    const ecopro = await getCurrentEcoproSession();
-    if (!ecopro) return null;
+  if (portal === "ecoproinnovation") {
+    const ecoproinnovation = await getCurrentEcoproInnovationSession();
+    if (!ecoproinnovation) return null;
     return {
-      portal: "ecopro",
-      userId: ecopro.userId,
-      email: ecopro.email,
-      requireTwoFactor: ecopro.requireTwoFactor,
-      twoFactorEnabled: ecopro.twoFactorEnabled,
-      loginAt: ecopro.loginAt,
+      portal: "ecoproinnovation",
+      userId: ecoproinnovation.userId,
+      email: ecoproinnovation.email,
+      requireTwoFactor: ecoproinnovation.requireTwoFactor,
+      twoFactorEnabled: ecoproinnovation.twoFactorEnabled,
+      loginAt: ecoproinnovation.loginAt,
     };
   }
 
-  if (portal === "eccoino") {
-    const eccoino = await getCurrentEccoinoSession();
-    if (!eccoino) return null;
+  if (portal === "ecoprobm") {
+    const ecoprobm = await getCurrentEcoproBmSession();
+    if (!ecoprobm) return null;
     return {
-      portal: "eccoino",
-      userId: eccoino.userId,
-      email: eccoino.email,
-      requireTwoFactor: eccoino.requireTwoFactor,
-      twoFactorEnabled: eccoino.twoFactorEnabled,
-      loginAt: eccoino.loginAt,
+      portal: "ecoprobm",
+      userId: ecoprobm.userId,
+      email: ecoprobm.email,
+      requireTwoFactor: ecoprobm.requireTwoFactor,
+      twoFactorEnabled: ecoprobm.twoFactorEnabled,
+      loginAt: ecoprobm.loginAt,
     };
   }
 
-  if (portal === "vitesco") {
-    const vitesco = await getCurrentVitescoSession();
-    if (!vitesco) return null;
+  if (portal === "schaefflermotion") {
+    const schaefflermotion = await getCurrentSchaefflerMotionSession();
+    if (!schaefflermotion) return null;
     return {
-      portal: "vitesco",
-      userId: vitesco.userId,
-      email: vitesco.email,
-      requireTwoFactor: vitesco.requireTwoFactor,
-      twoFactorEnabled: vitesco.twoFactorEnabled,
-      loginAt: vitesco.loginAt,
+      portal: "schaefflermotion",
+      userId: schaefflermotion.userId,
+      email: schaefflermotion.email,
+      requireTwoFactor: schaefflermotion.requireTwoFactor,
+      twoFactorEnabled: schaefflermotion.twoFactorEnabled,
+      loginAt: schaefflermotion.loginAt,
     };
   }
 
-  if (portal === "schaeffler") {
-    const schaeffler = await getCurrentSchaefflerSession();
-    if (!schaeffler) return null;
+  if (portal === "schaefflerdebrecen") {
+    const schaefflerdebrecen = await getCurrentSchaefflerDebrecenSession();
+    if (!schaefflerdebrecen) return null;
     return {
-      portal: "schaeffler",
-      userId: schaeffler.userId,
-      email: schaeffler.email,
-      requireTwoFactor: schaeffler.requireTwoFactor,
-      twoFactorEnabled: schaeffler.twoFactorEnabled,
-      loginAt: schaeffler.loginAt,
-    };
-  }
-
-  if (portal === "krones") {
-    const krones = await getCurrentKronesSession();
-    if (!krones) return null;
-    return {
-      portal: "krones",
-      userId: krones.userId,
-      email: krones.email,
-      requireTwoFactor: krones.requireTwoFactor,
-      twoFactorEnabled: krones.twoFactorEnabled,
-      loginAt: krones.loginAt,
-    };
-  }
-
-  if (portal === "enterair") {
-    const enterair = await getCurrentEnterairSession();
-    if (!enterair) return null;
-    return {
-      portal: "enterair",
-      userId: enterair.userId,
-      email: enterair.email,
-      requireTwoFactor: enterair.requireTwoFactor,
-      twoFactorEnabled: enterair.twoFactorEnabled,
-      loginAt: enterair.loginAt,
+      portal: "schaefflerdebrecen",
+      userId: schaefflerdebrecen.userId,
+      email: schaefflerdebrecen.email,
+      requireTwoFactor: schaefflerdebrecen.requireTwoFactor,
+      twoFactorEnabled: schaefflerdebrecen.twoFactorEnabled,
+      loginAt: schaefflerdebrecen.loginAt,
     };
   }
 
@@ -134,6 +106,19 @@ export async function getCurrentPartnerSessionForPortal(
       requireTwoFactor: tama.requireTwoFactor,
       twoFactorEnabled: tama.twoFactorEnabled,
       loginAt: tama.loginAt,
+    };
+  }
+
+  if (portal === "ibusz") {
+    const ibusz = await getCurrentIbuszSession();
+    if (!ibusz) return null;
+    return {
+      portal: "ibusz",
+      userId: ibusz.userId,
+      email: ibusz.email,
+      requireTwoFactor: ibusz.requireTwoFactor,
+      twoFactorEnabled: ibusz.twoFactorEnabled,
+      loginAt: ibusz.loginAt,
     };
   }
 
@@ -154,13 +139,12 @@ export async function getCurrentPartnerSessionForPortal(
 export async function getCurrentPartnerSession(): Promise<PartnerSession | null> {
   return (
     (await getCurrentPartnerSessionForPortal("catl")) ||
-    (await getCurrentPartnerSessionForPortal("ecopro")) ||
-    (await getCurrentPartnerSessionForPortal("eccoino")) ||
-    (await getCurrentPartnerSessionForPortal("vitesco")) ||
-    (await getCurrentPartnerSessionForPortal("schaeffler")) ||
-    (await getCurrentPartnerSessionForPortal("krones")) ||
-    (await getCurrentPartnerSessionForPortal("enterair")) ||
+    (await getCurrentPartnerSessionForPortal("ecoproinnovation")) ||
+    (await getCurrentPartnerSessionForPortal("ecoprobm")) ||
+    (await getCurrentPartnerSessionForPortal("schaefflermotion")) ||
+    (await getCurrentPartnerSessionForPortal("schaefflerdebrecen")) ||
     (await getCurrentPartnerSessionForPortal("tama")) ||
+    (await getCurrentPartnerSessionForPortal("ibusz")) ||
     (await getCurrentPartnerSessionForPortal("ni"))
   );
 }
