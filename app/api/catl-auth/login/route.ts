@@ -11,13 +11,13 @@ export async function POST(request: Request) {
     const result = await authenticateCatlByPassword(String(email || ""), String(password || ""));
     if (!result.success || !result.user) {
       return NextResponse.json(
-        { success: false, message: result.message || "Hibás hitelesítő adatok." },
+        { success: false, message: result.message || "Incorrect credentials." },
         { status: 401 }
       );
     }
     if (result.user.requireTwoFactor && !result.user.twoFactorEnabled) {
       return NextResponse.json(
-        { success: false, message: "Ez a fiók igényel kétfaktoros hitelesítést, amely még nincs aktiválva. Kérjük először állítsd be a 2FA-t a meghívó e-mailben kapott linken." },
+        { success: false, message: "This account requires two-factor authentication, which has not been activated yet. Please complete the 2FA setup using the link in your invitation email." },
         { status: 403 }
       );
     }

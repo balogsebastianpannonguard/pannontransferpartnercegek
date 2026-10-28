@@ -61,7 +61,7 @@ export default function CatlAuthPage() {
         const json = await res.json().catch(() => null);
         if (!res.ok || !json?.success) {
           setState("invalid");
-          setError(json?.message || "Érvénytelen vagy lejárt link.");
+          setError(json?.message || "This link is invalid or has expired.");
         } else if (json.needTwoFactor) {
           setEmail(json.email || "");
           setState("twofactor");
@@ -72,7 +72,7 @@ export default function CatlAuthPage() {
       } catch {
         if (!cancelled) {
           setState("invalid");
-          setError("Hálózati hiba történt.");
+          setError("Network error. Please try again.");
         }
       }
     })();
@@ -85,7 +85,7 @@ export default function CatlAuthPage() {
     e.preventDefault();
     setError(null);
     if (code.replace(/\s+/g, "").length < 4) {
-      setError(useBackup ? "A biztonsági kód túl rövid." : "Az Authenticator kód 6 számjegyből áll.");
+      setError(useBackup ? "The backup code is too short." : "The authenticator code consists of 6 digits.");
       return;
     }
     setSubmitting(true);
@@ -101,37 +101,35 @@ export default function CatlAuthPage() {
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        setError(json?.message || "Helytelen kód.");
+        setError(json?.message || "Incorrect code.");
       } else {
         setState("done");
         setTimeout(() => router.push("/catl"), 2500);
       }
     } catch {
-      setError("Hálózati hiba történt.");
+      setError("Network error. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
+  /* eslint-disable @next/next/no-img-element */
   return (
     <div className="relative min-h-screen bg-[#FAFBFC] text-zinc-900 flex flex-col">
       <div className="w-full border-b border-zinc-200/70 bg-white/60 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0047BA] to-[#0066E0] flex items-center justify-center shadow-sm">
-              <span className="text-white font-black text-sm tracking-tighter">C</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-zinc-900 leading-none">CATL Portál</span>
-              <span className="text-[11px] text-zinc-500 mt-0.5 tracking-wide">Pannon Transfer · Egyedi bejelentkezés</span>
-            </div>
+            <img src="/brand/pannon-transfer-logo.png" alt="Pannon Transfer" width={387} height={79} className="h-7 w-auto" />
+            <span className="hidden sm:block h-7 w-px bg-zinc-200" />
+            <img src="/partners/catl/logo.png" alt="CATL" width={139} height={45} className="h-[26px] w-auto" />
+            <span className="hidden md:block text-[11px] text-zinc-500 tracking-wide ml-1">Pannon Transfer · Personal sign-in</span>
           </div>
           <a
             href="/"
             className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Vissza a főoldalra
+            Back to home
           </a>
         </div>
       </div>
@@ -150,7 +148,7 @@ export default function CatlAuthPage() {
               >
                 <Loader2 className="w-8 h-8 text-[#0047BA] animate-spin" />
                 <p className="text-sm text-zinc-500 font-medium">
-                  {state === "redirecting" ? "Átirányítás..." : "Belépési link ellenőrzése..."}
+                  {state === "redirecting" ? "Redirecting…" : "Verifying your sign-in link…"}
                 </p>
               </motion.div>
             ) : null}
@@ -169,40 +167,40 @@ export default function CatlAuthPage() {
                     <AlertTriangle className="w-7 h-7 text-red-500" />
                   </div>
                   <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Hozzáférés megtagadva
+                    Access denied
                   </h1>
                   <p className="text-[15px] text-zinc-500 leading-relaxed max-w-sm mx-auto">
                     {error ||
-                      "Ez az egyedi link nem létezik, lejárt, vagy már felhasználták. Kérjük, használd a legújabb emailben küldött linket, vagy kérj új meghívót."}
+                      "This personal link does not exist, has expired, or has already been used. Please use the link from your most recent email, or request a new invitation."}
                   </p>
                 </div>
 
                 <div className="bg-white border border-zinc-200 rounded-2xl p-5 mb-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                   <div className="text-[12px] font-bold uppercase tracking-[0.16em] text-zinc-500 mb-2.5">
-                    Új meghívó igénylése
+                    Request a new invitation
                   </div>
                   <a
-                    href="mailto:balog.sebastian@pannonguard.hu"
+                    href="mailto:balogh.sebastian@pannonguard.hu"
                     className="inline-flex items-center gap-2 text-[15px] font-semibold text-[#0047BA] hover:text-[#003A99] transition-colors"
                   >
                     <Mail className="w-4 h-4" />
-                    balog.sebastian@pannonguard.hu
+                    balogh.sebastian@pannonguard.hu
                   </a>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <a
-                    href="mailto:balog.sebastian@pannonguard.hu?subject=CATL%20Port%C3%A1l%20-%20%C3%9Aj%20bel%C3%A9p%C3%A9si%20link%20k%C3%A9r%C3%A9se"
+                    href="mailto:balogh.sebastian@pannonguard.hu?subject=CATL%20Portal%20-%20New%20sign-in%20link"
                     className="flex-1 h-12 rounded-xl bg-white hover:bg-zinc-50 text-zinc-900 text-[14px] font-semibold border border-zinc-200 transition-colors inline-flex items-center justify-center gap-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
                   >
                     <Mail className="w-4 h-4" />
-                    Új belépési link kérése
+                    Request a new sign-in link
                   </a>
                   <a
                     href="/"
                     className="flex-1 h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-[14px] font-semibold transition-colors inline-flex items-center justify-center gap-2"
                   >
-                    Vissza a főoldalra
+                    Back to home
                   </a>
                 </div>
               </motion.div>
@@ -257,7 +255,7 @@ export default function CatlAuthPage() {
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0047BA] to-[#0066E0] flex items-center justify-center shadow-xl shadow-[#0047BA]/20 mb-4">
                       <span className="text-white font-black text-xl tracking-tighter">C</span>
                     </div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#0047BA] uppercase text-center w-24">CATL Portál</span>
+                    <span className="text-[10px] font-bold tracking-[0.2em] text-[#0047BA] uppercase text-center w-24">CATL Portal</span>
                   </motion.div>
                 </div>
 
@@ -270,13 +268,13 @@ export default function CatlAuthPage() {
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                     <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">
-                      Sikeres hitelesítés
+                      Authentication successful
                     </h1>
                   </div>
                   <div className="flex items-center gap-2.5 px-4 py-2 bg-zinc-100 rounded-full">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0047BA]" />
                     <p className="text-[13px] text-zinc-600 font-medium">
-                      Biztonságos kapcsolat felépítése...
+                      Establishing a secure connection…
                     </p>
                   </div>
                 </motion.div>
@@ -298,12 +296,12 @@ export default function CatlAuthPage() {
                     <ShieldCheck className="w-7 h-7 text-[#0047BA]" />
                   </div>
                   <h1 className="text-[26px] font-bold text-zinc-900 tracking-tight mb-2">
-                    Kétfaktoros hitelesítés
+                    Two-factor authentication
                   </h1>
                   <p className="text-[15px] text-zinc-500 leading-relaxed">
-                    A fiókodhoz 2FA kötelező. Írd be az Authenticator alkalmazásod által generált
-                    <strong className="font-semibold text-zinc-800"> 6 számjegyű kódot</strong>
-                    , vagy használd a biztonsági mentett kódot.
+                    2FA is required for your account. Enter the
+                    <strong className="font-semibold text-zinc-800"> 6-digit code</strong>
+                    {" "}generated by your authenticator app, or use a backup code.
                   </p>
                 </div>
 
@@ -313,10 +311,10 @@ export default function CatlAuthPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 mb-0.5">
-                      Belépő fiók
+                      Signing in as
                     </div>
                     <div className="text-[15px] font-semibold text-zinc-900 truncate">
-                      {email || "Betöltés..."}
+                      {email || "Loading…"}
                     </div>
                   </div>
                   <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#0047BA]/[0.07] border border-[#0047BA]/10 text-[#0047BA] text-[11px] font-bold tracking-wide">
@@ -326,7 +324,7 @@ export default function CatlAuthPage() {
 
                 <div className="mb-4">
                   <label className="block text-[13px] font-semibold text-zinc-800 mb-2 pl-0.5">
-                    {useBackup ? "Biztonsági kód (Backup code)" : "Authenticator kód (6 szám)"}
+                    {useBackup ? "Backup code" : "Authenticator code (6 digits)"}
                   </label>
                   <input
                     type="text"
@@ -356,7 +354,7 @@ export default function CatlAuthPage() {
                     className="w-4 h-4 rounded border-zinc-300 text-[#0047BA] focus:ring-[#0047BA]/30"
                   />
                   <label htmlFor="2fa-backup" className="text-[13px] font-medium text-zinc-600">
-                    Biztonsági kód használata (ha nincs hozzáférés az Authenticator apphoz)
+                    Use a backup code (if you cannot access your authenticator app)
                   </label>
                 </div>
 
@@ -385,11 +383,11 @@ export default function CatlAuthPage() {
                   {submitting ? (
                     <>
                       <Loader2 className="w-4.5 h-4.5 animate-spin" />
-                      Feldolgozás...
+                      Processing…
                     </>
                   ) : (
                     <>
-                      Ellenőrzés &amp; Belépés
+                      Verify &amp; sign in
                       <ArrowRight className="w-4.5 h-4.5" />
                     </>
                   )}
@@ -402,8 +400,8 @@ export default function CatlAuthPage() {
 
       <div className="w-full border-t border-zinc-200/70 bg-white/60 backdrop-blur-md mt-auto">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-          <span>© {new Date().getFullYear()} Pannon Transfer · Minden jog fenntartva.</span>
-          <span className="tracking-wider">CATL Dedikált Ügyfélportál · Kizárólagos linkalapú hozzáférés</span>
+          <span>© {new Date().getFullYear()} Pannon Transfer. All rights reserved.</span>
+          <span className="tracking-wider">CATL Dedicated Client Portal · Personal link access only</span>
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const rawToken = String(body?.token || "").trim();
     if (!rawToken) {
       return NextResponse.json(
-        { success: false, message: "Hiányzó token." },
+        { success: false, message: "Missing token." },
         { status: 400 }
       );
     }
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
         console.log("[CATL validate-invite] NINCS TALÁLAT a közös DB-ben -> invalid link.");
         console.log("====================================================\n");
         return NextResponse.json(
-          { success: false, message: "Érvénytelen vagy lejárt link." },
+          { success: false, message: "This link is invalid or has expired." },
           { status: 404 }
         );
       }

@@ -9,84 +9,63 @@ import {
   TWO_FACTOR_ISSUER,
 } from "@/lib/catl-portal-users";
 import { ObjectId } from "mongodb";
+import { catlEmailShell, catlEmailButton, catlEmailInfoRow, CATL_CONTACT } from "@/lib/catl-email-layout";
 
 export const dynamic = "force-dynamic";
 
-function buildWelcomeEmail(recipientEmail: string, loginLink: string, twoFactorRequired: boolean) {
-  const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8" /></head>
-<body style="margin:0; padding:0; background:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#F3F4F6"><tr><td align="center" style="padding:40px 15px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:580px; background:#FFFFFF; border-radius:12px; overflow:hidden;">
-<tr><td bgcolor="#040914" style="padding:44px 40px; border-bottom:3px solid #0047BA;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:22px;"><tr>
-<td width="64" height="64" align="center" valign="middle" bgcolor="#FFFFFF" style="border-radius:14px;">
-<span style="font-family:-apple-system, sans-serif; font-size:22px; font-weight:900; color:#0047BA;">CATL</span>
-</td></tr></table>
-<h1 style="margin:0 0 8px 0; font-family:Georgia, serif; color:#FFFFFF; font-size:26px; letter-spacing:.5px;">Üdvözlünk, ${recipientEmail}!</h1>
-<p style="margin:0; font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#60A5FA;">Pannon Transfer CATL Portál</p>
-</td></tr>
-<tr><td style="padding:44px 40px;">
-<h2 style="margin:0 0 20px 0; font-family:Georgia, serif; font-size:22px; color:#0F172A;">
-Jelszavad sikeresen beállítva!
-</h2>
-<p style="margin:0 0 10px 0; font-size:15px; line-height:1.7; color:#475569;">
-Kedves Partner!<br><br>
-Köszöntjük a CATL Dedikált Portálon. A fiókod mostantól aktív.
+function buildWelcomeEmail(recipientEmail: string, loginLink: string, twoFactorRequired: boolean, origin: string) {
+  const year = new Date().getFullYear();
+  const bodyHtml = `
+<p style="margin:0 0 16px 0; font-size:16px; font-weight:600; color:#0F172A;">Dear Partner,</p>
+<p style="margin:0 0 14px 0; font-size:15px; line-height:1.7; color:#334155;">
+Your password has been set and your account on the dedicated CATL portal is now active. Welcome aboard.
 </p>
-<p style="margin:0 0 30px 0; font-size:15px; line-height:1.7; color:#475569;">
-<strong>Kizárólag az alábbi egyedi linken keresztül tudsz belépni</strong> a szolgáltatásokhoz és a dedikált árstruktúrához (publikus bejelentkező oldal NINCS!).
-${twoFactorRequired ? `<br><br><strong style="color:#0F172A;">2FA / Kétfaktoros hitelesítés kötelező:</strong> A linkre kattintva az első bejelentkezés során a beállított Authenticator app által generált 6 számjegyű kódot is meg kell adnod.` : ""}
+<p style="margin:0 0 28px 0; font-size:15px; line-height:1.7; color:#334155;">
+Access is available <strong>exclusively through your personal sign-in link</strong> below &mdash; there is no public login page.${
+    twoFactorRequired
+      ? " Because two-factor authentication is mandatory for your account, you will also be asked for the 6-digit code from your authenticator app when you sign in."
+      : ""
+  }
 </p>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:30px;"><tr><td align="center">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td align="center" bgcolor="#0047BA" style="border-radius:10px;">
-<a href="${loginLink}" style="display:inline-block; padding:18px 40px; font-size:14px; font-weight:800; color:#FFFFFF; text-decoration:none; letter-spacing:1.5px; text-transform:uppercase; border-radius:10px;">
-Egyedi belépés a CATL Portálra →
-</a>
-</td></tr></table>
-</td></tr></table>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #E2E8F0; border-bottom:1px solid #E2E8F0; margin-bottom:28px;"><tr>
-<td width="50%" style="padding:20px 20px 20px 0; border-right:1px solid #E2E8F0;">
-<p style="margin:0 0 6px 0; font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8;">Belépési fiók</p>
-<p style="margin:0; font-size:14px; font-weight:700; color:#0F172A; word-break:break-all;">${recipientEmail}</p>
-</td>
-<td width="50%" style="padding:20px 0 20px 20px;">
-<p style="margin:0 0 6px 0; font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8;">Hozzáférés típusa</p>
-<p style="margin:0; font-size:14px; font-weight:700; color:#0F172A;">CATL Dedikált Partner · ${twoFactorRequired ? "2FA kötelező" : "2FA nélkül"}</p>
-</td>
-</tr></table>
-<p style="margin:0; font-size:13px; line-height:1.6; color:#64748B;">
-<strong style="color:#0F172A;">Fontos:</strong> Ez a link és a hozzáférés <strong>egyedi</strong>, csak a Te használatodra lett kiküldve. Kérjük ne oszd meg senkivel. A link 30 napig érvényes; lejárta után kérj új meghívót az ügyvezetődtől.
-</p>
-</td></tr>
-<tr><td bgcolor="#F8FAFC" style="padding:30px 40px; border-top:1px solid #E2E8F0;">
-<p style="margin:0; font-size:11px; line-height:1.6; color:#94A3B8; text-align:center;">
-Ezt az üzenetet a Pannon Transfer CATL Portál rendszere küldte.<br>
-Kérdés esetén: Vezető fejlesztő - Balog Sebastian Máté (balogh.sebastian@pannonguard.hu, +36 30 665 4135)<br>
-© ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.
-</p>
-</td></tr>
-</table></td></tr></table>
-</body></html>`;
+${catlEmailButton(loginLink, "Open the CATL portal")}
+${catlEmailInfoRow(
+  { label: "Your account", value: recipientEmail },
+  { label: "Access", value: twoFactorRequired ? "Dedicated partner · 2FA required" : "Dedicated partner" }
+)}
+<p style="margin:0 0 30px 0; font-size:13px; line-height:1.7; color:#64748B;">
+<strong style="color:#0F172A;">Security:</strong> this link is personal and valid for 30 days. Please do not forward or share it. After it expires, ask Pannon Transfer for a new invitation.
+</p>`;
+  const html = catlEmailShell({
+    origin,
+    preheader: "Your CATL portal account is active. Use your personal sign-in link to get started.",
+    eyebrow: "Account activated",
+    headline: "Welcome to the<br>CATL Booking Portal",
+    bodyHtml,
+    topRight: "Welcome",
+  });
   const text = [
-    "Üdvözölünk a CATL Portálon!",
+    "PANNON TRANSFER - CATL DEDICATED PORTAL",
     "",
-    "Jelszavad sikeresen be lett állítva. A fiókod mostantól aktív.",
-    twoFactorRequired ? "2FA (kétfaktoros hitelesítés) kötelező a belépéshez." : "2FA nincs bekapcsolva.",
+    "Dear Partner,",
     "",
-    "Kizárólag az alábbi EGYEDI linken keresztül tudsz belépni a CATL Portálra (publikus login nincs):",
+    "Your password has been set and your CATL portal account is now active.",
+    twoFactorRequired
+      ? "Two-factor authentication (2FA) is mandatory for your account."
+      : "Two-factor authentication is not enabled for your account.",
+    "",
+    "Access is available only through your personal sign-in link (there is no public login page):",
     loginLink,
     "",
-    "Belépési fiókod: " + recipientEmail,
+    "Your account: " + recipientEmail,
+    "The link is valid for 30 days. After it expires, please ask Pannon Transfer for a new invitation.",
     "",
-    "A link 30 napig érvényes. Lejárta után kérj új meghívót az ügyvezetődtől.",
+    "YOUR CONTACT",
+    `${CATL_CONTACT.name} - ${CATL_CONTACT.role}`,
+    CATL_CONTACT.email,
+    CATL_CONTACT.phone,
     "",
-    "Üdvözlettel:",
-    "Pannon Transfer - CATL Dedikált Portál",
-    `© ${new Date().getFullYear()} Pannon Transfer. Minden jog fenntartva.`,
+    "This message was sent by the Pannon Transfer Komplex system.",
+    `© ${year} Pannon Transfer. All rights reserved.`,
   ].join("\n");
   return { html, text };
 }
@@ -99,7 +78,7 @@ export async function POST(request: Request) {
 
     if (!token || !password) {
       return NextResponse.json(
-        { success: false, message: "Hiányzó token vagy jelszó." },
+        { success: false, message: "Missing token or password." },
         { status: 400 }
       );
     }
@@ -107,7 +86,7 @@ export async function POST(request: Request) {
     const res = await setCatlPasswordByInvite(token, password);
     if (!res.success || !res.user) {
       return NextResponse.json(
-        { success: false, message: res.message || "Jelszó beállítás sikertelen." },
+        { success: false, message: res.message || "Password setup failed." },
         { status: 400 }
       );
     }
@@ -159,7 +138,7 @@ export async function POST(request: Request) {
       }
 
       const magicLink = `${loginBase}/catl/auth?token=${encodeURIComponent(magicRaw)}`;
-      const { html, text } = buildWelcomeEmail(res.user.email, magicLink, require2FA);
+      const { html, text } = buildWelcomeEmail(res.user.email, magicLink, require2FA, loginBase);
 
       console.log("\n=========== CATL WELCOME EMAIL (TEST MODE) ===========");
       console.log("Címzett:", res.user.email);
@@ -170,8 +149,8 @@ export async function POST(request: Request) {
       const emailRes = await sendEmail({
         to: res.user.email,
         subject: require2FA
-          ? "CATL Portál – Jelszó beállítva · 2FA kötelező · Egyedi belépési link"
-          : "CATL Portál – Üdvözlünk! Jelszó beállítva · Egyedi belépési link",
+          ? "Your CATL portal account is active – personal sign-in link (2FA required)"
+          : "Your CATL portal account is active – personal sign-in link",
         html,
         text,
       });
@@ -189,8 +168,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: require2FA
-        ? "Jelszó beállítva! Most állítsd be a kétfaktoros hitelesítést — az egyedi belépési linket emailben kapsz majd."
-        : "Jelszó sikeresen beállítva. Hamarosan kapsz egy emailt az egyedi belépési linkkel.",
+        ? "Password set. Now set up two-factor authentication — you will receive your personal sign-in link by email."
+        : "Password set successfully. You will shortly receive an email with your personal sign-in link.",
       requireTwoFactorSetup: require2FA,
       twoFactorSetup,
       user: {

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
     if (!inviteToken || !code) {
       return NextResponse.json(
-        { success: false, message: "Hiányzó token vagy kód." },
+        { success: false, message: "Missing token or code." },
         { status: 400 }
       );
     }
@@ -39,14 +39,14 @@ export async function POST(request: Request) {
     const user = await findCatlUserByInviteToken(inviteToken, { allowExpired: true });
     if (!user || !user.isActivated) {
       return NextResponse.json(
-        { success: false, message: "Nincs ilyen aktivált felhasználó a megadott linkhez." },
+        { success: false, message: "No activated account was found for this link." },
         { status: 404 }
       );
     }
 
     if (!user.twoFactorSecret) {
       return NextResponse.json(
-        { success: false, message: "A kétfaktoros hitelesítés még nem lett inicializálva a fiókodhoz." },
+        { success: false, message: "Two-factor authentication has not been initialised for your account yet." },
         { status: 400 }
       );
     }
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     } else {
       if (code.length !== 6 || !/^\d{6}$/.test(code)) {
         return NextResponse.json(
-          { success: false, message: "Az Authenticator kód 6 számjegyből áll." },
+          { success: false, message: "The authenticator code consists of 6 digits." },
           { status: 400 }
         );
       }
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
     if (!valid) {
       return NextResponse.json(
-        { success: false, message: "A kód helytelen. Próbáld újra 30 mp múlva, vagy használd az egyik mentett backup kódot." },
+        { success: false, message: "The code is incorrect. Try again in 30 seconds, or use one of your saved backup codes." },
         { status: 401 }
       );
     }
@@ -79,8 +79,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: usedBackup
-        ? "Backup kód elfogadva! A kétfaktoros hitelesítés aktiválva — emailben küldjük az egyedi belépési linket."
-        : "Kétfaktoros hitelesítés aktiválva! Hamarosan kapsz egy emailt az egyedi belépési linkkel.",
+        ? "Backup code accepted. Two-factor authentication is now active — we will email you your personal sign-in link."
+        : "Two-factor authentication is now active. You will shortly receive an email with your personal sign-in link.",
       usedBackup,
     });
   } catch (error) {

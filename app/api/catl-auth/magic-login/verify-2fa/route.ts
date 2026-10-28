@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
     if (!token || !code) {
       return NextResponse.json(
-        { success: false, message: "Hiányzó token vagy kód." },
+        { success: false, message: "Missing token or code." },
         { status: 400 }
       );
     }
@@ -32,14 +32,14 @@ export async function POST(request: Request) {
     const user = await findCatlUserByMagicLoginToken(token, false);
     if (!user) {
       return NextResponse.json(
-        { success: false, message: "A belépési link érvénytelen vagy lejárt." },
+        { success: false, message: "The sign-in link is invalid or has expired." },
         { status: 404 }
       );
     }
 
     if (!user.isActivated) {
       return NextResponse.json(
-        { success: false, message: "A fiók még nincs aktiválva." },
+        { success: false, message: "The account has not been activated yet." },
         { status: 400 }
       );
     }
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     } else {
       if (code.length !== 6 || !/^\d{6}$/.test(code)) {
         return NextResponse.json(
-          { success: false, message: "Az Authenticator kód 6 számjegyből áll." },
+          { success: false, message: "The authenticator code consists of 6 digits." },
           { status: 400 }
         );
       }
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         {
           success: false,
           message:
-            "A kétfaktoros kód helytelen. Próbáld újra 30 mp múlva, vagy használd az egyik mentett biztonsági kódot.",
+            "The two-factor code is incorrect. Try again in 30 seconds, or use one of your saved backup codes.",
         },
         { status: 401 }
       );

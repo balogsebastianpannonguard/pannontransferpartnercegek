@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const token = String(body?.token || "").trim();
     if (!token) {
       return NextResponse.json(
-        { success: false, message: "Hiányzó token." },
+        { success: false, message: "Missing token." },
         { status: 400 }
       );
     }
@@ -31,19 +31,19 @@ export async function POST(request: Request) {
       const maybeExpired = await findCatlUserByMagicLoginToken(token, true);
       if (maybeExpired) {
         return NextResponse.json(
-          { success: false, message: "Ez az egyedi belépési link lejárt. Kérj új meghívót a Pannon Transfer Ügyvezetőtől." },
+          { success: false, message: "This personal sign-in link has expired. Please request a new invitation from Pannon Transfer." },
           { status: 410 }
         );
       }
       return NextResponse.json(
-        { success: false, message: "Érvénytelen vagy nem létező belépési link." },
+        { success: false, message: "This sign-in link is invalid or does not exist." },
         { status: 404 }
       );
     }
 
     if (!user.isActivated) {
       return NextResponse.json(
-        { success: false, message: "Ez a fiók még nincs aktiválva — használd a jelszóbeállítási linket." },
+        { success: false, message: "This account has not been activated yet — please use the password setup link from your invitation." },
         { status: 400 }
       );
     }
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         {
           success: false,
           message:
-            "A fiókodhoz kétfaktoros hitelesítés be van kérve, de még nincs aktiválva. Kérj új meghívót és vedd fel újra a 2FA beállítását.",
+            "Two-factor authentication is required for your account but has not been activated yet. Please request a new invitation and complete the 2FA setup.",
         },
         { status: 403 }
       );

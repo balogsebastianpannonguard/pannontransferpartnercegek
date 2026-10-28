@@ -26,9 +26,9 @@ export async function validateInviteTokenOnly(rawToken: string): Promise<{
   message?: string;
   user?: CatlDbUser;
 }> {
-  if (!rawToken) return { success: false, message: "Hiányzó meghívó token." };
+  if (!rawToken) return { success: false, message: "Missing invitation token." };
   const user = await findCatlUserByInviteToken(rawToken);
-  if (!user) return { success: false, message: "Érvénytelen vagy lejárt meghívó link." };
+  if (!user) return { success: false, message: "This invitation link is invalid or has expired." };
   return { success: true, user };
 }
 
@@ -36,14 +36,14 @@ export async function authenticateCatlByPassword(
   email: string,
   password: string
 ): Promise<{ success: boolean; message?: string; user?: CatlDbUser }> {
-  if (!email || !password) return { success: false, message: "Hiányzó hitelesítő adatok." };
+  if (!email || !password) return { success: false, message: "Missing credentials." };
   const user = await findCatlUserByEmail(email);
-  if (!user) return { success: false, message: "Hibás email vagy jelszó." };
+  if (!user) return { success: false, message: "Incorrect email or password." };
   if (!user.isActivated || !user.hashedPassword) {
-    return { success: false, message: "Ehhez a fiókhoz előbb be kell állítani a jelszót a meghívó linken keresztül." };
+    return { success: false, message: "A password must first be set for this account using the invitation link." };
   }
   const ok = await compareCatlPassword(user, password);
-  if (!ok) return { success: false, message: "Hibás email vagy jelszó." };
+  if (!ok) return { success: false, message: "Incorrect email or password." };
   await recordCatlLogin(user._id!);
   return { success: true, user };
 }
@@ -55,14 +55,14 @@ export async function setCatlPasswordByInvite(
   const check = await validateInviteTokenOnly(rawToken);
   if (!check.success || !check.user) return { success: false, message: check.message };
   if (check.user.isActivated && check.user.hashedPassword) {
-    return { success: false, message: "A jelszó már be van állítva ehhez a fiókhoz." };
+    return { success: false, message: "A password has already been set for this account." };
   }
   if (!password || password.length < 8) {
-    return { success: false, message: "A jelszónak minimum 8 karakter hosszúnak kell lennie." };
+    return { success: false, message: "The password must be at least 8 characters long." };
   }
   const { setCatlPasswordAndActivate } = await import("./catl-portal-users");
   const updated = await setCatlPasswordAndActivate(check.user._id!, password);
-  if (!updated) return { success: false, message: "Jelszó módosítás sikertelen." };
+  if (!updated) return { success: false, message: "Password change failed." };
   return { success: true, user: updated };
 }
 
