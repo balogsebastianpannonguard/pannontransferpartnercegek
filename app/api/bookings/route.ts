@@ -11,6 +11,7 @@ import {
   type CreateBookingData,
 } from "@/lib/bookings";
 import { sendEmail } from "@/lib/email";
+import { buildCatlBookingConfirmationEmail } from "@/lib/catl-email-layout";
 import {
   buildCustomerConfirmationEmail,
   buildNiCustomerConfirmationEmail,
@@ -160,14 +161,36 @@ export async function POST(request: Request) {
       language: createdBooking.language,
     };
 
-    const customerHtml = session.portal === "ni"
-      ? buildNiCustomerConfirmationEmail(emailParams)
-      : buildCustomerConfirmationEmail(emailParams);
+    const customerHtml =
+      session.portal === "ni"
+        ? buildNiCustomerConfirmationEmail(emailParams)
+        : session.portal === "catl"
+          ? buildCatlBookingConfirmationEmail({
+              origin: getRequestOrigin(request),
+              bookingCode: createdBooking.bookingCode,
+              travelerName: createdBooking.travelerName,
+              travelerEmail: createdBooking.travelerEmail,
+              travelerPhone: createdBooking.travelerPhone,
+              pickupDate: createdBooking.pickupDate,
+              pickupTime: createdBooking.pickupTime,
+              fromAddress: createdBooking.fromAddress,
+              toAddress: createdBooking.toAddress,
+              flightNumber: createdBooking.flightNumber,
+              travelers: createdBooking.travelers,
+              luggage: createdBooking.luggage,
+              transferType: createdBooking.transferType,
+              secondTravelerEmail: createdBooking.secondTravelerEmail,
+              secondTravelerPhone: createdBooking.secondTravelerPhone,
+              comment: createdBooking.comment,
+            })
+          : buildCustomerConfirmationEmail(emailParams);
 
     const customerSubject =
       session.portal === "ni" && createdBooking.language === "en"
         ? `Booking confirmation - #${createdBooking.bookingCode}`
-        : `Foglalás visszaigazolása - #${createdBooking.bookingCode}`;
+        : session.portal === "catl"
+          ? `Booking confirmation - #${createdBooking.bookingCode} | CATL x Pannon Transfer`
+          : `Foglalás visszaigazolása - #${createdBooking.bookingCode}`;
 
     if (session.portal === "ni") {
       // NI: az utas, az admin (megadott admin e-mail, különben a foglalást rögzítő) és a Location Support is megkapja.
