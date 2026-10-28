@@ -710,21 +710,6 @@ export default function CatlLandingPage() {
             <p className="mt-4 text-[15px] sm:text-base text-slate-400 max-w-xl mx-auto leading-relaxed">
               {tx("heroSubtitle")}
             </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
-              {[
-                { icon: <Mail className="w-3.5 h-3.5" />, text: tx("heroChipConfirm") },
-                { icon: <Building2 className="w-3.5 h-3.5" />, text: tx("heroChipDesk") },
-                { icon: <ShieldCheck className="w-3.5 h-3.5" />, text: tx("heroChipSupport") },
-              ].map((chip) => (
-                <span
-                  key={chip.text}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-[12px] font-medium text-slate-300"
-                >
-                  <span className="text-[#5AA0FF]">{chip.icon}</span>
-                  {chip.text}
-                </span>
-              ))}
-            </div>
           </motion.div>
 
           {submitSuccess ? (
