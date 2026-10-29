@@ -1,18 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { en, FIXED_EN } from "./i18n-en";
 
 /* -------------------------------------------------------------------------- */
-/*  Language state (Hungarian / Korean only)                                  */
+/*  Language state (Hungarian / English / Korean)                             */
 /* -------------------------------------------------------------------------- */
 
-export type EcoLang = "hu" | "ko";
+export type EcoLang = "hu" | "en" | "ko";
 
 export const ECO_LANG_STORAGE_KEY = "ecoproinnovation_lang";
 const LANG_EVENT = "ecoproinnovation-lang-change";
 
 export const ECO_LANGS: { id: EcoLang; label: string; full: string }[] = [
   { id: "hu", label: "HU", full: "Magyar" },
+  { id: "en", label: "EN", full: "English" },
   { id: "ko", label: "한국어", full: "한국어" },
 ];
 
@@ -27,7 +29,8 @@ function subscribe(onChange: () => void) {
 
 function getSnapshot(): EcoLang {
   try {
-    return localStorage.getItem(ECO_LANG_STORAGE_KEY) === "ko" ? "ko" : "hu";
+    const saved = localStorage.getItem(ECO_LANG_STORAGE_KEY);
+    return saved === "ko" || saved === "en" ? saved : "hu";
   } catch {
     return "hu";
   }
@@ -42,7 +45,7 @@ export function useEcoLang(): [EcoLang, (next: EcoLang) => void] {
   const lang = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   useEffect(() => {
-    document.documentElement.lang = lang === "ko" ? "ko" : "hu";
+    document.documentElement.lang = lang;
   }, [lang]);
 
   const setLang = useCallback((next: EcoLang) => {
@@ -939,7 +942,7 @@ const ko: Record<EcoKey, string> = {
   srvGeneric: "요청을 처리하는 중 오류가 발생했습니다. 다시 시도해 주세요.",
 };
 
-const DICTS: Record<EcoLang, Record<EcoKey, string>> = { hu: hu as unknown as Record<EcoKey, string>, ko };
+const DICTS: Record<EcoLang, Record<EcoKey, string>> = { hu: hu as unknown as Record<EcoKey, string>, en, ko };
 
 export type EcoTranslator = (key: EcoKey, params?: Record<string, string | number>) => string;
 
@@ -971,7 +974,7 @@ export function splitBold(text: string): { text: string; bold: boolean }[] {
 /*  Formatting                                                                */
 /* -------------------------------------------------------------------------- */
 
-const LOCALE: Record<EcoLang, string> = { hu: "hu-HU", ko: "ko-KR" };
+const LOCALE: Record<EcoLang, string> = { hu: "hu-HU", en: "en-GB", ko: "ko-KR" };
 
 export function formatPickupDate(dateStr: string, lang: EcoLang): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr || "");
@@ -1000,7 +1003,7 @@ export function formatTimestamp(ts: number | undefined, lang: EcoLang): string {
 }
 
 export function formatPrice(price: number, lang: EcoLang): string {
-  return lang === "hu" ? `${price.toLocaleString("hu-HU")} Ft` : `${price.toLocaleString("ko-KR")} HUF`;
+  return lang === "hu" ? `${price.toLocaleString("hu-HU")} Ft` : `${price.toLocaleString(LOCALE[lang])} HUF`;
 }
 
 export const STATUS_KEY: Record<string, EcoKey> = {
@@ -1187,7 +1190,7 @@ const FIXED_MESSAGES: FixedMessage[] = [
 
 function fixedMessage(raw: string, lang: EcoLang): string | null {
   for (const f of FIXED_MESSAGES) {
-    if (raw === f.match || raw.startsWith(f.match)) return lang === "ko" ? f.ko : f.hu;
+    if (raw === f.match || raw.startsWith(f.match)) return lang === "ko" ? f.ko : lang === "en" ? FIXED_EN[f.match] ?? f.hu : f.hu;
   }
   return null;
 }
@@ -1209,37 +1212,47 @@ export function translateServerMessage(raw: string | undefined | null, lang: Eco
   if ((m = /legalább (\d+) órával a jövőben/i.exec(msg))) {
     return lang === "ko"
       ? `픽업은 현재 시각으로부터 최소 ${m[1]}시간 이후여야 합니다.`
-      : `A felvételnek legalább ${m[1]} órával a jövőben kell lennie.`;
+      : lang === "en"
+        ? `The pick-up must be at least ${m[1]} hours from now.`
+        : `A felvételnek legalább ${m[1]} órával a jövőben kell lennie.`;
   }
   if ((m = /nem lehet több mint (\d+) nap a jövőben/i.exec(msg))) {
     return lang === "ko"
       ? `픽업은 최대 ${m[1]}일 이내로만 예약할 수 있습니다.`
-      : `A felvétel legfeljebb ${m[1]} nappal előre foglalható.`;
+      : lang === "en"
+        ? `Pick-ups can be booked at most ${m[1]} days in advance.`
+        : `A felvétel legfeljebb ${m[1]} nappal előre foglalható.`;
   }
   if ((m = /csak (\S+) és (\S+) között engedélyezettek/i.exec(msg))) {
     return lang === "ko"
       ? `시내 이동은 ${m[1]}~${m[2]} 사이에만 이용할 수 있습니다.`
-      : `A városi transzferek csak ${m[1]} és ${m[2]} között érhetők el.`;
+      : lang === "en"
+        ? `City transfers are only available between ${m[1]} and ${m[2]}.`
+        : `A városi transzferek csak ${m[1]} és ${m[2]} között érhetők el.`;
   }
   if ((m = /^(Standard|Executive) transzferen maximálisan (\d+) csomag\/utas engedélyezett \(összesen (\d+)\)/i.exec(msg))) {
     const type = transferTypeLabel(m[1], lang);
     return lang === "ko"
       ? `${type} 서비스는 승객 1인당 수하물 최대 ${m[2]}개까지 가능합니다 (총 ${m[3]}개).`
-      : `${type} transzferen utasonként legfeljebb ${m[2]} poggyász engedélyezett (összesen ${m[3]}).`;
+      : lang === "en"
+        ? `On a ${type} transfer, up to ${m[2]} luggage pieces per passenger are allowed (${m[3]} in total).`
+        : `${type} transzferen utasonként legfeljebb ${m[2]} poggyász engedélyezett (összesen ${m[3]}).`;
   }
   if ((m = /^(Standard|Executive) transzferen maximálisan (\d+) utas utazhat/i.exec(msg))) {
     const type = transferTypeLabel(m[1], lang);
     return lang === "ko"
       ? `${type} 서비스는 최대 ${m[2]}명까지 탑승할 수 있습니다.`
-      : `${type} transzferen legfeljebb ${m[2]} utas utazhat.`;
+      : lang === "en"
+        ? `A ${type} transfer can carry up to ${m[2]} passengers.`
+        : `${type} transzferen legfeljebb ${m[2]} utas utazhat.`;
   }
   if (/járatszám megadása kötelező/i.test(msg)) return fixedMessage("Reptéri transzfernél a járatszám megadása kötelező", lang) as string;
   if (/A foglalás módosítása sikertelen|Módosítás sikertelen/i.test(msg)) {
-    return lang === "ko" ? "예약을 변경하지 못했습니다." : "A foglalás módosítása nem sikerült.";
+    return lang === "ko" ? "예약을 변경하지 못했습니다." : lang === "en" ? "The booking could not be modified." : "A foglalás módosítása nem sikerült.";
   }
 
   if (HU_CHARS.test(msg) || /\b(foglal|utas|hiba|sikertelen|kötelező|diszpécser|sofőr)/i.test(msg)) {
-    return lang === "ko" ? t("toastGeneric") : msg;
+    return lang === "hu" ? msg : t("toastGeneric");
   }
   return lang === "ko" && !/^[\x20-\x7E]+$/.test(msg) ? t("toastGeneric") : msg;
 }
@@ -1299,7 +1312,7 @@ export function localizeNotificationDetails(raw: string | undefined, lang: EcoLa
     })
     .join("; ");
 
-  if (lang === "ko" && /diszpécser|foglalás|módosít|időpont|címe?\b|utas|csomag|megjegyzés/i.test(text)) {
+  if (lang !== "hu" && /diszpécser|foglalás|módosít|időpont|címe?\b|utas|csomag|megjegyzés/i.test(text)) {
     return t("dispatcherModified");
   }
   return text;

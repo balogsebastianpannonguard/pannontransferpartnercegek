@@ -378,7 +378,195 @@ const ko: Record<EcoproBmKey, string> = {
   fieldGeneric: "항목",
 };
 
-export const DICT: Record<EcoproBmLang, Record<EcoproBmKey, string>> = { hu, ko };
+const en: Record<EcoproBmKey, string> = {
+  navBooking: "Booking",
+  navMyBookings: "My bookings",
+  portalLabel: "Dedicated Ecopro BM portal",
+  signOut: "Sign out",
+  verifyingAccess: "Verifying access and session…",
+  preparingWorkspace: "Preparing your workspace…",
+  premiumTagline: "Premium corporate transfers",
+  footerPortal: "Ecopro BM dedicated customer portal",
+  footerSupport: "Dedicated customer support",
+  rightsReserved: "All rights reserved.",
+  timesNote: "All times are Budapest time (CET/CEST).",
+
+  eyebrow: "Booking management",
+  pageTitle: "My bookings",
+  pageSubtitle: "The live status and full details of every transfer booked with your account, in one place.",
+  refresh: "Refresh",
+  newBooking: "New booking",
+  searchPlaceholder: "Search by reference, passenger, address or flight…",
+  lastUpdated: "Refreshes automatically every 15 seconds",
+
+  statTotal: "Total bookings",
+  statPending: "Awaiting confirmation",
+  statConfirmed: "Confirmed",
+  statClosed: "Completed / cancelled",
+  badgePending: "Pending",
+  badgeActive: "Active",
+  badgeClosed: "Closed",
+
+  filterAll: "All",
+  filterPending: "Pending",
+  filterConfirmed: "Confirmed",
+  filterClosed: "Closed",
+
+  statusPending: "Received",
+  statusModified: "Modified",
+  statusConfirmed: "Confirmed",
+  statusInProgress: "In progress",
+  statusCompleted: "Completed",
+  statusCancelled: "Cancelled",
+
+  loadingBookings: "Loading bookings…",
+  emptyTitle: "No bookings",
+  emptyBody: "No bookings match the current filter. Book a new transfer on the booking page.",
+  emptySearch: "No bookings match your search.",
+  goBook: "Go to the booking page",
+  clearSearch: "Clear search",
+
+  from: "From",
+  to: "To",
+  pickup: "Pick-up",
+  flight: "Flight number",
+  noFlight: "Not provided",
+  vehicleClass: "Service class",
+  passengers: "Passengers",
+  luggage: "Luggage",
+  payment: "Payment",
+  driverVehicle: "Driver & vehicle",
+  driverPending: "Assignment in progress",
+  driverNotified: "Driver notified",
+  driverAcknowledged: "Driver confirmed",
+  standard: "Standard",
+  standardSub: "Economy class",
+  executive: "Executive",
+  executiveSub: "Business class",
+  payCard: "Credit card to the driver",
+  payBank: "Bank transfer",
+  payCash: "Cash",
+  paxUnit: "{n} pax",
+  bagUnit: "{n} pcs",
+
+  details: "Details",
+  hideDetails: "Hide details",
+  modify: "Modify",
+  cancel: "Cancel",
+
+  secTrip: "Route",
+  secPassenger: "Passenger",
+  secSecond: "Second passenger",
+  secCompany: "Company & payment",
+  secDriver: "Driver & vehicle",
+  secComment: "Notes",
+  secTimeline: "Booking history",
+  secTracking: "Passenger tracking",
+  name: "Name",
+  email: "Email",
+  phone: "Phone",
+  company: "Company",
+  price: "Price",
+  priceNotSet: "To be agreed",
+  portal: "Portal",
+  bookingCode: "Booking reference",
+  noComment: "No notes",
+  createdAt: "Created",
+  updatedAt: "Last updated",
+  statusChangedAt: "Last status change",
+  statusChange: "{from} → {to}",
+  trackingHint: "Share this link with the passenger so they can follow the trip.",
+  openTracking: "Open tracking page",
+  copyTracking: "Copy link",
+  copied: "Link copied to the clipboard.",
+  trackingInactive: "The tracking link is no longer active.",
+
+  notifTitle: "Status updates",
+  dismissAll: "Dismiss all",
+  view: "View",
+  dismiss: "Dismiss",
+  notifConfirmed: "The booking has been confirmed.",
+  notifModified: "The dispatcher modified the booking.",
+  notifCancelled: "The booking has been cancelled.",
+  notifInProgress: "The booking is in progress.",
+  notifCompleted: "The booking has been completed.",
+  notifDefault: "The booking status has changed.",
+  dispatcherModified: "The dispatcher modified the booking.",
+
+  editTitle: "Modify booking",
+  date: "Date",
+  time: "Time",
+  fromAddress: "Pick-up address",
+  toAddress: "Drop-off address",
+  paxCount: "Number of passengers",
+  bagCount: "Number of luggage items",
+  commentLabel: "Notes",
+  commentPlaceholder: "Special request or instructions…",
+  phoneLabel: "Passenger phone number",
+  flightLabel: "Flight number",
+  flightPlaceholder: "e.g. LH1234",
+  flightRequired: "A flight number is required for airport transfers.",
+  required: "This field is required.",
+  fixErrors: "Please correct the errors below.",
+  noticeTitle: "Please note",
+  noticeBody: "Changes are checked against the booking conditions (minimum lead time, capacity and operating hours).",
+  back: "Back",
+  saving: "Saving…",
+  saveChanges: "Save changes",
+
+  cancelTitle: "Are you sure you want to cancel this booking?",
+  refundTitle: "Refund",
+  refundBody: "No refund is available after cancellation.",
+  driverTitle: "Driver",
+  driverBody: "The assigned driver will be released automatically.",
+  keepBooking: "Keep booking",
+  processing: "Processing…",
+  confirmCancel: "Cancel booking",
+
+  toastUpdated: "The booking has been modified successfully.",
+  toastCancelled: "The booking has been cancelled successfully.",
+  toastNetwork: "A network error occurred. Please try again.",
+  toastUpdateFailed: "The modification could not be completed.",
+  toastCancelFailed: "The cancellation could not be completed.",
+  toastGeneric: "The request could not be completed. Please check your details and try again.",
+
+  srvSession: "Your session has expired. Please sign in again.",
+  srvNotFound: "The booking could not be found.",
+  srvForbidden: "You do not have permission to modify this booking.",
+  srvUpdateFailed: "The booking could not be modified.",
+  srvMinAdvance: "The pick-up must be at least {n} hours in the future.",
+  srvMaxAdvance: "The pick-up can be at most {n} days in the future.",
+  srvCityHours: "City transfers can only be booked between {a} and {b}.",
+  srvMaxPax: "A maximum of {n} passengers can travel in the {type} class.",
+  srvMaxBags: "The {type} class allows up to {n} luggage items per passenger ({t} in total).",
+  srvFlight: "A flight number is required for airport transfers.",
+  srvInvalidTime: "The pick-up time is invalid.",
+  srvFrom: "The pick-up address is required.",
+  srvTo: "The drop-off address is required.",
+  srvDate: "The pick-up date is required.",
+  srvTimeReq: "The pick-up time is required.",
+  srvPax: "At least 1 passenger is required.",
+  srvBags: "The number of luggage items cannot be negative.",
+  srvPhone: "The passenger's phone number is required.",
+
+  fieldPickupDate: "Pick-up date",
+  fieldPickupTime: "Pick-up time",
+  fieldFromAddress: "Pick-up address",
+  fieldToAddress: "Drop-off address",
+  fieldFlight: "Flight number",
+  fieldPax: "Number of passengers",
+  fieldBags: "Number of luggage items",
+  fieldComment: "Dispatcher note",
+  fieldDriver: "Driver",
+  fieldVehicle: "Vehicle",
+  fieldStatus: "Booking status",
+  fieldPrice: "Price",
+  fieldCompany: "Company name",
+  fieldPayment: "Payment method",
+  fieldGeneric: "Detail",
+};
+
+export const DICT: Record<EcoproBmLang, Record<EcoproBmKey, string>> = { hu, en, ko };
 
 export type Translator = (key: EcoproBmKey, params?: Record<string, string | number>) => string;
 
@@ -394,7 +582,7 @@ export function makeT(lang: EcoproBmLang): Translator {
   };
 }
 
-const LOCALE: Record<EcoproBmLang, string> = { hu: "hu-HU", ko: "ko-KR" };
+const LOCALE: Record<EcoproBmLang, string> = { hu: "hu-HU", en: "en-GB", ko: "ko-KR" };
 
 export function formatPickupDate(dateStr: string, lang: EcoproBmLang): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr || "");
@@ -529,7 +717,7 @@ export function localizeNotificationDetails(raw: string | undefined, lang: Ecopr
     })
     .join("; ");
 
-  if (lang === "ko" && /diszpécser|foglalás|módosít|időpont|címe?\b|utas|csomag|megjegyzés/i.test(text)) {
+  if (lang !== "hu" && /diszpécser|foglalás|módosít|időpont|címe?\b|utas|csomag|megjegyzés/i.test(text)) {
     return t("dispatcherModified");
   }
   return text;

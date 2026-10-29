@@ -231,7 +231,7 @@ export default function EcoproInnovationSetupPasswordPage() {
     const content =
       `${t("backupFileTitle")}\n\n` +
       `${t("backupFileAccount")}: ${email || "N/A"}\n` +
-      `${t("backupFileDate")}: ${new Date().toLocaleString(lang === "ko" ? "ko-KR" : "hu-HU")}\n\n` +
+      `${t("backupFileDate")}: ${new Date().toLocaleString(lang === "ko" ? "ko-KR" : lang === "en" ? "en-GB" : "hu-HU")}\n\n` +
       `${t("backupFileUse")}\n` +
       `${t("backupFileOnce")}\n\n` +
       "-------------------------\n" +

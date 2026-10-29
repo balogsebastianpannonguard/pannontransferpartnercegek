@@ -1,7 +1,7 @@
 import type { PortalBookingEmailParams } from "@/lib/portal-booking-emails";
 
 /**
- * Ecopro BM arculatú e-mail sablonok (magyar / koreai).
+ * Ecopro BM arculatú e-mail sablonok (magyar / angol / koreai).
  * Tábla alapú, e-mail kliensekkel kompatibilis elrendezés; a logók abszolút URL-ről töltődnek.
  */
 
@@ -29,7 +29,7 @@ const C = {
   page: "#EAF0F8",
 };
 
-type Lang = "hu" | "ko";
+type Lang = "hu" | "en" | "ko";
 
 export function esc(s: string) {
   return String(s ?? "")
@@ -62,14 +62,20 @@ export function ecoproBmInfoRow(
 </td></tr></table>`;
 }
 
-/** Két nyelvű tartalom: magyar blokk, elválasztó, koreai blokk. */
-export function ecoproBmBilingual(huHtml: string, koHtml: string) {
+function langDivider(label: string) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 26px 0;"><tr>
+<td style="border-top:1px solid ${C.line}; height:1px; font-size:0; line-height:0;" width="42%">&nbsp;</td>
+<td align="center" style="padding:0 12px; white-space:nowrap;"><span style="display:inline-block; padding:4px 12px; border-radius:20px; background:${C.panel}; border:1px solid ${C.line}; font-size:10px; font-weight:800; letter-spacing:1.6px; color:${C.muted};">${label}</span></td>
+<td style="border-top:1px solid ${C.line}; height:1px; font-size:0; line-height:0;" width="42%">&nbsp;</td>
+</tr></table>`;
+}
+
+/** Háromnyelvű tartalom: magyar blokk, elválasztó, angol blokk, elválasztó, koreai blokk. */
+export function ecoproBmMultilingual(huHtml: string, enHtml: string, koHtml: string) {
   return `${huHtml}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 26px 0;"><tr>
-<td style="border-top:1px solid ${C.line}; height:1px; font-size:0; line-height:0;" width="42%">&nbsp;</td>
-<td align="center" style="padding:0 12px; white-space:nowrap;"><span style="display:inline-block; padding:4px 12px; border-radius:20px; background:${C.panel}; border:1px solid ${C.line}; font-size:10px; font-weight:800; letter-spacing:1.6px; color:${C.muted};">한국어</span></td>
-<td style="border-top:1px solid ${C.line}; height:1px; font-size:0; line-height:0;" width="42%">&nbsp;</td>
-</tr></table>
+${langDivider("ENGLISH")}
+${enHtml}
+${langDivider("한국어")}
 ${koHtml}`;
 }
 
@@ -85,10 +91,10 @@ export function ecoproBmNote(label: string, text: string) {
   return `<p style="margin:0 0 24px 0; font-size:13px; line-height:1.7; color:${C.muted};"><strong style="color:${C.ink};">${label}</strong> ${text}</p>`;
 }
 
-/** Ecopro BM arculatú e-mail keret. `lang` = "both" esetén kétnyelvű lábléc. */
+/** Ecopro BM arculatú e-mail keret. `lang` = "all" esetén háromnyelvű lábléc. */
 export function ecoproBmEmailShell(opts: {
   origin: string;
-  lang: Lang | "both";
+  lang: Lang | "all";
   preheader: string;
   eyebrow: string;
   headline: string;
@@ -111,25 +117,38 @@ export function ecoproBmEmailShell(opts: {
       : `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:26px;"><tr><td style="background:#FFFFFF; border-radius:9px; padding:10px 16px; font-size:16px; font-weight:900; color:${C.blue};">Ecopro <span style="color:${C.orange};">BM</span></td></tr></table>`;
 
   const roleHu = "Fejlesztő";
+  const roleEn = "Developer";
   const roleKo = "개발자";
-  const role = opts.lang === "hu" ? roleHu : opts.lang === "ko" ? roleKo : `${roleHu} · ${roleKo}`;
+  const role =
+    opts.lang === "hu" ? roleHu : opts.lang === "en" ? roleEn : opts.lang === "ko" ? roleKo : `${roleHu} · ${roleEn} · ${roleKo}`;
   const contactLabel =
-    opts.lang === "hu" ? "Az Ön kapcsolattartója" : opts.lang === "ko" ? "담당자 연락처" : "Kapcsolattartó · 담당자 연락처";
+    opts.lang === "hu"
+      ? "Az Ön kapcsolattartója"
+      : opts.lang === "en"
+        ? "Your contact"
+        : opts.lang === "ko"
+          ? "담당자 연락처"
+          : "Kapcsolattartó · Your contact · 담당자 연락처";
 
   const footerHu =
     "Ezt az üzenetet a Pannon Transfer Komplex rendszere küldte. Ha nem számított erre az üzenetre, kérjük, hagyja figyelmen kívül.";
+  const footerEn =
+    "This message was sent by the Pannon Transfer Komplex system. If you did not expect it, please disregard it.";
   const footerKo = "이 메일은 Pannon Transfer Komplex 시스템에서 발송되었습니다. 예상하지 못한 메일이라면 무시해 주세요.";
   const rightsHu = "Minden jog fenntartva.";
+  const rightsEn = "All rights reserved.";
   const rightsKo = "모든 권리 보유.";
   const footer =
     opts.lang === "hu"
       ? `${footerHu}<br>&copy; ${year} Pannon Transfer. ${rightsHu}`
-      : opts.lang === "ko"
-        ? `${footerKo}<br>&copy; ${year} Pannon Transfer. ${rightsKo}`
-        : `${footerHu}<br>${footerKo}<br>&copy; ${year} Pannon Transfer. ${rightsHu} / ${rightsKo}`;
+      : opts.lang === "en"
+        ? `${footerEn}<br>&copy; ${year} Pannon Transfer. ${rightsEn}`
+        : opts.lang === "ko"
+          ? `${footerKo}<br>&copy; ${year} Pannon Transfer. ${rightsKo}`
+          : `${footerHu}<br>${footerEn}<br>${footerKo}<br>&copy; ${year} Pannon Transfer. ${rightsHu} / ${rightsEn} / ${rightsKo}`;
 
   return `<!DOCTYPE html>
-<html lang="${opts.lang === "ko" ? "ko" : "hu"}">
+<html lang="${opts.lang === "ko" ? "ko" : opts.lang === "en" ? "en" : "hu"}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -218,6 +237,37 @@ const CONFIRM_TEXT = {
     help:
       "Módosítani vagy lemondani szeretne? Nyissa meg a <strong style=\"color:#0F172A;\">Foglalásaim</strong> oldalt az Ecopro BM portálon, vagy forduljon hozzánk az alábbi elérhetőségeken.",
   },
+  en: {
+    subject: (code: string) => `Booking confirmation - #${code} | Ecopro BM x Pannon Transfer`,
+    preheader: (code: string, name: string, date: string) => `Booking #${code} received – ${name}, ${date}.`,
+    eyebrow: "Booking confirmation",
+    headline: "We&rsquo;ve received<br>your transfer request",
+    greeting: "Dear Partner,",
+    intro: (name: string) =>
+      `Thank you for your booking. We have received the transfer request for <strong style="color:#0F172A;">${name}</strong>. Our dispatcher will review it and confirm it shortly.`,
+    ref: "Booking reference",
+    status: "Status",
+    statusValue: "Received · awaiting confirmation",
+    tripTitle: "Transfer details",
+    when: "Pick-up date & time",
+    from: "Pick-up location",
+    to: "Drop-off location",
+    flight: "Flight number",
+    cls: "Service class",
+    pax: "Passengers",
+    bags: "Luggage",
+    paxTitle: "Passenger",
+    name: "Name",
+    phone: "Phone",
+    email: "Email",
+    email2: "2nd passenger email",
+    phone2: "2nd passenger phone",
+    notes: "Notes",
+    standard: "Standard",
+    executive: "Executive",
+    help:
+      "Need to change or cancel? Open <strong style=\"color:#0F172A;\">My bookings</strong> in the Ecopro BM portal, or contact us using the details below.",
+  },
   ko: {
     subject: (code: string) => `예약 확인 - #${code} | Ecopro BM x Pannon Transfer`,
     preheader: (code: string, name: string, date: string) => `예약 #${code}이(가) 접수되었습니다 – ${name}, ${date}.`,
@@ -254,7 +304,7 @@ const CONFIRM_TEXT = {
 export function buildBookingConfirmationEmail(
   params: PortalBookingEmailParams,
 ): { subject: string; html: string } | null {
-  const lang: Lang = params.language === "ko" ? "ko" : "hu";
+  const lang: Lang = params.language === "ko" ? "ko" : params.language === "en" ? "en" : "hu";
   const t = CONFIRM_TEXT[lang];
   const row = (label: string, value: string) =>
     `<tr><td style="padding:11px 0; border-bottom:1px solid #EEF2F7; font-size:13px; color:${C.muted}; width:42%; vertical-align:top;">${esc(label)}</td><td style="padding:11px 0; border-bottom:1px solid #EEF2F7; font-size:14px; font-weight:600; color:${C.ink}; vertical-align:top;">${value}</td></tr>`;
@@ -304,7 +354,7 @@ ${params.comment ? row(t.notes, e(params.comment)) : ""}
 }
 
 /* ------------------------------------------------------------------ */
-/* Üdvözlő e-mail jelszóbeállítás után (két nyelvű: magyar + koreai)     */
+/* Üdvözlő e-mail jelszóbeállítás után (háromnyelvű: magyar + angol + koreai) */
 /* ------------------------------------------------------------------ */
 
 export function buildEcoproBmWelcomeEmail(opts: {
@@ -336,6 +386,27 @@ export function buildEcoproBmWelcomeEmail(opts: {
       "ez a link személyes, 30 napig érvényes. Kérjük, ne ossza meg senkivel. Lejárta után új meghívót kérhet a Pannon Transfertől.",
     );
 
+  const en =
+    ecoproBmGreeting("Dear Partner,") +
+    ecoproBmPara("Your password has been set successfully and your account on the dedicated Ecopro BM portal is now active. Welcome!") +
+    ecoproBmPara(
+      `The portal can be accessed <strong>only through the personal sign-in link below</strong> – there is no public sign-in page.${
+        twoFactorRequired
+          ? " Because your account uses two-factor authentication (2FA), we will also ask for the 6-digit code from your Authenticator app when you sign in."
+          : ""
+      }`,
+      { last: true },
+    ) +
+    ecoproBmButton(loginLink, "Sign in to the Ecopro BM portal") +
+    ecoproBmInfoRow(
+      { label: "Your account", value: recipientEmail },
+      { label: "Access", value: twoFactorRequired ? "Dedicated partner · 2FA required" : "Dedicated partner" },
+    ) +
+    ecoproBmNote(
+      "Security:",
+      "this link is personal and valid for 30 days. Please do not share it with anyone. Once it expires, you can request a new invitation from Pannon Transfer.",
+    );
+
   const ko =
     ecoproBmGreeting("고객님께,") +
     ecoproBmPara("비밀번호가 설정되어 Ecopro BM 전용 포털 계정이 활성화되었습니다. 환영합니다!") +
@@ -359,12 +430,13 @@ export function buildEcoproBmWelcomeEmail(opts: {
 
   const html = ecoproBmEmailShell({
     origin,
-    lang: "both",
-    preheader: "Fiókja aktív – használja személyes belépési linkjét. / 계정이 활성화되었습니다. 개인 로그인 링크를 사용하세요.",
-    eyebrow: "Fiók aktiválva · 계정 활성화",
+    lang: "all",
+    preheader:
+      "Fiókja aktív – használja személyes belépési linkjét. / Your account is active – use your personal sign-in link. / 계정이 활성화되었습니다. 개인 로그인 링크를 사용하세요.",
+    eyebrow: "Fiók aktiválva · Account activated · 계정 활성화",
     headline: "Üdvözöljük az<br>Ecopro BM portálon",
-    headlineSub: "Ecopro BM 전용 포털에 오신 것을 환영합니다",
-    bodyHtml: ecoproBmBilingual(hu, ko),
+    headlineSub: "Welcome to the Ecopro BM portal · Ecopro BM 전용 포털에 오신 것을 환영합니다",
+    bodyHtml: ecoproBmMultilingual(hu, en, ko),
     topRight: "Ecopro BM",
   });
 
@@ -385,6 +457,20 @@ export function buildEcoproBmWelcomeEmail(opts: {
     "",
     "--------------------",
     "",
+    "Dear Partner,",
+    "",
+    "Your password has been set successfully and your account is now active.",
+    twoFactorRequired
+      ? "Two-factor authentication (2FA) is required for your account."
+      : "Two-factor authentication is not enabled for your account.",
+    "You can sign in only through your personal link below:",
+    loginLink,
+    "",
+    `Account: ${recipientEmail}`,
+    "The link is valid for 30 days. Once it expires, please request a new invitation from Pannon Transfer.",
+    "",
+    "--------------------",
+    "",
     "고객님께,",
     "",
     "비밀번호가 설정되어 계정이 활성화되었습니다.",
@@ -396,18 +482,18 @@ export function buildEcoproBmWelcomeEmail(opts: {
     "링크는 30일간 유효하며, 만료 시 Pannon Transfer에 새 초대를 요청해 주세요.",
     "",
     "--------------------",
-    `${ECOPROBM_CONTACT.name} - Fejlesztő / 개발자`,
+    `${ECOPROBM_CONTACT.name} - Fejlesztő / Developer / 개발자`,
     ECOPROBM_CONTACT.email,
     ECOPROBM_CONTACT.phone,
     "",
-    "Ezt az üzenetet a Pannon Transfer Komplex rendszere küldte. / 이 메일은 Pannon Transfer Komplex 시스템에서 발송되었습니다.",
+    "Ezt az üzenetet a Pannon Transfer Komplex rendszere küldte. / This message was sent by the Pannon Transfer Komplex system. / 이 메일은 Pannon Transfer Komplex 시스템에서 발송되었습니다.",
     `© ${new Date().getFullYear()} Pannon Transfer.`,
   ].join("\n");
 
   return {
     subject: twoFactorRequired
-      ? "Ecopro BM portál – fiókja aktív, 2FA kötelező / 계정 활성화 · 2FA 필수"
-      : "Ecopro BM portál – fiókja aktív / 계정이 활성화되었습니다",
+      ? "Ecopro BM portál – fiókja aktív, 2FA kötelező / Account active, 2FA required / 계정 활성화 · 2FA 필수"
+      : "Ecopro BM portál – fiókja aktív / Account active / 계정이 활성화되었습니다",
     html,
     text,
   };

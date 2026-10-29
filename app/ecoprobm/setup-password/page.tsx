@@ -194,7 +194,7 @@ export default function EcoproBmSetupPasswordPage() {
     const content =
       `${tx("backupFileTitle")}\n\n` +
       `${tx("backupFileAccount")}: ${email || "N/A"}\n` +
-      `${tx("backupFileDate")}: ${new Date().toLocaleString(lang === "ko" ? "ko-KR" : "hu-HU")}\n\n` +
+      `${tx("backupFileDate")}: ${new Date().toLocaleString(lang === "ko" ? "ko-KR" : lang === "en" ? "en-GB" : "hu-HU")}\n\n` +
       `${tx("backupFileUse")}\n` +
       `${tx("backupFileOnce")}\n\n` +
       "-------------------------\n" +

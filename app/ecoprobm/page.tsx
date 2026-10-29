@@ -471,7 +471,7 @@ export default function EcoproBmBookingPage() {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d || "");
     if (!m) return null;
     const date = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-    const text = new Intl.DateTimeFormat(l === "ko" ? "ko-KR" : "hu-HU", {
+    const text = new Intl.DateTimeFormat(l === "ko" ? "ko-KR" : l === "en" ? "en-GB" : "hu-HU", {
       weekday: "short",
       day: "numeric",
       month: "long",

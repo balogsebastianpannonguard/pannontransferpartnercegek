@@ -99,7 +99,7 @@ export function LangSwitch({
             onClick={() => onChange(l.id)}
             aria-pressed={active}
             title={l.full}
-            className={`relative z-10 ${compact ? "h-7 min-w-9 px-2.5" : "h-8 min-w-11 px-3"} rounded-full text-[11px] font-bold tracking-wider transition-colors ${
+            className={`relative z-10 ${compact ? "h-7 min-w-8 px-2 sm:min-w-9 sm:px-2.5" : "h-8 min-w-11 px-3"} rounded-full text-[11px] font-bold tracking-wider transition-colors ${
               active ? "text-white" : "text-slate-500 hover:text-[#0B3F8F]"
             }`}
           >
@@ -150,10 +150,10 @@ export function EcoHeader({
       }`}
     >
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 h-16 sm:h-[68px] flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <PannonLogo className="h-5 sm:h-6" />
+        <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 overflow-hidden">
+          <PannonLogo className="h-4 min-[400px]:h-5 sm:h-6" />
           <span className="hidden sm:block w-px h-6 bg-[#DCEBF7]" aria-hidden />
-          <EcoLogo className="h-4 sm:h-5" />
+          <EcoLogo className="h-3.5 min-[400px]:h-4 sm:h-5 shrink-0 max-[339px]:hidden" />
           <div className="hidden xl:flex flex-col min-w-0 pl-1">
             <span className="text-[10px] font-semibold tracking-[0.2em] uppercase text-slate-400 truncate">
               {t("navSubline")}
@@ -172,7 +172,7 @@ export function EcoHeader({
           </Link>
         </nav>
 
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <LangSwitch lang={lang} onChange={onLangChange} compact />
           <div className="hidden xl:flex items-center gap-2.5 pl-1">
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0E86D4] to-[#00B4D8] flex items-center justify-center shadow-[0_4px_12px_rgba(14,134,212,0.3)]">

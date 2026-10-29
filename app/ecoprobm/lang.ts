@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 
-export type EcoproBmLang = "hu" | "ko";
+export type EcoproBmLang = "hu" | "en" | "ko";
 
 export const ECOPROBM_LANG_STORAGE_KEY = "ecoprobm_lang";
 const LANG_EVENT = "ecoprobm-lang-change";
 
 export const ECOPROBM_LANGS: { id: EcoproBmLang; label: string; full: string }[] = [
   { id: "hu", label: "HU", full: "Magyar" },
+  { id: "en", label: "EN", full: "English" },
   { id: "ko", label: "한국어", full: "한국어" },
 ];
 
@@ -23,7 +24,8 @@ function subscribe(onChange: () => void) {
 
 function getSnapshot(): EcoproBmLang {
   try {
-    return localStorage.getItem(ECOPROBM_LANG_STORAGE_KEY) === "ko" ? "ko" : "hu";
+    const saved = localStorage.getItem(ECOPROBM_LANG_STORAGE_KEY);
+    return saved === "ko" || saved === "en" ? saved : "hu";
   } catch {
     return "hu";
   }
@@ -33,12 +35,12 @@ function getServerSnapshot(): EcoproBmLang {
   return "hu";
 }
 
-/** Az Ecopro BM portál felületi nyelve (magyar / koreai), a böngészőben megjegyezve. */
+/** Az Ecopro BM portál felületi nyelve (magyar / angol / koreai), a böngészőben megjegyezve. */
 export function useEcoproBmLang(): [EcoproBmLang, (next: EcoproBmLang) => void] {
   const lang = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   useEffect(() => {
-    document.documentElement.lang = lang === "ko" ? "ko" : "hu";
+    document.documentElement.lang = lang;
   }, [lang]);
 
   const setLang = useCallback((next: EcoproBmLang) => {
