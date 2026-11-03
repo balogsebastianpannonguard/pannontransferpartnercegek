@@ -1,4 +1,5 @@
 import { sendEmail } from "@/lib/email";
+import { buildNiCancellationEmail } from "@/lib/email-templates";
 
 /**
  * A Location Support központi címzett: MINDEN NI foglalásról megkapja a visszaigazolást,
@@ -78,4 +79,64 @@ export async function sendNiBookingConfirmations(params: {
     results.push({ ...recipient, sent });
   }
   return results;
+}
+
+/**
+ * NI foglalás lemondásakor értesítést küld ugyanazoknak, akik a visszaigazolást is megkapták
+ * (utas, admin / foglaló, Location Support). Hiba esetén csak naplóz, a lemondást nem buktatja meg.
+ */
+export async function sendNiCancellationNotifications(params: {
+  booking: {
+    bookingCode: string;
+    travelerName: string;
+    travelerEmail: string;
+    userEmail?: string;
+    adminEmail?: string;
+    pickupDate: string;
+    pickupTime: string;
+    fromAddress: string;
+    toAddress: string;
+    flightNumber?: string;
+    travelers: number;
+    luggage: number;
+    transferType: "standard" | "executive";
+    language?: string;
+  };
+  cancelledBy?: string;
+  logTag: string;
+}) {
+  const { booking } = params;
+  const en = booking.language === "en";
+  try {
+    return await sendNiBookingConfirmations({
+      recipients: buildNiConfirmationRecipients({
+        travelerEmail: booking.travelerEmail,
+        adminEmail: booking.adminEmail,
+        bookerEmail: booking.userEmail,
+      }),
+      subject: en
+        ? `Booking cancelled - #${booking.bookingCode}`
+        : `Foglalás lemondva - #${booking.bookingCode}`,
+      htmlFor: (role) =>
+        buildNiCancellationEmail({
+          bookingCode: booking.bookingCode,
+          travelerName: booking.travelerName,
+          forTraveler: role === "traveler",
+          pickupDate: booking.pickupDate,
+          pickupTime: booking.pickupTime,
+          fromAddress: booking.fromAddress,
+          toAddress: booking.toAddress,
+          flightNumber: booking.flightNumber,
+          travelers: booking.travelers,
+          luggage: booking.luggage,
+          transferType: booking.transferType,
+          cancelledBy: params.cancelledBy,
+          language: en ? "en" : "hu",
+        }),
+      logTag: params.logTag,
+    });
+  } catch (error) {
+    console.error(`[${params.logTag}] NI cancellation notifications failed`, error);
+    return [];
+  }
 }

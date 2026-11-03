@@ -11,6 +11,7 @@ import {
   validateTravelConditions,
   type Booking,
 } from "@/lib/bookings";
+import { sendNiCancellationNotifications } from "@/lib/ni-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -252,6 +253,18 @@ export async function PATCH(
         { success: false, message: "A foglalás módosítása sikertelen." },
         { status: 500 }
       );
+    }
+
+    if (
+      patch.status === "cancelled" &&
+      existingBooking.status !== "cancelled" &&
+      session.portal === "ni"
+    ) {
+      await sendNiCancellationNotifications({
+        booking: updatedBooking,
+        cancelledBy: session.email,
+        logTag: "booking-cancel",
+      });
     }
 
     return NextResponse.json({ success: true, booking: updatedBooking });

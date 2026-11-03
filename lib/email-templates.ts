@@ -1083,3 +1083,186 @@ ${trackUrl ? `<table role="presentation" cellpadding="0" cellspacing="0" border=
 </td></tr></table>
 </body></html>`;
 }
+
+export function buildNiCancellationEmail(params: {
+  bookingCode: string;
+  travelerName: string;
+  forTraveler: boolean;
+  pickupDate: string;
+  pickupTime: string;
+  fromAddress: string;
+  toAddress: string;
+  flightNumber?: string;
+  travelers: number;
+  luggage: number;
+  transferType: 'standard' | 'executive';
+  cancelledBy?: string;
+  language?: 'hu' | 'en';
+}): string {
+  const {
+    bookingCode,
+    travelerName,
+    forTraveler,
+    pickupDate,
+    pickupTime,
+    fromAddress,
+    toAddress,
+    flightNumber,
+    travelers,
+    luggage,
+    transferType,
+    cancelledBy,
+    language,
+  } = params;
+
+  const en = language === 'en';
+  const transferTypeLabel = transferType === 'executive' ? 'EXECUTIVE' : 'STANDARD';
+
+  const intro = forTraveler
+    ? (en
+      ? `Dear ${travelerName}, we confirm that your booking below has been <strong>cancelled</strong>. No transfer will take place for this booking.`
+      : `Tisztelt ${travelerName}! Ezúton visszaigazoljuk, hogy az alábbi foglalását <strong>lemondták</strong>. Erre a foglalásra transzfer nem fog történni.`)
+    : (en
+      ? `Dear Partner, the booking of your passenger <strong>${travelerName}</strong> has been <strong>cancelled</strong>. No transfer will take place for this booking.`
+      : `Tisztelt Partnerünk! <strong>${travelerName}</strong> utasa foglalását <strong>lemondták</strong>. Erre a foglalásra transzfer nem fog történni.`);
+
+  return `<!DOCTYPE html>
+<html${en ? ' lang="en"' : ''}>
+<head><meta charset="utf-8" /></head>
+<body style="margin:0; padding:0; background:#F3F4F6; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+<div style="display:none; max-height:0; overflow:hidden; opacity:0;">
+${en ? `Booking cancelled. Route: ${fromAddress} - ${toAddress}, Time: ${pickupDate} ${pickupTime}.` : `Foglalás lemondva. Útvonal: ${fromAddress} - ${toAddress}, Időpont: ${pickupDate} ${pickupTime}.`}
+</div>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#F3F4F6">
+  <tr>
+    <td align="center" style="padding:40px 14px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;">
+        <tr>
+          <td style="padding-bottom:16px; text-align:center; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#94A3B8; font-weight:700;">
+            ${en ? 'Pannon Transfer · NI | Emerson Portal · Cancellation' : 'Pannon Transfer · NI | Emerson Portál · Lemondás'}
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#FFFFFF; border-radius:24px; overflow:hidden; box-shadow:0 12px 40px rgba(15,23,42,0.08);">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td style="padding:40px 32px; background:linear-gradient(135deg, #0B172D 0%, #163669 100%);">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+                    <tr>
+                      <td bgcolor="#FEE2E2" style="padding:8px 16px; border-radius:12px;">
+                        <span style="font-size:16px; font-weight:900; color:#991B1B;">NI</span>
+                        <span style="font-size:13px; font-weight:700; color:#991B1B; margin-left:6px;">| Emerson Booking Cancellation</span>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <div style="display:inline-block; padding:6px 12px; margin-bottom:16px; border-radius:999px; background:rgba(248,113,113,0.15); border:1px solid rgba(248,113,113,0.4); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#FCA5A5;">
+                    ${en ? 'BOOKING CANCELLED' : 'FOGLALÁS LEMONDVA'}
+                  </div>
+
+                  <h1 style="margin:0 0 16px 0; font-size:28px; line-height:1.2; color:#FFFFFF; font-weight:800;">
+                    ${en ? 'Booking cancelled' : 'Foglalás lemondva'}
+                  </h1>
+
+                  <p style="margin:0 0 32px 0; font-size:15px; line-height:1.6; color:#CBD5E1;">
+                    ${intro}
+                  </p>
+
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                    <tr>
+                      <td width="48%" style="padding-right:8px;">
+                        <div style="background:rgba(255,255,255,0.08); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,0.1);">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8; margin-bottom:6px;">${en ? 'Booking code' : 'Foglalás kód'}</div>
+                          <div style="font-size:14px; font-weight:600; color:#FCA5A5; word-break:break-all; text-decoration:line-through;">#${bookingCode}</div>
+                        </div>
+                      </td>
+                      <td width="48%" style="padding-left:8px;">
+                        <div style="background:rgba(255,255,255,0.08); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,0.1);">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#94A3B8; margin-bottom:6px;">${en ? 'Service' : 'Szolgáltatás'}</div>
+                          <div style="font-size:14px; font-weight:600; color:#FFFFFF;">${transferTypeLabel}</div>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:32px;">
+                  <div style="font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#64748B; margin-bottom:16px;">
+                    ${en ? 'Cancelled trip' : 'Lemondott utazás'}
+                  </div>
+
+                  <div style="border:1px solid #FECACA; border-radius:16px; padding:20px; margin-bottom:24px; background:#FEF2F2;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td width="50%" valign="top" style="padding-right:16px;">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">${en ? 'Date' : 'Dátum'}</div>
+                          <div style="font-size:15px; font-weight:700; color:#0F172A; margin-bottom:16px;">${pickupDate}</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">${en ? 'Time' : 'Időpont'}</div>
+                          <div style="font-size:18px; font-weight:800; color:#DC2626;">${pickupTime}</div>
+                        </td>
+                        <td width="50%" valign="top" style="padding-left:16px; border-left:1px solid #FECACA;">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">${en ? 'Departure' : 'Indulás'}</div>
+                          <div style="font-size:14px; font-weight:600; color:#0F172A; margin-bottom:12px; line-height:1.4;">${fromAddress}</div>
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">${en ? 'Arrival' : 'Érkezés'}</div>
+                          <div style="font-size:14px; font-weight:600; color:#0F172A; line-height:1.4;">${toAddress}</div>
+                          ${flightNumber ? `<div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-top:12px; margin-bottom:4px;">${en ? 'Flight number' : 'Járatszám'}</div><div style="font-size:15px; font-weight:800; color:#0F172A;">✈ ${flightNumber}</div>` : ''}
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
+                    <tr>
+                      <td width="50%" style="padding-right:6px;" valign="top">
+                        <div style="border:1px solid #E2E8F0; border-radius:12px; padding:12px; background:#FFFFFF;">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">${en ? 'Passengers' : 'Utasok'}</div>
+                          <div style="font-size:14px; font-weight:700; color:#0F172A;">${en ? `${travelers} ${travelers === 1 ? 'passenger' : 'passengers'}` : `${travelers} fő`}</div>
+                        </div>
+                      </td>
+                      <td width="50%" style="padding-left:6px;" valign="top">
+                        <div style="border:1px solid #E2E8F0; border-radius:12px; padding:12px; background:#FFFFFF;">
+                          <div style="font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">${en ? 'Luggage' : 'Csomagok'}</div>
+                          <div style="font-size:14px; font-weight:700; color:#0F172A;">${en ? `${luggage} ${luggage === 1 ? 'piece' : 'pieces'}` : `${luggage} db`}</div>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  ${cancelledBy ? `
+                  <div style="border-left:3px solid #DC2626; background:#FEF2F2; border-radius:0 12px 12px 0; padding:16px; margin-bottom:24px;">
+                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#991B1B; margin-bottom:6px;">${en ? 'Cancelled by' : 'Lemondta'}</div>
+                    <div style="font-size:13px; line-height:1.6; color:#7F1D1D;">${cancelledBy}</div>
+                  </div>
+                  ` : ''}
+
+                  <div style="background:#0F172A; border-radius:16px; padding:20px; color:#F8FAFC;">
+                    <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#FCA5A5; margin-bottom:8px;">
+                      ${en ? 'Not you?' : 'Nem Ön mondta le?'}
+                    </div>
+                    <div style="font-size:13px; line-height:1.6;">
+                      ${en ? 'If this cancellation was made by mistake, please create a new booking in the NI | Emerson portal or contact your dedicated NI contact person.' : 'Ha a lemondás tévedésből történt, kérjük, rögzítsen új foglalást az NI | Emerson portálon, vagy forduljon az NI dedikált kapcsolattartójához.'}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td bgcolor="#F8FAFC" style="padding:24px 32px; border-top:1px solid #E2E8F0; text-align:center;">
+                  <p style="margin:0; font-size:11px; line-height:1.6; color:#94A3B8;">
+                    ${en ? 'This message was sent by the Pannon Transfer NI | Emerson Portal system.' : 'Ezt az üzenetet a Pannon Transfer NI | Emerson Portál rendszere küldte.'}<br>
+                    ${en ? 'Kind regards, the Pannon Transfer team' : 'Üdvözlettel, Pannon Transfer csapata'}<br>
+                    © ${new Date().getFullYear()} Pannon Transfer. ${en ? 'All rights reserved.' : 'Minden jog fenntartva.'}
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body></html>`;
+}
