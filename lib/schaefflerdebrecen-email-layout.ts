@@ -1,4 +1,5 @@
 import type { PortalBookingEmailParams } from "@/lib/portal-booking-emails";
+import { portalEmailVariant } from "@/lib/portal-email-variants";
 
 /*
  * Schaeffler Debrecen – e-mail arculat: mélyzöld fejléc, Schaeffler-zöld gomb,
@@ -307,6 +308,12 @@ export function buildBookingConfirmationEmail(
   const lang: "hu" | "en" = p.language === "en" ? "en" : "hu";
   const tr = T[lang];
   const e = (v: string) => esc(v || "—");
+  const V = portalEmailVariant(p, lang, {
+    brand: "Schaeffler Debrecen",
+    name: e(p.travelerName),
+    bold: (s) => `<strong style="color:#0E1A14;">${s}</strong>`,
+    confirmSubject: tr.subject(p.bookingCode),
+  });
   const row = (label: string, value: string) =>
     `<tr><td style="padding:11px 0; border-bottom:1px solid #EAF0EC; font-size:13px; color:#5F7469; width:42%; vertical-align:top;">${esc(label)}</td><td style="padding:11px 0; border-bottom:1px solid #EAF0EC; font-size:14px; font-weight:600; color:#0E1A14; vertical-align:top;">${value}</td></tr>`;
   const cap = (title: string) =>
@@ -316,9 +323,9 @@ export function buildBookingConfirmationEmail(
   const when = `${formatDate(p.pickupDate, lang)} · ${p.pickupTime}`;
 
   const bodyHtml = `
-<p style="margin:0 0 16px 0; font-size:16px; font-weight:600; color:#0E1A14;">${tr.dear}</p>
-<p style="margin:0 0 24px 0; font-size:15px; line-height:1.7; color:#334155;">${tr.intro(e(p.travelerName))}</p>
-${sdEmailInfoRow({ label: tr.ref, value: "#" + p.bookingCode }, { label: tr.status, value: tr.statusVal })}
+<p style="margin:0 0 16px 0; font-size:16px; font-weight:600; color:#0E1A14;">${V.greeting ?? tr.dear}</p>
+<p style="margin:0 0 24px 0; font-size:15px; line-height:1.7; color:#334155;">${V.intro ?? tr.intro(e(p.travelerName))}</p>
+${sdEmailInfoRow({ label: tr.ref, value: "#" + p.bookingCode }, { label: tr.status, value: V.statusValue ?? tr.statusVal })}
 
 ${cap(tr.transfer)}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:26px;">
@@ -341,16 +348,16 @@ ${p.secondTravelerPhone ? row(tr.phone2, e(p.secondTravelerPhone)) : ""}
 ${p.comment ? row(tr.notes, e(p.comment)) : ""}
 </table>
 
-<p style="margin:0 0 28px 0; font-size:13px; line-height:1.7; color:#64748B;">${tr.change}</p>`;
+<p style="margin:0 0 28px 0; font-size:13px; line-height:1.7; color:#64748B;">${V.note ?? tr.change}</p>`;
 
   const html = sdEmailShell({
     origin: p.origin,
-    preheader: tr.pre(p.bookingCode, p.travelerName, p.pickupDate),
-    eyebrow: tr.eyebrow,
-    headline: tr.headline,
+    preheader: V.preheader ?? tr.pre(p.bookingCode, p.travelerName, p.pickupDate),
+    eyebrow: V.eyebrow ?? tr.eyebrow,
+    headline: V.headline ?? tr.headline,
     bodyHtml,
     lang,
     topRight: tr.top,
   });
-  return { subject: tr.subject(p.bookingCode), html };
+  return { subject: V.subject ?? tr.subject(p.bookingCode), html };
 }

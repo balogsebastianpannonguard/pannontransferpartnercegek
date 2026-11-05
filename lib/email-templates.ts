@@ -395,6 +395,8 @@ export function buildDispatcherNotificationEmail(params: {
   travelers: number;
   luggage: number;
   transferType: string;
+  /** "cancelled": a partner lemondta a foglalást (ugyanaz a sablon, más címmel és szöveggel). */
+  kind?: "new" | "cancelled";
 }): string {
   const {
     bookingCode,
@@ -411,6 +413,7 @@ export function buildDispatcherNotificationEmail(params: {
     luggage,
     transferType,
   } = params;
+  const cancelled = params.kind === "cancelled";
 
   const transferTypeUpper = transferType.toUpperCase();
 
@@ -419,7 +422,7 @@ export function buildDispatcherNotificationEmail(params: {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Új foglalás érkezett · #${bookingCode} · Pannon Transfer</title>
+<title>${cancelled ? "Foglalás lemondva" : "Új foglalás érkezett"} · #${bookingCode} · Pannon Transfer</title>
 </head>
 <body style="margin:0;padding:0;background-color:#FAF8F5;font-family:Arial,Helvetica,sans-serif;min-width:100%;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#FAF8F5;padding:48px 16px;">
@@ -467,7 +470,7 @@ export function buildDispatcherNotificationEmail(params: {
 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
 <tr>
 <td style="width:3px;background-color:#C9A962;border-radius:2px;"></td>
-<td style="padding-left:12px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;color:#C9A962;letter-spacing:4px;text-transform:uppercase;">ÚJ FOGLALÁS ÉRKEZETT</td>
+<td style="padding-left:12px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;color:#C9A962;letter-spacing:4px;text-transform:uppercase;">${cancelled ? "FOGLALÁS LEMONDVA" : "ÚJ FOGLALÁS ÉRKEZETT"}</td>
 </tr>
 </table>
 </td>
@@ -476,7 +479,7 @@ export function buildDispatcherNotificationEmail(params: {
 <td style="padding-top:14px;font-family:Arial,Helvetica,sans-serif;font-size:28px;font-weight:700;color:#1A1A1A;line-height:1.2;">#${bookingCode}</td>
 </tr>
 <tr>
-<td style="padding-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#7A7A7A;line-height:1.6;">A következő ügyfél új foglalást küldött be, kérjük kezelje prioritásban.</td>
+<td style="padding-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#7A7A7A;line-height:1.6;">${cancelled ? "A partner lemondta az alábbi foglalást. Kérjük, töröljék a beosztásból, és értesítsék a kijelölt sofőrt." : "A következő ügyfél új foglalást küldött be, kérjük kezelje prioritásban."}</td>
 </tr>
 </table>
 </td>
@@ -636,7 +639,7 @@ ${flightNumber ? `<tr>
 <td align="center">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#C9A962;border-radius:4px;">
 <tr>
-<td align="center" style="padding:0 24px;height:44px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;color:#0B1A2A;letter-spacing:2px;text-transform:uppercase;line-height:44px;">FOGLALÁS MEGTEKINTÉSE ÉS HOZZÁRENDELÉSE</td>
+<td align="center" style="padding:0 24px;height:44px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;color:#0B1A2A;letter-spacing:2px;text-transform:uppercase;line-height:44px;">${cancelled ? "FOGLALÁS MEGTEKINTÉSE" : "FOGLALÁS MEGTEKINTÉSE ÉS HOZZÁRENDELÉSE"}</td>
 </tr>
 </table>
 </td>
@@ -647,7 +650,7 @@ ${flightNumber ? `<tr>
 </table>
 </td>
 </tr>
-<tr>
+${cancelled ? "" : `<tr>
 <td style="padding-top:24px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#FAF6EE;border-left:3px solid #C9A962;border-radius:0 8px 8px 0;">
 <tr>
@@ -683,7 +686,7 @@ ${flightNumber ? `<tr>
 </tr>
 </table>
 </td>
-</tr>
+</tr>`}
 <tr>
 <td style="padding-top:32px;padding-bottom:40px;"></td>
 </tr>

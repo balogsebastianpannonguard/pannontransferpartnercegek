@@ -7,8 +7,21 @@ import {
   type Booking,
 } from "@/lib/bookings";
 import { sendNiCancellationNotifications } from "@/lib/ni-notifications";
+import {
+  sendDispatcherCancellationNotification,
+  sendPortalCancellationNotifications,
+} from "@/lib/portal-notifications";
 
 export const dynamic = "force-dynamic";
+
+function getRequestOrigin(request: Request): string {
+  const originHeader = request.headers.get("origin");
+  if (originHeader) return originHeader.replace(/\/$/, "");
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const host = request.headers.get("host");
+  if (host) return `${forwardedProto}://${host}`;
+  return process.env.NEXT_PUBLIC_APP_URL || "";
+}
 
 const PICKUP_AFFECTING_FIELDS = [
   "pickupDate",
@@ -201,6 +214,16 @@ export async function PATCH(
         cancelledBy: `${updatedBooking.travelerName} (${updatedBooking.travelerEmail})`,
         logTag: "track-cancel",
       });
+    }
+
+    // Nem NI portál (az NI fent, változatlanul): foglaló + utas cég arculatú értesítő, diszpécser e-mail.
+    if (patch.status === "cancelled" && updatedBooking.portal && updatedBooking.portal !== "ni") {
+      await sendPortalCancellationNotifications({
+        booking: updatedBooking,
+        origin: getRequestOrigin(request),
+        logTag: "track-cancel",
+      });
+      await sendDispatcherCancellationNotification({ booking: updatedBooking, logTag: "track-cancel" });
     }
 
     return NextResponse.json({ success: true, booking: toPublicBooking(updatedBooking) });

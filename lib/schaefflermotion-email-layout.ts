@@ -1,4 +1,5 @@
 import type { PortalBookingEmailParams } from "@/lib/portal-booking-emails";
+import { portalEmailVariant } from "@/lib/portal-email-variants";
 
 /**
  * Schaeffler Motion e-mail design: graphite header with Schaeffler-green signal bar,
@@ -234,11 +235,17 @@ export function buildBookingConfirmationEmail(p: PortalBookingEmailParams): { su
   const lang: MxMailLang = p.language === "en" ? "en" : "hu";
   const c = CONF[lang];
   const e = (v?: string) => mxEsc(v || "") || "—";
+  const V = portalEmailVariant(p, lang, {
+    brand: "Schaeffler Motion",
+    name: e(p.travelerName),
+    bold: (s) => `<strong style="color:#0E1412;">${s}</strong>`,
+    confirmSubject: c.subject(p.bookingCode),
+  });
 
   const body =
-    mxMailPara(c.dear, { size: 16, weight: 600, color: "#0E1412" }) +
-    mxMailPara(c.intro(e(p.travelerName)), { mb: 24 }) +
-    mxMailSpecPair({ label: c.ref, value: `#${p.bookingCode}` }, { label: c.status, value: c.statusValue }) +
+    mxMailPara(V.greeting ?? c.dear, { size: 16, weight: 600, color: "#0E1412" }) +
+    mxMailPara(V.intro ?? c.intro(e(p.travelerName)), { mb: 24 }) +
+    mxMailSpecPair({ label: c.ref, value: `#${p.bookingCode}` }, { label: c.status, value: V.statusValue ?? c.statusValue }) +
     mxMailRows(c.detailsTitle, [
       [c.when, e(`${p.pickupDate}  ${p.pickupTime}`)],
       [c.from, e(p.fromAddress)],
@@ -256,15 +263,15 @@ export function buildBookingConfirmationEmail(p: PortalBookingEmailParams): { su
       [c.p2Phone, p.secondTravelerPhone ? e(p.secondTravelerPhone) : ""],
       [c.notes, p.comment ? e(p.comment) : ""],
     ]) +
-    mxMailPara(c.foot, { size: 13, color: "#6B7B73", mb: 26 });
+    mxMailPara(V.note ?? c.foot, { size: 13, color: "#6B7B73", mb: 26 });
 
   return {
-    subject: c.subject(p.bookingCode),
+    subject: V.subject ?? c.subject(p.bookingCode),
     html: mxMailShell({
       origin: p.origin,
-      preheader: c.preheader(p.bookingCode, p.travelerName, p.pickupDate),
-      eyebrow: c.eyebrow,
-      headline: c.headline,
+      preheader: V.preheader ?? c.preheader(p.bookingCode, p.travelerName, p.pickupDate),
+      eyebrow: V.eyebrow ?? c.eyebrow,
+      headline: V.headline ?? c.headline,
       bodyHtml: body,
       lang,
       topRight: "Schaeffler Motion",

@@ -1,4 +1,5 @@
 import type { PortalBookingEmailParams } from "@/lib/portal-booking-emails";
+import { portalEmailVariant } from "@/lib/portal-email-variants";
 
 /**
  * Ecopro BM arculatú e-mail sablonok (magyar / angol / koreai).
@@ -306,6 +307,12 @@ export function buildBookingConfirmationEmail(
 ): { subject: string; html: string } | null {
   const lang: Lang = params.language === "ko" ? "ko" : params.language === "en" ? "en" : "hu";
   const t = CONFIRM_TEXT[lang];
+  const V = portalEmailVariant(params, lang, {
+    brand: "Ecopro BM",
+    name: esc(params.travelerName),
+    bold: (s) => `<strong style="color:#0F172A;">${s}</strong>`,
+    confirmSubject: t.subject(params.bookingCode),
+  });
   const row = (label: string, value: string) =>
     `<tr><td style="padding:11px 0; border-bottom:1px solid #EEF2F7; font-size:13px; color:${C.muted}; width:42%; vertical-align:top;">${esc(label)}</td><td style="padding:11px 0; border-bottom:1px solid #EEF2F7; font-size:14px; font-weight:600; color:${C.ink}; vertical-align:top;">${value}</td></tr>`;
   const e = (v: string | undefined) => esc(v && v.trim() ? v : "—");
@@ -313,9 +320,9 @@ export function buildBookingConfirmationEmail(
     `<div style="font-size:10px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:${C.orange}; margin:0 0 4px 0;">${esc(text)}</div>`;
 
   const bodyHtml = `
-${ecoproBmGreeting(t.greeting)}
-${ecoproBmPara(t.intro(esc(params.travelerName)), { last: true })}
-${ecoproBmInfoRow({ label: t.ref, value: `#${params.bookingCode}` }, { label: t.status, value: t.statusValue })}
+${ecoproBmGreeting(V.greeting ?? t.greeting)}
+${ecoproBmPara(V.intro ?? t.intro(esc(params.travelerName)), { last: true })}
+${ecoproBmInfoRow({ label: t.ref, value: `#${params.bookingCode}` }, { label: t.status, value: V.statusValue ?? t.statusValue })}
 
 ${sectionTitle(t.tripTitle)}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:26px;">
@@ -338,19 +345,19 @@ ${params.secondTravelerPhone ? row(t.phone2, e(params.secondTravelerPhone)) : ""
 ${params.comment ? row(t.notes, e(params.comment)) : ""}
 </table>
 
-<p style="margin:0 0 30px 0; font-size:13px; line-height:1.7; color:${C.muted};">${t.help}</p>`;
+<p style="margin:0 0 30px 0; font-size:13px; line-height:1.7; color:${C.muted};">${V.note ?? t.help}</p>`;
 
   const html = ecoproBmEmailShell({
     origin: params.origin,
     lang,
-    preheader: t.preheader(params.bookingCode, params.travelerName, params.pickupDate),
-    eyebrow: t.eyebrow,
-    headline: t.headline,
+    preheader: V.preheader ?? t.preheader(params.bookingCode, params.travelerName, params.pickupDate),
+    eyebrow: V.eyebrow ?? t.eyebrow,
+    headline: V.headline ?? t.headline,
     bodyHtml,
     topRight: "Ecopro BM",
   });
 
-  return { subject: t.subject(params.bookingCode), html };
+  return { subject: V.subject ?? t.subject(params.bookingCode), html };
 }
 
 /* ------------------------------------------------------------------ */

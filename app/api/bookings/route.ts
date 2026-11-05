@@ -13,6 +13,11 @@ import {
 import { sendEmail } from "@/lib/email";
 import { buildPortalBookingConfirmation } from "@/lib/portal-booking-emails";
 import {
+  buildPortalRecipients,
+  portalEmailParamsFromBooking,
+  sendPortalBookingEmails,
+} from "@/lib/portal-notifications";
+import {
   buildCustomerConfirmationEmail,
   buildNiCustomerConfirmationEmail,
   buildDispatcherNotificationEmail,
@@ -165,28 +170,9 @@ export async function POST(request: Request) {
       language: createdBooking.language === "en" ? ("en" as const) : ("hu" as const),
     };
 
+    const portalEmailParams = portalEmailParamsFromBooking(createdBooking, getRequestOrigin(request));
     const portalEmail =
-      session.portal === "ni"
-        ? null
-        : buildPortalBookingConfirmation(session.portal, {
-            origin: getRequestOrigin(request),
-            bookingCode: createdBooking.bookingCode,
-            travelerName: createdBooking.travelerName,
-            travelerEmail: createdBooking.travelerEmail,
-            travelerPhone: createdBooking.travelerPhone,
-            pickupDate: createdBooking.pickupDate,
-            pickupTime: createdBooking.pickupTime,
-            fromAddress: createdBooking.fromAddress,
-            toAddress: createdBooking.toAddress,
-            flightNumber: createdBooking.flightNumber,
-            travelers: createdBooking.travelers,
-            luggage: createdBooking.luggage,
-            transferType: createdBooking.transferType,
-            secondTravelerEmail: createdBooking.secondTravelerEmail,
-            secondTravelerPhone: createdBooking.secondTravelerPhone,
-            comment: createdBooking.comment,
-            language: createdBooking.language ?? "hu",
-          });
+      session.portal === "ni" ? null : buildPortalBookingConfirmation(session.portal, portalEmailParams);
 
     const customerHtml =
       session.portal === "ni"
@@ -226,6 +212,20 @@ export async function POST(request: Request) {
         subject: customerSubject,
         html: customerHtml,
       });
+      // Mint az NI-nál: ha nem az utas maga foglalt, ő is megkapja a saját (neki szóló) visszaigazolását.
+      if (portalEmail) {
+        const travelerRecipients = buildPortalRecipients({
+          bookerEmail: session.email,
+          travelerEmail: createdBooking.travelerEmail,
+        }).filter((r) => r.role === "traveler");
+        await sendPortalBookingEmails({
+          portal: session.portal,
+          emailParams: portalEmailParams,
+          recipients: travelerRecipients,
+          variant: "confirmation",
+          logTag: "booking",
+        });
+      }
     }
 
     const db = await getDb();

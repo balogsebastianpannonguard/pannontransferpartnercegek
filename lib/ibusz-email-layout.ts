@@ -1,4 +1,5 @@
 import type { PortalBookingEmailParams } from "@/lib/portal-booking-emails";
+import { portalEmailVariant } from "@/lib/portal-email-variants";
 
 /**
  * IBUSZ Hungary Kft. – saját arculatú e-mail sablonok (Pannon Transfer × IBUSZ).
@@ -294,15 +295,21 @@ export function buildBookingConfirmationEmail(
   const l: L = p.language === "en" ? "en" : "hu";
   const c = BOOKING_COPY[l];
   const e = (v: string) => esc(v || "—");
+  const V = portalEmailVariant(p, l, {
+    brand: "IBUSZ",
+    name: esc(p.travelerName),
+    bold: (s) => `<strong style="color:${INK};">${s}</strong>`,
+    confirmSubject: c.subject(p.bookingCode),
+  });
   const row = (label: string, value: string) =>
     `<tr><td style="padding:11px 0; border-bottom:1px solid #EAF0F6; font-size:13px; color:#6B7F96; width:42%; vertical-align:top;">${esc(label)}</td><td style="padding:11px 0; border-bottom:1px solid #EAF0F6; font-size:14px; font-weight:600; color:${INK}; vertical-align:top;">${value}</td></tr>`;
   const sectionTitle = (t: string) =>
     `<div style="font-size:10px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:${ORANGE}; margin:0 0 4px 0;">${esc(t)}</div>`;
 
   const bodyHtml = `
-<p style="margin:0 0 14px 0; font-size:16px; font-weight:600; color:${INK};">${c.greeting}</p>
-<p style="margin:0 0 24px 0; font-size:15px; line-height:1.7; color:#3C5068;">${c.intro(p.travelerName)}</p>
-${ibuszInfoRow({ label: c.ref, value: "#" + p.bookingCode }, { label: c.status, value: c.statusValue })}
+<p style="margin:0 0 14px 0; font-size:16px; font-weight:600; color:${INK};">${V.greeting ?? c.greeting}</p>
+<p style="margin:0 0 24px 0; font-size:15px; line-height:1.7; color:#3C5068;">${V.intro ?? c.intro(p.travelerName)}</p>
+${ibuszInfoRow({ label: c.ref, value: "#" + p.bookingCode }, { label: c.status, value: V.statusValue ?? c.statusValue })}
 
 ${sectionTitle(c.transfer)}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:26px;">
@@ -325,17 +332,17 @@ ${p.secondTravelerPhone ? row(c.secondPhone, e(p.secondTravelerPhone)) : ""}
 ${p.comment ? row(c.notes, e(p.comment)) : ""}
 </table>
 
-<p style="margin:0 0 30px 0; font-size:13px; line-height:1.7; color:#6B7F96;">${c.change}</p>`;
+<p style="margin:0 0 30px 0; font-size:13px; line-height:1.7; color:#6B7F96;">${V.note ?? c.change}</p>`;
 
   const html = ibuszEmailShell({
     origin: p.origin,
     lang: l,
-    preheader: c.preheader(p.bookingCode, p.travelerName, p.pickupDate),
-    eyebrow: c.eyebrow,
-    headline: c.headline,
+    preheader: V.preheader ?? c.preheader(p.bookingCode, p.travelerName, p.pickupDate),
+    eyebrow: V.eyebrow ?? c.eyebrow,
+    headline: V.headline ?? c.headline,
     bodyHtml,
     topRight: "IBUSZ Hungary Kft.",
     footerKind: l === "hu" ? "booking-hu" : "booking-en",
   });
-  return { subject: c.subject(p.bookingCode), html };
+  return { subject: V.subject ?? c.subject(p.bookingCode), html };
 }

@@ -1,3 +1,6 @@
+import type { PortalBookingEmailParams } from "@/lib/portal-booking-emails";
+import { portalEmailVariant } from "@/lib/portal-email-variants";
+
 export const CATL_CONTACT = {
   name: "Balog Sebastian Máté",
   role: "Developer, Pannon Transfer",
@@ -109,35 +112,24 @@ This message was sent by the Pannon Transfer Komplex system. If you did not expe
   return html;
 }
 
-export function buildCatlBookingConfirmationEmail(params: {
-  origin: string;
-  bookingCode: string;
-  travelerName: string;
-  travelerEmail: string;
-  travelerPhone: string;
-  pickupDate: string;
-  pickupTime: string;
-  fromAddress: string;
-  toAddress: string;
-  flightNumber?: string;
-  travelers: number;
-  luggage: number;
-  transferType: "standard" | "executive";
-  secondTravelerEmail?: string;
-  secondTravelerPhone?: string;
-  comment?: string;
-}) {
+export function buildCatlBookingConfirmationEmail(params: PortalBookingEmailParams): { subject: string; html: string } {
   const p = params;
   const row = (label: string, value: string) =>
     `<tr><td style="padding:11px 0; border-bottom:1px solid #EEF2F7; font-size:13px; color:#64748B; width:42%; vertical-align:top;">${esc(label)}</td><td style="padding:11px 0; border-bottom:1px solid #EEF2F7; font-size:14px; font-weight:600; color:#0F172A; vertical-align:top;">${value}</td></tr>`;
   const e = (v: string) => esc(v || "—");
+  const v = portalEmailVariant(p, "en", {
+    brand: "CATL",
+    name: e(p.travelerName),
+    bold: (s) => `<strong style="color:#0F172A;">${s}</strong>`,
+    confirmSubject: `Booking confirmation - #${p.bookingCode} | CATL x Pannon Transfer`,
+  });
 
   const bodyHtml = `
-<p style="margin:0 0 16px 0; font-size:16px; font-weight:600; color:#0F172A;">Dear Partner,</p>
+<p style="margin:0 0 16px 0; font-size:16px; font-weight:600; color:#0F172A;">${v.greeting ?? "Dear Partner,"}</p>
 <p style="margin:0 0 24px 0; font-size:15px; line-height:1.7; color:#334155;">
-Thank you for your booking. We have received your transfer request for <strong style="color:#0F172A;">${e(p.travelerName)}</strong>. Our dispatch team will review it and confirm it with you shortly.
+${v.intro ?? `Thank you for your booking. We have received your transfer request for <strong style="color:#0F172A;">${e(p.travelerName)}</strong>. Our dispatch team will review it and confirm it with you shortly.`}
 </p>
-${catlEmailInfoRow({ label: "Booking reference", value: "#" + p.bookingCode }, { label: "Status", value: "Received · awaiting confirmation" })}
+${catlEmailInfoRow({ label: "Booking reference", value: "#" + p.bookingCode }, { label: "Status", value: v.statusValue ?? "Received · awaiting confirmation" })}
 
 <div style="font-size:10px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:#94A3B8; margin:0 0 4px 0;">Transfer details</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:26px;">
@@ -161,15 +153,16 @@ ${p.comment ? row("Notes", e(p.comment)) : ""}
 </table>
 
 <p style="margin:0 0 30px 0; font-size:13px; line-height:1.7; color:#64748B;">
-Need to change or cancel? Open <strong style="color:#0F172A;">My bookings</strong> in the CATL portal, or contact us using the details below.
+${v.note ?? `Need to change or cancel? Open <strong style="color:#0F172A;">My bookings</strong> in the CATL portal, or contact us using the details below.`}
 </p>`;
 
-  return catlEmailShell({
+  const html = catlEmailShell({
     origin: p.origin,
-    preheader: `Booking #${p.bookingCode} received - transfer for ${p.travelerName} on ${p.pickupDate}.`,
-    eyebrow: "Booking confirmation",
-    headline: "We&rsquo;ve received<br>your transfer request",
+    preheader: v.preheader ?? `Booking #${p.bookingCode} received - transfer for ${p.travelerName} on ${p.pickupDate}.`,
+    eyebrow: v.eyebrow ?? "Booking confirmation",
+    headline: v.headline ?? "We&rsquo;ve received<br>your transfer request",
     bodyHtml,
     topRight: "CATL Dedicated Portal",
   });
+  return { subject: v.subject ?? `Booking confirmation - #${p.bookingCode} | CATL x Pannon Transfer`, html };
 }

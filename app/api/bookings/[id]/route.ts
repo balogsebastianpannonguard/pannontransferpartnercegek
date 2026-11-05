@@ -12,8 +12,21 @@ import {
   type Booking,
 } from "@/lib/bookings";
 import { sendNiCancellationNotifications } from "@/lib/ni-notifications";
+import {
+  sendDispatcherCancellationNotification,
+  sendPortalCancellationNotifications,
+} from "@/lib/portal-notifications";
 
 export const dynamic = "force-dynamic";
+
+function getRequestOrigin(request: Request): string {
+  const originHeader = request.headers.get("origin");
+  if (originHeader) return originHeader.replace(/\/$/, "");
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const host = request.headers.get("host");
+  if (host) return `${forwardedProto}://${host}`;
+  return process.env.NEXT_PUBLIC_APP_URL || "";
+}
 
 function getRequestedPortal(request: Request): PartnerPortal | null {
   const portal = request.headers.get("x-partner-portal");
@@ -265,6 +278,21 @@ export async function PATCH(
         cancelledBy: session.email,
         logTag: "booking-cancel",
       });
+    }
+
+    // A többi (nem NI) portálnál: a foglaló és az utas a cég arculatú lemondási értesítőt kapja,
+    // a diszpécserek pedig e-mailt a lemondásról. Az NI saját, változatlan folyamatát fent kezeljük.
+    if (
+      patch.status === "cancelled" &&
+      existingBooking.status !== "cancelled" &&
+      session.portal !== "ni"
+    ) {
+      await sendPortalCancellationNotifications({
+        booking: { ...updatedBooking, portal: updatedBooking.portal ?? session.portal },
+        origin: getRequestOrigin(request),
+        logTag: "booking-cancel",
+      });
+      await sendDispatcherCancellationNotification({ booking: updatedBooking, logTag: "booking-cancel" });
     }
 
     return NextResponse.json({ success: true, booking: updatedBooking });

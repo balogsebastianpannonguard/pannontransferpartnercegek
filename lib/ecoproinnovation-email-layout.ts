@@ -1,4 +1,5 @@
 import type { PortalBookingEmailParams } from "@/lib/portal-booking-emails";
+import { portalEmailVariant } from "@/lib/portal-email-variants";
 
 /* Ecopro Innovation e-mail identity: bright, airy, EcoPro blue → cyan. Table-based, client-safe. */
 
@@ -477,15 +478,22 @@ export function buildBookingConfirmationEmail(
 ): { subject: string; html: string } | null {
   const lang: Lang = params.language === "ko" || params.language === "en" ? params.language : "hu";
   const c = CONFIRM_COPY[lang];
+  const V = portalEmailVariant(params, lang, {
+    brand: "Ecopro Innovation",
+    name: params.travelerName,
+    bold: (s) => `**${s}**`,
+    br: " ",
+    confirmSubject: c.subject(params.bookingCode),
+  });
   const row = (label: string, value: string) =>
     `<tr><td style="padding:11px 0; border-bottom:1px solid #E6F0F8; font-size:13px; color:#64748B; width:42%; vertical-align:top;">${esc(label)}</td><td style="padding:11px 0; border-bottom:1px solid #E6F0F8; font-size:14px; font-weight:600; color:#0B2540; vertical-align:top;">${esc(value || "—")}</td></tr>`;
   const sectionTitle = (title: string) =>
     `<div style="font-size:10px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:#0E86D4; margin:0 0 4px 0;">${esc(title)}</div>`;
 
   const bodyHtml =
-    ecoPara(c.greeting, { size: 16, color: "#0B2540", margin: "0 0 14px 0" }) +
-    ecoPara(c.intro(params.travelerName), { margin: "0 0 24px 0" }) +
-    ecoInfoRow({ label: c.ref, value: "#" + params.bookingCode }, { label: c.status, value: c.statusValue }) +
+    ecoPara(V.greeting ?? c.greeting, { size: 16, color: "#0B2540", margin: "0 0 14px 0" }) +
+    ecoPara(V.intro ?? c.intro(params.travelerName), { margin: "0 0 24px 0" }) +
+    ecoInfoRow({ label: c.ref, value: "#" + params.bookingCode }, { label: c.status, value: V.statusValue ?? c.statusValue }) +
     sectionTitle(c.secTransfer) +
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:26px;">
 ${row(c.when, fmtWhen(lang, params.pickupDate, params.pickupTime))}
@@ -505,17 +513,17 @@ ${params.secondTravelerEmail ? row(c.email2, params.secondTravelerEmail) : ""}
 ${params.secondTravelerPhone ? row(c.phone2, params.secondTravelerPhone) : ""}
 ${params.comment ? row(c.notes, params.comment) : ""}
 </table>` +
-    ecoPara(c.change, { size: 13, color: "#64748B", margin: "0 0 30px 0" });
+    ecoPara(V.note ?? c.change, { size: 13, color: "#64748B", margin: "0 0 30px 0" });
 
   const html = ecoEmailShell({
     origin: params.origin,
-    preheader: c.preheader(params.bookingCode, params.travelerName, params.pickupDate),
-    eyebrow: c.eyebrow,
-    headline: c.headline,
+    preheader: V.preheader ?? c.preheader(params.bookingCode, params.travelerName, params.pickupDate),
+    eyebrow: V.eyebrow ?? c.eyebrow,
+    headline: V.headline ?? c.headline,
     bodyHtml,
     langs: [lang],
     topRight: c.topRight,
   });
 
-  return { subject: c.subject(params.bookingCode), html };
+  return { subject: V.subject ?? c.subject(params.bookingCode), html };
 }

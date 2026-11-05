@@ -1,4 +1,5 @@
 import type { PortalBookingEmailParams } from "@/lib/portal-booking-emails";
+import { portalEmailVariant } from "@/lib/portal-email-variants";
 
 /* ------------------------------------------------------------------ */
 /*  TAMA arculatú, e-mail-kliens-biztos (táblázatos) sablonok           */
@@ -320,6 +321,12 @@ export function buildBookingConfirmationEmail(
   const lang: Lang = params.language === "en" ? "en" : "hu";
   const T = CONFIRM_TEXT[lang];
   const e = (v?: string) => esc(v && v.trim() ? v : "—");
+  const V = portalEmailVariant(params, lang, {
+    brand: "TAMA",
+    name: esc(params.travelerName),
+    bold: (s) => `<strong style="color:#26301B;">${s}</strong>`,
+    confirmSubject: T.subject(params.bookingCode),
+  });
   const row = (label: string, value: string) =>
     `<tr><td style="padding:11px 0; border-bottom:1px solid #EFE9D7; font-family:${SANS}; font-size:13px; color:#8B917D; width:40%; vertical-align:top;">${esc(label)}</td><td style="padding:11px 0; border-bottom:1px solid #EFE9D7; font-family:${SANS}; font-size:14px; font-weight:600; color:#26301B; vertical-align:top;">${value}</td></tr>`;
   const heading = (t: string) =>
@@ -327,9 +334,9 @@ export function buildBookingConfirmationEmail(
 
   const classLabel = params.transferType === "executive" ? "Executive" : "Standard";
   const bodyHtml = `
-<p style="margin:0 0 12px 0; font-family:${SANS}; font-size:16px; font-weight:700; color:#26301B;">${T.greet}</p>
-<p style="margin:0 0 24px 0; font-family:${SANS}; font-size:15px; line-height:1.7; color:#3B4530;">${T.intro(esc(params.travelerName))}</p>
-${tamaEmailInfoRow({ label: T.ref, value: "#" + params.bookingCode }, { label: T.status, value: T.statusValue })}
+<p style="margin:0 0 12px 0; font-family:${SANS}; font-size:16px; font-weight:700; color:#26301B;">${V.greeting ?? T.greet}</p>
+<p style="margin:0 0 24px 0; font-family:${SANS}; font-size:15px; line-height:1.7; color:#3B4530;">${V.intro ?? T.intro(esc(params.travelerName))}</p>
+${tamaEmailInfoRow({ label: T.ref, value: "#" + params.bookingCode }, { label: T.status, value: V.statusValue ?? T.statusValue })}
 
 ${heading(T.sTransfer)}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:26px;">
@@ -352,19 +359,19 @@ ${params.secondTravelerPhone ? row(T.phone2, e(params.secondTravelerPhone)) : ""
 ${params.comment ? row(T.notes, e(params.comment)) : ""}
 </table>
 
-<p style="margin:0 0 28px 0; font-family:${SANS}; font-size:13px; line-height:1.7; color:#6B705C;">${T.changeNote}</p>`;
+<p style="margin:0 0 28px 0; font-family:${SANS}; font-size:13px; line-height:1.7; color:#6B705C;">${V.note ?? T.changeNote}</p>`;
 
   const html = tamaEmailShell({
     origin: params.origin,
     lang,
-    preheader: T.preheader(params.bookingCode, params.travelerName, params.pickupDate),
-    eyebrow: T.eyebrow,
-    headline: T.headline,
+    preheader: V.preheader ?? T.preheader(params.bookingCode, params.travelerName, params.pickupDate),
+    eyebrow: V.eyebrow ?? T.eyebrow,
+    headline: V.headline ?? T.headline,
     bodyHtml,
-    topRight: T.topRight,
+    topRight: V.eyebrow ?? T.topRight,
     footerLines: [...T.footer],
     rights: lang === "hu" ? "Minden jog fenntartva." : "All rights reserved.",
   });
 
-  return { subject: T.subject(params.bookingCode), html };
+  return { subject: V.subject ?? T.subject(params.bookingCode), html };
 }
