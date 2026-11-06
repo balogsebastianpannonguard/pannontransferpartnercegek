@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { sendEmail } from "@/lib/email";
 import { buildFeedbackNotificationEmail } from "@/lib/feedback-email";
-import { LOCATION_SUPPORT_EMAIL } from "@/lib/ni-notifications";
+import { LOCATION_SUPPORT_EMAIL, NI_SUPERVISOR_EMAILS } from "@/lib/ni-notifications";
 import {
   FEEDBACKS_COLLECTION,
   FEEDBACK_REQUESTS_COLLECTION,
@@ -96,17 +96,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
     // Valódi visszajelzésnél a Location Support kapja az összefoglalót; próbánál kizárólag a próbát indító admin megadott címe.
     // A küldés hibája nem akadályozza a mentést.
-    const recipient = isTest ? feedbackRequest.testRecipient : LOCATION_SUPPORT_EMAIL;
-    try {
-      if (!recipient) throw new Error("missing test recipient");
-      const result = await sendEmail({
-        to: recipient,
-        subject: `${isTest ? "[TEST] " : ""}Passenger feedback – #${record.bookingCode} – ${record.satisfied ? "Satisfied" : "Not satisfied"}`,
-        html: buildFeedbackNotificationEmail(record),
-      });
-      if (!result.success) console.error("[feedback] Location Support notification failed", result.error);
-    } catch (error) {
-      console.error("[feedback] Location Support notification threw", error);
+    // Az NI felügyelő (Zsuzsi) is megkapja az összefoglalót.
+    const recipients = isTest
+      ? [feedbackRequest.testRecipient].filter((e): e is string => !!e)
+      : Array.from(new Map([LOCATION_SUPPORT_EMAIL, ...NI_SUPERVISOR_EMAILS].map((e) => [e.toLowerCase(), e])).values());
+    if (recipients.length === 0) console.error("[feedback] missing test recipient");
+    for (const recipient of recipients) {
+      try {
+        const result = await sendEmail({
+          to: recipient,
+          subject: `${isTest ? "[TEST] " : ""}Passenger feedback – #${record.bookingCode} – ${record.satisfied ? "Satisfied" : "Not satisfied"}`,
+          html: buildFeedbackNotificationEmail(record),
+        });
+        if (!result.success) console.error("[feedback] notification failed", recipient, result.error);
+      } catch (error) {
+        console.error("[feedback] notification threw", recipient, error);
+      }
     }
 
     return NextResponse.json({ success: true });

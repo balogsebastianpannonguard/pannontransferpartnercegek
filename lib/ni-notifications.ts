@@ -8,13 +8,30 @@ import { buildNiCancellationEmail } from "@/lib/email-templates";
 export const LOCATION_SUPPORT_EMAIL =
   process.env.LOCATION_SUPPORT_EMAIL?.trim() || "locationsupport.request@emerson.com";
 
+/**
+ * NI felügyelő(k): minden NI foglalásról és változásról értesítést kapnak, és a portálon minden NI foglalást látnak,
+ * bárki rögzítette is. Vesszővel elválasztva felülírható a NI_SUPERVISOR_EMAILS környezeti változóval.
+ */
+export const NI_SUPERVISOR_EMAILS: string[] = (
+  process.env.NI_SUPERVISOR_EMAILS?.trim() || "zsuzsa.kukucska@emerson.com"
+)
+  .split(",")
+  .map((e) => e.trim())
+  .filter(Boolean);
+
+export function isNiSupervisor(email: string | undefined | null): boolean {
+  if (!email) return false;
+  const key = email.trim().toLowerCase();
+  return NI_SUPERVISOR_EMAILS.some((e) => e.toLowerCase() === key);
+}
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function isValidEmail(value: unknown): value is string {
   return typeof value === "string" && EMAIL_PATTERN.test(value.trim());
 }
 
-export type NiConfirmationRole = "traveler" | "admin" | "location-support";
+export type NiConfirmationRole = "traveler" | "admin" | "location-support" | "supervisor";
 
 export interface NiConfirmationRecipient {
   email: string;
@@ -24,7 +41,8 @@ export interface NiConfirmationRecipient {
 /**
  * Összeállítja a címzetteket: utas, admin (megadott admin e-mail, ennek hiányában a foglalást rögzítő
  * felhasználó), valamint a Location Support. Kis/nagybetűtől függetlenül egyszer szerepel egy cím;
- * ha egy ember több szerepben is van, az első (utas > admin > Location Support) érvényes.
+ * ha egy ember több szerepben is van, az első (utas > admin > Location Support > NI felügyelő) érvényes.
+ * Az NI felügyelő (Zsuzsi) minden foglalásról másolatot kap.
  */
 export function buildNiConfirmationRecipients(params: {
   travelerEmail?: string;
@@ -46,6 +64,7 @@ export function buildNiConfirmationRecipients(params: {
   add(params.travelerEmail, "traveler");
   add(params.adminEmail || params.bookerEmail, "admin");
   add(LOCATION_SUPPORT_EMAIL, "location-support");
+  for (const supervisor of NI_SUPERVISOR_EMAILS) add(supervisor, "supervisor");
 
   return recipients;
 }

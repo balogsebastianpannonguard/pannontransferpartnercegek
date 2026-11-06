@@ -1,6 +1,7 @@
 import { getDb } from './mongodb';
 import { ObjectId, Collection, type Filter } from 'mongodb';
 import { getTravelConditions, isTimeInOperatingHours } from './travel-conditions';
+import { isNiSupervisor } from './ni-notifications';
 import { getPartnerPricing, type PartnerPricing, type PricingVehicle } from './partner-pricing';
 
 export type PartnerPortal =
@@ -490,6 +491,20 @@ function resolveBookingPortal(companyName?: string): PartnerPortal {
 }
 
 export function buildPortalScopeFilter(portal: PartnerPortal): Filter<Booking> {
+  if (portal === 'ni') {
+    // A diszpécser által rögzített NI utaknál régebben nem volt portal mező, csak a cégnév.
+    return {
+      $or: [
+        { portal: 'ni' },
+        {
+          $and: [
+            { $or: [{ portal: { $exists: false } }, { portal: null }, { portal: '' }] },
+            { companyName: { $regex: '^(national instruments|ni)\\b', $options: 'i' } },
+          ],
+        },
+      ],
+    } as Filter<Booking>;
+  }
   if (portal !== 'catl') {
     return { portal };
   }
@@ -577,13 +592,30 @@ export async function createBooking(data: CreateBookingData): Promise<Booking> {
   return convertDocId(created);
 }
 
+/**
+ * NI portálon a felügyelő (lásd NI_SUPERVISOR_EMAILS) minden NI foglalást lát – a diszpécser által rögzítetteket is
+ * Mindenki más csak a sajátjait.
+ */
+export function buildUserBookingsFilter(userEmail: string, portal: PartnerPortal): Filter<Booking> {
+  if (portal === 'ni' && isNiSupervisor(userEmail)) {
+    return buildPortalScopeFilter(portal);
+  }
+  return { userEmail, ...buildPortalScopeFilter(portal) } as Filter<Booking>;
+}
+
+/** Megnézheti-e / módosíthatja-e a felhasználó a foglalást (saját, vagy NI felügyelőként bármely NI foglalás). */
+export function canAccessBooking(booking: Pick<Booking, 'userEmail'>, userEmail: string, portal: PartnerPortal): boolean {
+  if (booking.userEmail === userEmail) return true;
+  return portal === 'ni' && isNiSupervisor(userEmail);
+}
+
 export async function listUserBookings(
   userEmail: string,
   portal: PartnerPortal
 ): Promise<Booking[]> {
   const col = await getBookingsCollection();
   const docs = await col
-    .find({ userEmail, ...buildPortalScopeFilter(portal) })
+    .find(buildUserBookingsFilter(userEmail, portal))
     .sort({ createdAt: -1 })
     .toArray();
   return docs.map(convertDocId);

@@ -10,6 +10,7 @@ import {
   updateBookingStatus,
   validateTravelConditions,
   type Booking,
+  canAccessBooking,
 } from "@/lib/bookings";
 import { sendNiCancellationNotifications } from "@/lib/ni-notifications";
 import {
@@ -89,7 +90,7 @@ export async function GET(
       );
     }
 
-    if (booking.userEmail !== session.email) {
+    if (!canAccessBooking(booking, session.email, session.portal)) {
       return NextResponse.json(
         { success: false, message: "Nincs jogosultság a foglalás megtekintéséhez." },
         { status: 401 }
@@ -133,7 +134,7 @@ export async function PATCH(
       );
     }
 
-    if (existingBooking.userEmail !== session.email) {
+    if (!canAccessBooking(existingBooking, session.email, session.portal)) {
       return NextResponse.json(
         { success: false, message: "Nincs jogosultság a foglalás módosításához." },
         { status: 401 }

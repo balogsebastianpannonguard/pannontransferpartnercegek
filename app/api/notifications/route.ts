@@ -7,7 +7,7 @@ import {
 import {
   listUserBookings,
   getBookingsCollection,
-  buildPortalScopeFilter,
+  buildUserBookingsFilter,
   type Booking,
 } from "@/lib/bookings";
 
@@ -52,12 +52,11 @@ export async function GET(request: Request) {
 
     // Query bookings updated since last poll
     const col = await getBookingsCollection();
-    const portalFilter = buildPortalScopeFilter(session.portal);
+    const scopeFilter = buildUserBookingsFilter(session.email, session.portal);
 
     const updatedDocs = await col
       .find({
-        userEmail: session.email,
-        ...portalFilter,
+        ...scopeFilter,
         updatedAt: { $gt: lastPollTimestamp },
         auditTrail: {
           $elemMatch: {
