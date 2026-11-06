@@ -296,6 +296,7 @@ export default function CompanyClient() {
     }
   }, []);
 
+  const [allBookings, setAllBookings] = useState(false);
   const fetchGroups = useCallback(async () => {
     setGroupsLoading(true);
     try {
@@ -303,6 +304,7 @@ export default function CompanyClient() {
       const json = await res.json().catch(() => null);
       if (res.ok && json?.success) {
         setGroups(json.groups || []);
+        setAllBookings(json.allBookings === true);
       }
     } catch {
     } finally {
@@ -572,7 +574,9 @@ export default function CompanyClient() {
               <Users className="w-4 h-4 text-[#0A5CCB]" />
             </div>
             <h2 className="text-lg font-bold text-white tracking-wide">
-              {tr("Céges foglalások (linkből érkezett)", "Company bookings (received via link)")}{" "}
+              {allBookings
+                ? tr("Összes NI foglalás", "All NI bookings")
+                : tr("Céges foglalások (linkből érkezett)", "Company bookings (received via link)")}{" "}
               {groups.length > 0 && `· ${groups.reduce((s, g) => s + g.count, 0)} ${tr("db", "pcs")}`}
             </h2>
           </div>
@@ -582,7 +586,9 @@ export default function CompanyClient() {
               <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
             </div>
           ) : groups.length === 0 ? (
-            <p className="text-sm text-slate-500 text-center py-6">{tr("Még nem érkezett foglalás céges linken keresztül.", "No bookings have been received via a company link yet.")}</p>
+            <p className="text-sm text-slate-500 text-center py-6">{allBookings
+                ? tr("Még nincs NI foglalás.", "There are no NI bookings yet.")
+                : tr("Még nem érkezett foglalás céges linken keresztül.", "No bookings have been received via a company link yet.")}</p>
           ) : (
             <div className="space-y-3">
               {groups.map((group) => (

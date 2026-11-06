@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { isNiSupervisor } from "./ni-notifications";
 import {
   findNiUserByInviteToken,
   findNiUserByEmail,
@@ -114,7 +115,10 @@ export async function getCurrentNiSession(): Promise<NiPortalSessionUser | null>
   const cookieStore = await cookies();
   const token = cookieStore.get(NI_SESSION_COOKIE)?.value;
   if (!token) return null;
-  return verifyNiSessionToken(token);
+  const session = await verifyNiSessionToken(token);
+  // Az NI felügyelő (Zsuzsi) mindig admin NI jogosultságú: a Céges foglalások oldalon minden NI utat lát.
+  if (session && isNiSupervisor(session.email)) return { ...session, role: "admin-ni" };
+  return session;
 }
 
 export async function hashPassword(password: string): Promise<string> {

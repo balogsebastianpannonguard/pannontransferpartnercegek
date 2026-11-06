@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentPartnerSessionForPortal } from "@/lib/partner-session";
-import { listSharedLinkBookings } from "@/lib/bookings";
+import { buildPortalScopeFilter, getBookingsCollection, listSharedLinkBookings, type Booking } from "@/lib/bookings";
+import { isNiSupervisor } from "@/lib/ni-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,10 @@ export async function GET() {
     );
   }
 
-  const bookings = await listSharedLinkBookings("ni");
+  // Az NI felügyelő (Zsuzsi) minden NI foglalást lát – a portálon, linken és a diszpécser által rögzítetteket is –,
+  // a többi admin csak a céges linken érkezetteket.
+  const allBookings = isNiSupervisor(session.email);
+  const bookings = allBookings ? await listAllNiBookings() : await listSharedLinkBookings("ni");
 
   const groupsMap = new Map<string, typeof bookings>();
   for (const booking of bookings) {
@@ -35,5 +39,11 @@ export async function GET() {
 
   groups.sort((a, b) => (b.bookings[0]?.createdAt || 0) - (a.bookings[0]?.createdAt || 0));
 
-  return NextResponse.json({ success: true, groups, total: bookings.length });
+  return NextResponse.json({ success: true, groups, total: bookings.length, allBookings });
+}
+
+async function listAllNiBookings(): Promise<Booking[]> {
+  const col = await getBookingsCollection();
+  const docs = await col.find(buildPortalScopeFilter("ni")).sort({ pickupDate: -1, pickupTime: -1, createdAt: -1 }).toArray();
+  return docs.map((doc) => ({ ...doc, _id: String(doc._id) }) as unknown as Booking);
 }

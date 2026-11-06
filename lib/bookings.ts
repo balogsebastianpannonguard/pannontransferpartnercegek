@@ -492,14 +492,20 @@ function resolveBookingPortal(companyName?: string): PartnerPortal {
 
 export function buildPortalScopeFilter(portal: PartnerPortal): Filter<Booking> {
   if (portal === 'ni') {
-    // A diszpécser által rögzített NI utaknál régebben nem volt portal mező, csak a cégnév.
+    // A diszpécser által rögzített NI utaknál régebben nem volt portal mező: cégnév vagy NI / Emerson e-mail alapján.
     return {
       $or: [
         { portal: 'ni' },
         {
           $and: [
             { $or: [{ portal: { $exists: false } }, { portal: null }, { portal: '' }] },
-            { companyName: { $regex: '^(national instruments|ni)\\b', $options: 'i' } },
+            {
+              $or: [
+                { companyName: { $regex: '^(national instruments|ni\\b|emerson)', $options: 'i' } },
+                { travelerEmail: { $regex: '@(ni|emerson)\\.com$', $options: 'i' } },
+                { userEmail: { $regex: '@(ni|emerson)\\.com$', $options: 'i' } },
+              ],
+            },
           ],
         },
       ],
