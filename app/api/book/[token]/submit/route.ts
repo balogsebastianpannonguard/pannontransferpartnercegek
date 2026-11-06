@@ -135,6 +135,7 @@ export async function POST(
       await sendNiBookingConfirmations({
         recipients: buildNiConfirmationRecipients({
           travelerEmail: createdBooking.travelerEmail,
+          secondTravelerEmail: createdBooking.secondTravelerEmail,
           adminEmail: createdBooking.adminEmail,
         }),
         subject: confirmationSubject,

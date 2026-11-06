@@ -482,6 +482,10 @@ function convertDocId(doc: any): Booking {
   return {
     ...doc,
     _id: doc._id ? doc._id.toString() : undefined,
+    // A diszpécser assignedDriverName / assignedVehicleName néven menti a kiosztást, a portálok egy része
+    // driverName / vehicleName mezőt olvas – különben "Hozzárendelés függőben" látszana kiosztott útnál is.
+    driverName: doc.assignedDriverName || doc.driverName || undefined,
+    vehicleName: doc.assignedVehicleName || doc.vehicleName || undefined,
   } as Booking;
 }
 

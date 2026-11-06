@@ -196,6 +196,7 @@ export async function POST(request: Request) {
       await sendNiBookingConfirmations({
         recipients: buildNiConfirmationRecipients({
           travelerEmail: createdBooking.travelerEmail,
+          secondTravelerEmail: createdBooking.secondTravelerEmail,
           adminEmail: createdBooking.adminEmail,
           bookerEmail: session.email,
         }),

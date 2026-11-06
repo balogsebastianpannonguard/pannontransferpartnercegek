@@ -46,6 +46,8 @@ export interface NiConfirmationRecipient {
  */
 export function buildNiConfirmationRecipients(params: {
   travelerEmail?: string;
+  /** Második utas: ő is az utasnak szóló levelet kapja. */
+  secondTravelerEmail?: string;
   adminEmail?: string;
   bookerEmail?: string;
 }): NiConfirmationRecipient[] {
@@ -62,6 +64,7 @@ export function buildNiConfirmationRecipients(params: {
   };
 
   add(params.travelerEmail, "traveler");
+  add(params.secondTravelerEmail, "traveler");
   add(params.adminEmail || params.bookerEmail, "admin");
   add(LOCATION_SUPPORT_EMAIL, "location-support");
   for (const supervisor of NI_SUPERVISOR_EMAILS) add(supervisor, "supervisor");
@@ -109,6 +112,7 @@ export async function sendNiCancellationNotifications(params: {
     bookingCode: string;
     travelerName: string;
     travelerEmail: string;
+    secondTravelerEmail?: string;
     userEmail?: string;
     adminEmail?: string;
     pickupDate: string;
@@ -130,6 +134,7 @@ export async function sendNiCancellationNotifications(params: {
     return await sendNiBookingConfirmations({
       recipients: buildNiConfirmationRecipients({
         travelerEmail: booking.travelerEmail,
+        secondTravelerEmail: booking.secondTravelerEmail,
         adminEmail: booking.adminEmail,
         bookerEmail: booking.userEmail,
       }),
