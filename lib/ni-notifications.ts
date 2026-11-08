@@ -64,7 +64,8 @@ export function buildNiConfirmationRecipients(params: {
   };
 
   add(params.travelerEmail, "traveler");
-  add(params.secondTravelerEmail, "traveler");
+  // A második utas mezőben több cím is lehet (vesszővel / pontosvesszővel / szóközzel elválasztva).
+  for (const extra of String(params.secondTravelerEmail || "").split(/[\s,;]+/)) add(extra, "traveler");
   add(params.adminEmail || params.bookerEmail, "admin");
   add(LOCATION_SUPPORT_EMAIL, "location-support");
   for (const supervisor of NI_SUPERVISOR_EMAILS) add(supervisor, "supervisor");
