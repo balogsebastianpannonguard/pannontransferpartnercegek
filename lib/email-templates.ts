@@ -735,6 +735,20 @@ ${cancelled ? "" : `<tr>
 }
 
 
+/** NI levelek fejléce: a Pannon Transfer és az NI logója egymás mellett (abszolút URL a levélkliensekhez). */
+function niLogoHeader(origin?: string): string {
+  const base = (origin || process.env.NEXT_PUBLIC_APP_URL || "https://pannontransferkomplexxpartnerceg.vercel.app").replace(/\/$/, "");
+  return `<tr>
+          <td align="center" style="padding-bottom:14px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+              <td valign="middle" style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:999px; padding:9px 16px;"><img src="${base}/brand/pannon-transfer-logo.png" width="116" height="24" alt="Pannon Transfer" style="display:block; border:0; height:24px; width:116px;"></td>
+              <td width="12"></td>
+              <td valign="middle" style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:999px; padding:7px 14px;"><img src="${base}/partners/ni/logo.png" width="33" height="28" alt="NI" style="display:block; border:0; height:28px; width:33px;"></td>
+            </tr></table>
+          </td>
+        </tr>`;
+}
+
 export function buildNiCustomerConfirmationEmail(params: {
   bookingCode: string;
   travelerName: string;
@@ -753,6 +767,7 @@ export function buildNiCustomerConfirmationEmail(params: {
   price?: number;
   trackUrl?: string;
   language?: 'hu' | 'en';
+  origin?: string;
 }): string {
   const {
     bookingCode,
@@ -793,6 +808,7 @@ ${en ? `Booking confirmation. Route: ${fromAddress} - ${toAddress}, Time: ${pick
   <tr>
     <td align="center" style="padding:40px 14px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;">
+        ${niLogoHeader(params.origin)}
         <tr>
           <td style="padding-bottom:16px; text-align:center; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#94A3B8; font-weight:700;">
             ${en ? 'Pannon Transfer · NI | Emerson Portal · Booking' : 'Pannon Transfer · NI | Emerson Portál · Foglalás'}
@@ -1101,6 +1117,7 @@ export function buildNiCancellationEmail(params: {
   transferType: 'standard' | 'executive';
   cancelledBy?: string;
   language?: 'hu' | 'en';
+  origin?: string;
 }): string {
   const {
     bookingCode,
@@ -1140,6 +1157,7 @@ ${en ? `Booking cancelled. Route: ${fromAddress} - ${toAddress}, Time: ${pickupD
   <tr>
     <td align="center" style="padding:40px 14px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;">
+        ${niLogoHeader(params.origin)}
         <tr>
           <td style="padding-bottom:16px; text-align:center; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#94A3B8; font-weight:700;">
             ${en ? 'Pannon Transfer · NI | Emerson Portal · Cancellation' : 'Pannon Transfer · NI | Emerson Portál · Lemondás'}
