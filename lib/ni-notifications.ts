@@ -1,5 +1,6 @@
 import { sendEmail } from "@/lib/email";
 import { buildNiCancellationEmail } from "@/lib/email-templates";
+import { readAdditionalPassengers, type AdditionalPassenger } from "@/lib/passengers";
 
 /**
  * A Location Support központi címzett: MINDEN NI foglalásról megkapja a visszaigazolást,
@@ -48,6 +49,8 @@ export function buildNiConfirmationRecipients(params: {
   travelerEmail?: string;
   /** Második utas: ő is az utasnak szóló levelet kapja. */
   secondTravelerEmail?: string;
+  /** További utasok: akinek megadták az e-mail címét, ő is az utasnak szóló levelet kapja. */
+  additionalPassengers?: AdditionalPassenger[];
   adminEmail?: string;
   bookerEmail?: string;
 }): NiConfirmationRecipient[] {
@@ -66,6 +69,7 @@ export function buildNiConfirmationRecipients(params: {
   add(params.travelerEmail, "traveler");
   // A második utas mezőben több cím is lehet (vesszővel / pontosvesszővel / szóközzel elválasztva).
   for (const extra of String(params.secondTravelerEmail || "").split(/[\s,;]+/)) add(extra, "traveler");
+  for (const passenger of readAdditionalPassengers(params.additionalPassengers)) add(passenger.email, "traveler");
   add(params.adminEmail || params.bookerEmail, "admin");
   add(LOCATION_SUPPORT_EMAIL, "location-support");
   for (const supervisor of NI_SUPERVISOR_EMAILS) add(supervisor, "supervisor");
@@ -114,6 +118,7 @@ export async function sendNiCancellationNotifications(params: {
     travelerName: string;
     travelerEmail: string;
     secondTravelerEmail?: string;
+    additionalPassengers?: AdditionalPassenger[];
     userEmail?: string;
     adminEmail?: string;
     pickupDate: string;
@@ -136,6 +141,7 @@ export async function sendNiCancellationNotifications(params: {
       recipients: buildNiConfirmationRecipients({
         travelerEmail: booking.travelerEmail,
         secondTravelerEmail: booking.secondTravelerEmail,
+        additionalPassengers: booking.additionalPassengers,
         adminEmail: booking.adminEmail,
         bookerEmail: booking.userEmail,
       }),
@@ -156,6 +162,7 @@ export async function sendNiCancellationNotifications(params: {
           luggage: booking.luggage,
           transferType: booking.transferType,
           cancelledBy: params.cancelledBy,
+          additionalPassengers: booking.additionalPassengers,
           language: en ? "en" : "hu",
         }),
       logTag: params.logTag,

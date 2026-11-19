@@ -66,6 +66,7 @@ export async function POST(request: Request) {
       paymentMethod: booking.paymentMethod === "card" ? ("card" as const) : ("bank" as const),
       comment: booking.comment,
       price: booking.price,
+      additionalPassengers: booking.additionalPassengers,
       origin,
       language: language === "en" ? ("en" as const) : ("hu" as const),
     };
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
         recipients: buildNiConfirmationRecipients({
           travelerEmail: booking.travelerEmail,
           secondTravelerEmail: booking.secondTravelerEmail,
+          additionalPassengers: booking.additionalPassengers,
           adminEmail: booking.adminEmail,
           bookerEmail: booking.userEmail,
         }),

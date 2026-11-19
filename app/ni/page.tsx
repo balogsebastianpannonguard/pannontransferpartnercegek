@@ -31,6 +31,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "../context/LanguageContext";
 import NiPremiumLogin from "./components/NiPremiumLogin";
 import { useNiLanguage } from "./useNiLanguage";
+import AdditionalPassengersEditor, {
+  passengerDraftsToPayload,
+  validatePassengerDrafts,
+  type PassengerDraft,
+} from "./components/AdditionalPassengersEditor";
 
 interface NiPortalUser {
   email: string;
@@ -80,6 +85,7 @@ export default function NiLandingPage() {
   const [secondTravelerEmail, setSecondTravelerEmail] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [secondTravelerPhone, setSecondTravelerPhone] = useState("");
+  const [additionalPassengers, setAdditionalPassengers] = useState<PassengerDraft[]>([]);
   const [fromAddress, setFromAddress] = useState("");
   const [toAddress, setToAddress] = useState("");
   const [flightNumber, setFlightNumber] = useState("");
@@ -322,6 +328,7 @@ export default function NiLandingPage() {
     setSecondTravelerEmail("");
     setAdminEmail("");
     setSecondTravelerPhone("");
+    setAdditionalPassengers([]);
     setFromAddress("");
     setToAddress("");
     setFlightNumber("");
@@ -355,6 +362,12 @@ export default function NiLandingPage() {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+    const passengerErrors = validatePassengerDrafts(additionalPassengers, tr);
+    if (passengerErrors.length > 0) {
+      setSubmitErrors(passengerErrors);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     setFormLoading(true);
     try {
       const payload = {
@@ -363,6 +376,7 @@ export default function NiLandingPage() {
         travelerPhone,
         secondTravelerEmail: secondTravelerEmail || undefined,
         secondTravelerPhone: secondTravelerPhone || undefined,
+        additionalPassengers: passengerDraftsToPayload(additionalPassengers),
         adminEmail: adminEmail.trim() || undefined,
         companyName: "National Instruments",
         paymentMethod,
@@ -1181,6 +1195,14 @@ export default function NiLandingPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* További utasok: + gombbal bővíthető lista */}
+                  <AdditionalPassengersEditor
+                    passengers={additionalPassengers}
+                    onChange={setAdditionalPassengers}
+                    showErrors={showValidationInline}
+                    onAdd={(count) => setTravelers((t) => Math.max(t, count + 1))}
+                  />
                 </div>
 
                 {/* SECTION 2: Payment */}
@@ -1554,7 +1576,9 @@ export default function NiLandingPage() {
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() =>
-                              setTravelers(Math.max(1, travelers - 1))
+                              setTravelers(
+                                Math.max(1 + additionalPassengers.length, travelers - 1),
+                              )
                             }
                             type="button"
                             aria-label={tr("Utasok számának csökkentése", "Decrease passenger count")}

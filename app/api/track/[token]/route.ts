@@ -161,6 +161,7 @@ export async function PATCH(
         luggage: patch.luggage !== undefined ? patch.luggage : existingBooking.luggage,
         transferType: existingBooking.transferType,
         companyName: existingBooking.companyName,
+        additionalPassengers: existingBooking.additionalPassengers,
       };
 
       const validation = await validateTravelConditions(mergedForValidation);

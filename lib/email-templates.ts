@@ -1,3 +1,6 @@
+import { buildAdditionalPassengersHtml } from './passengers-email';
+import type { AdditionalPassenger } from './passengers';
+
 export function buildCustomerConfirmationEmail(params: {
   bookingCode: string;
   travelerName: string;
@@ -397,6 +400,8 @@ export function buildDispatcherNotificationEmail(params: {
   transferType: string;
   /** "cancelled": a partner lemondta a foglalást (ugyanaz a sablon, más címmel és szöveggel). */
   kind?: "new" | "cancelled";
+  /** További utasok a fő utason kívül (név, elérhetőség, egyedi felvételi hely). */
+  additionalPassengers?: AdditionalPassenger[];
 }): string {
   const {
     bookingCode,
@@ -484,6 +489,9 @@ export function buildDispatcherNotificationEmail(params: {
 </table>
 </td>
 </tr>
+${buildAdditionalPassengersHtml(params.additionalPassengers, false) ? `<tr>
+<td style="padding-top:28px;">${buildAdditionalPassengersHtml(params.additionalPassengers, false)}</td>
+</tr>` : ''}
 <tr>
 <td style="padding-top:28px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#FFFFFF;border:1px solid #E8E3DA;border-radius:8px;">
@@ -768,6 +776,7 @@ export function buildNiCustomerConfirmationEmail(params: {
   trackUrl?: string;
   language?: 'hu' | 'en';
   origin?: string;
+  additionalPassengers?: AdditionalPassenger[];
 }): string {
   const {
     bookingCode,
@@ -927,6 +936,8 @@ ${en ? `Booking confirmation. Route: ${fromAddress} - ${toAddress}, Time: ${pick
                     </tr>
                   </table>
                   
+                  ${buildAdditionalPassengersHtml(params.additionalPassengers, en)}
+
                   ${comment ? `
                   <div style="border-left:3px solid #22C55E; background:#F0FDF4; border-radius:0 12px 12px 0; padding:16px; margin-bottom:24px;">
                     <div style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#166534; margin-bottom:6px;">${en ? 'Comment' : 'Megjegyzés'}</div>
@@ -1118,6 +1129,7 @@ export function buildNiCancellationEmail(params: {
   cancelledBy?: string;
   language?: 'hu' | 'en';
   origin?: string;
+  additionalPassengers?: AdditionalPassenger[];
 }): string {
   const {
     bookingCode,
@@ -1250,6 +1262,8 @@ ${en ? `Booking cancelled. Route: ${fromAddress} - ${toAddress}, Time: ${pickupD
                       </td>
                     </tr>
                   </table>
+
+                  ${buildAdditionalPassengersHtml(params.additionalPassengers, en)}
 
                   ${cancelledBy ? `
                   <div style="border-left:3px solid #DC2626; background:#FEF2F2; border-radius:0 12px 12px 0; padding:16px; margin-bottom:24px;">

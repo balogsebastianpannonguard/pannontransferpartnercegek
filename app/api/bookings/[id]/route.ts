@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sanitizeAdditionalPassengers } from "@/lib/passengers";
 import {
   getCurrentPartnerSession,
   getCurrentPartnerSessionForPortal,
@@ -45,6 +46,7 @@ const PICKUP_AFFECTING_FIELDS = [
   "flightNumber",
   "travelers",
   "luggage",
+  "additionalPassengers",
  ] as const;
 
 const ALLOWED_PATCH_FIELDS = [
@@ -152,6 +154,15 @@ export async function PATCH(
       }
     }
 
+    // További utasok módosítása (csak NI): üres lista = az összes további utas törlése.
+    if (session.portal === "ni" && body.additionalPassengers !== undefined) {
+      const extra = sanitizeAdditionalPassengers(body.additionalPassengers);
+      if (extra.errors.length > 0) {
+        return NextResponse.json({ success: false, errors: extra.errors }, { status: 400 });
+      }
+      patch.additionalPassengers = extra.passengers;
+    }
+
     if (patch.status !== undefined) {
       if (patch.status !== "cancelled") {
         return NextResponse.json(
@@ -206,6 +217,10 @@ export async function PATCH(
           patch.luggage !== undefined ? patch.luggage : existingBooking.luggage,
         transferType: existingBooking.transferType,
         companyName: existingBooking.companyName,
+        additionalPassengers:
+          patch.additionalPassengers !== undefined
+            ? patch.additionalPassengers
+            : existingBooking.additionalPassengers,
       };
 
       const validation = await validateTravelConditions(mergedForValidation);

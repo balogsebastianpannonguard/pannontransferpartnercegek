@@ -3,6 +3,7 @@ import { ObjectId, Collection, type Filter } from 'mongodb';
 import { getTravelConditions, isTimeInOperatingHours } from './travel-conditions';
 import { isNiSupervisor } from './ni-notifications';
 import { getPartnerPricing, type PartnerPricing, type PricingVehicle } from './partner-pricing';
+import { sanitizeAdditionalPassengers, type AdditionalPassenger } from './passengers';
 
 export type PartnerPortal =
   | 'catl'
@@ -50,6 +51,8 @@ export interface Booking {
   travelerPhone: string;
   secondTravelerEmail?: string;
   secondTravelerPhone?: string;
+  // További utasok a fő utason kívül (név kötelező; e-mail, telefon és eltérő felvételi hely opcionális)
+  additionalPassengers?: AdditionalPassenger[];
   // NI: a foglalást rögzítő admin e-mail címe – ő is megkapja a visszaigazolást (az utas és a Location Support mellett)
   adminEmail?: string;
   companyName: string;
@@ -328,6 +331,22 @@ export async function validateTravelConditions(
   }
   if (luggage === undefined || luggage === null || luggage < 0) {
     errors.push('A csomagok száma nem lehet negatív');
+  }
+
+  const rawAdditional = (bookingData as { additionalPassengers?: unknown }).additionalPassengers;
+  if (rawAdditional !== undefined && rawAdditional !== null) {
+    const extra = sanitizeAdditionalPassengers(rawAdditional);
+    errors.push(...extra.errors);
+    if (
+      extra.errors.length === 0 &&
+      typeof travelers === 'number' &&
+      travelers >= 1 &&
+      extra.passengers.length + 1 > travelers
+    ) {
+      errors.push(
+        `Az utasok száma (${travelers}) kevesebb, mint a megadott utasok száma (${extra.passengers.length + 1})`
+      );
+    }
   }
 
   if (pickupDate && pickupTime) {

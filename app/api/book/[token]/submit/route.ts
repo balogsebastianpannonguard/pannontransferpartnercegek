@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sanitizeAdditionalPassengers } from "@/lib/passengers";
 import {
   getActiveCompanyBookingToken,
   incrementCompanyBookingTokenUsage,
@@ -53,6 +54,10 @@ export async function POST(
 
     const body = await request.json();
 
+    // További utasok (csak NI): tisztítjuk; hiba esetén a nyers lista megy a validációba, ami hibát ad vissza.
+    const extraPassengers =
+      linkRecord.portal === "ni" ? sanitizeAdditionalPassengers(body.additionalPassengers) : { passengers: [], errors: [] };
+
     const bookingData: CreateBookingData = {
       portal: linkRecord.portal,
       userEmail: body.travelerEmail,
@@ -61,6 +66,12 @@ export async function POST(
       travelerPhone: body.travelerPhone,
       secondTravelerEmail: body.secondTravelerEmail,
       secondTravelerPhone: body.secondTravelerPhone,
+      ...(linkRecord.portal === "ni" && (extraPassengers.errors.length > 0 || extraPassengers.passengers.length > 0)
+        ? {
+            additionalPassengers:
+              extraPassengers.errors.length > 0 ? body.additionalPassengers : extraPassengers.passengers,
+          }
+        : {}),
       ...(linkRecord.portal === "ni" && typeof body.adminEmail === "string" && body.adminEmail.trim()
         ? { adminEmail: body.adminEmail.trim() }
         : {}),
@@ -113,6 +124,7 @@ export async function POST(
       comment: createdBooking.comment,
       price: createdBooking.price,
       trackUrl,
+      additionalPassengers: createdBooking.additionalPassengers,
       language: createdBooking.language === "en" ? ("en" as const) : ("hu" as const),
     };
 
@@ -136,6 +148,7 @@ export async function POST(
         recipients: buildNiConfirmationRecipients({
           travelerEmail: createdBooking.travelerEmail,
           secondTravelerEmail: createdBooking.secondTravelerEmail,
+          additionalPassengers: createdBooking.additionalPassengers,
           adminEmail: createdBooking.adminEmail,
         }),
         subject: confirmationSubject,
@@ -181,6 +194,7 @@ export async function POST(
       travelers: createdBooking.travelers,
       luggage: createdBooking.luggage,
       transferType: createdBooking.transferType,
+      additionalPassengers: createdBooking.additionalPassengers,
     });
 
     for (const targetEmail of uniqueDispatcherTargets) {

@@ -23,6 +23,11 @@ import {
 } from "lucide-react";
 import NiLanguageSwitcher from "../../components/NiLanguageSwitcher";
 import { useNiLanguage } from "../../useNiLanguage";
+import AdditionalPassengersEditor, {
+  passengerDraftsToPayload,
+  validatePassengerDrafts,
+  type PassengerDraft,
+} from "../../components/AdditionalPassengersEditor";
 
 interface Props {
   token: string;
@@ -51,6 +56,7 @@ export default function BookPageClient({ token }: Props) {
   const [secondTravelerEmail, setSecondTravelerEmail] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [secondTravelerPhone, setSecondTravelerPhone] = useState("");
+  const [additionalPassengers, setAdditionalPassengers] = useState<PassengerDraft[]>([]);
   const [fromAddress, setFromAddress] = useState("");
   const [toAddress, setToAddress] = useState("");
   const [flightNumber, setFlightNumber] = useState("");
@@ -187,6 +193,7 @@ export default function BookPageClient({ token }: Props) {
     setTravelerPhone("");
     setSecondTravelerEmail("");
     setSecondTravelerPhone("");
+    setAdditionalPassengers([]);
     setFromAddress("");
     setToAddress("");
     setFlightNumber("");
@@ -221,6 +228,13 @@ export default function BookPageClient({ token }: Props) {
       return;
     }
 
+    const passengerErrors = validatePassengerDrafts(additionalPassengers, tr);
+    if (passengerErrors.length > 0) {
+      setSubmitErrors(passengerErrors);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     setFormLoading(true);
     try {
       const payload = {
@@ -229,6 +243,7 @@ export default function BookPageClient({ token }: Props) {
         travelerPhone,
         secondTravelerEmail: secondTravelerEmail || undefined,
         secondTravelerPhone: secondTravelerPhone || undefined,
+        additionalPassengers: passengerDraftsToPayload(additionalPassengers),
         adminEmail: adminEmail.trim() || undefined,
         transferType,
         fromType,
@@ -554,6 +569,13 @@ export default function BookPageClient({ token }: Props) {
                         </div>
                       </div>
                     </div>
+
+                    <AdditionalPassengersEditor
+                      passengers={additionalPassengers}
+                      onChange={setAdditionalPassengers}
+                      showErrors={showValidationInline}
+                      onAdd={(count) => setTravelers((t) => Math.max(t, count + 1))}
+                    />
                   </div>
 
                   <div className="space-y-6">
@@ -836,7 +858,7 @@ export default function BookPageClient({ token }: Props) {
                           </div>
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={() => setTravelers(Math.max(1, travelers - 1))}
+                              onClick={() => setTravelers(Math.max(1 + additionalPassengers.length, travelers - 1))}
                               type="button"
                               className="w-9 h-9 rounded-lg bg-white/5 hover:bg-[#41B679]/20 hover:text-[#41B679] flex items-center justify-center transition-colors"
                               aria-label={tr("Utasok számának csökkentése", "Decrease passenger count")}

@@ -43,6 +43,7 @@ const EXACT: Record<string, string> = {
   "Legalább 1 utas szükséges": "At least 1 passenger is required",
   "A csomagok száma nem lehet negatív": "The number of luggage items cannot be negative",
   "Érvénytelen átvétel időpont": "Invalid pick-up time",
+  "A további utasok listája érvénytelen": "The list of additional passengers is invalid",
 
   // Bejelentkezés / jelszó / 2FA
   "Hibás hitelesítő adatok.": "Invalid credentials.",
@@ -164,6 +165,10 @@ const PATTERNS: Pattern[] = [
   ],
   [/^Executive transzfer: (.+) kategória lesz használva$/, (v) => `Executive transfer: the ${v} category will be used`],
   [/^Executive transzfer: VIP kategória lesz használva$/, () => "Executive transfer: the VIP category will be used"],
+  [/^A\(z\) (\d+)\. utas nevének megadása kötelező$/, (n) => `The name of passenger ${n} is required`],
+  [/^A\(z\) (\d+)\. utas e-mail címének formátuma érvénytelen$/, (n) => `The email address of passenger ${n} is invalid`],
+  [/^Legfeljebb (\d+) további utas adható meg$/, (n) => `A maximum of ${n} additional passengers can be added`],
+  [/^Az utasok száma \((\d+)\) kevesebb, mint a megadott utasok száma \((\d+)\)$/, (a, b) => `The number of passengers (${a}) is lower than the number of listed passengers (${b})`],
   [/^A foglalás érvénytelen: (.+)$/, (rest) => `The booking is invalid: ${rest}`],
   [/^Foglalás létrehozva\. Becsült ár: (.+) Ft$/, (p) => `Booking created. Estimated price: ${p} HUF`],
   [/^Státusz módosítva: (.+)$/, (s) => `Status changed: ${STATUS_HU_TO_EN[s] || s}`],

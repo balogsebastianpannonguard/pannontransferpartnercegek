@@ -34,6 +34,7 @@ import {
   MessageSquare,
   DollarSign,
   Phone,
+  Mail,
   Minus,
   Plus,
   Bell,
@@ -42,6 +43,11 @@ import Link from "next/link";
 import Image from "next/image";
 import NiPremiumLogin from "../components/NiPremiumLogin";
 import { useNiLanguage } from "../useNiLanguage";
+import AdditionalPassengersEditor, {
+  passengerDraftsToPayload,
+  validatePassengerDrafts,
+  type PassengerDraft,
+} from "../components/AdditionalPassengersEditor";
 
 interface NiPortalUser {
   email: string;
@@ -58,6 +64,7 @@ interface Booking {
   travelerPhone: string;
   secondTravelerEmail?: string;
   secondTravelerPhone?: string;
+  additionalPassengers?: Array<{ name: string; email?: string; phone?: string; pickupAddress?: string }>;
   companyName: string;
   paymentMethod: "card" | "bank";
   transferType: "standard" | "executive";
@@ -235,6 +242,7 @@ export default function NiBookingsClient() {
     luggage: 0,
     comment: "",
   });
+  const [editPassengers, setEditPassengers] = useState<PassengerDraft[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -425,6 +433,14 @@ export default function NiBookingsClient() {
       luggage: booking.luggage,
       comment: booking.comment || "",
     });
+    setEditPassengers(
+      (booking.additionalPassengers || []).map((p) => ({
+        name: p.name || "",
+        email: p.email || "",
+        phone: p.phone || "",
+        pickupAddress: p.pickupAddress || "",
+      })),
+    );
     setEditErrors({});
   };
 
@@ -437,6 +453,11 @@ export default function NiBookingsClient() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editModal) return;
+    const passengerErrors = validatePassengerDrafts(editPassengers, tr);
+    if (passengerErrors.length > 0) {
+      setEditErrors({ general: passengerErrors.join("\n") });
+      return;
+    }
     setEditLoading(true);
     setEditErrors({});
     try {
@@ -446,7 +467,7 @@ export default function NiBookingsClient() {
           "Content-Type": "application/json",
           "x-partner-portal": "ni",
         },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({ ...editForm, additionalPassengers: passengerDraftsToPayload(editPassengers) }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
@@ -1513,6 +1534,46 @@ export default function NiBookingsClient() {
                                 </div>
                               </div>
 
+                              {booking.additionalPassengers && booking.additionalPassengers.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-2">
+                                    {tr("További utasok", "Additional passengers")}
+                                  </p>
+                                  <div className="space-y-3">
+                                    {booking.additionalPassengers.map((passenger, passengerIndex) => (
+                                      <div key={passengerIndex} className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                          <UserCircle className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                          <span className="text-sm font-bold text-slate-200">
+                                            {passengerIndex + 2}. {passenger.name}
+                                          </span>
+                                        </div>
+                                        {passenger.email && (
+                                          <div className="flex items-center gap-2 pl-5">
+                                            <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                            <span className="text-sm text-slate-300">{passenger.email}</span>
+                                          </div>
+                                        )}
+                                        {passenger.phone && (
+                                          <div className="flex items-center gap-2 pl-5">
+                                            <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                            <span className="text-sm text-slate-300">{passenger.phone}</span>
+                                          </div>
+                                        )}
+                                        {passenger.pickupAddress && (
+                                          <div className="flex items-center gap-2 pl-5">
+                                            <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                            <span className="text-sm text-slate-300">
+                                              {tr("Felvételi hely", "Pick-up point")}: {passenger.pickupAddress}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
                               {booking.secondTravelerEmail && (
                                 <div>
                                   <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-2">
@@ -1763,7 +1824,7 @@ export default function NiBookingsClient() {
                           onClick={() =>
                             setEditForm({
                               ...editForm,
-                              travelers: Math.max(1, editForm.travelers - 1),
+                              travelers: Math.max(1 + editPassengers.length, editForm.travelers - 1),
                             })
                           }
                           aria-label={tr("Utasok számának csökkentése", "Decrease passengers")}
@@ -1851,6 +1912,15 @@ export default function NiBookingsClient() {
                     />
                   </div>
                 </div>
+
+                <AdditionalPassengersEditor
+                  passengers={editPassengers}
+                  onChange={setEditPassengers}
+                  showErrors
+                  onAdd={(count) =>
+                    setEditForm((f) => ({ ...f, travelers: Math.max(f.travelers, count + 1) }))
+                  }
+                />
 
                 {Object.keys(editErrors).length > 0 &&
                   !editErrors.pickupDate &&

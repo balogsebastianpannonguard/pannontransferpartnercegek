@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sanitizeAdditionalPassengers } from "@/lib/passengers";
 import {
   getCurrentPartnerSession,
   getCurrentPartnerSessionForPortal,
@@ -105,6 +106,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const companyName = body.companyName || DEFAULT_COMPANY_BY_PORTAL[session.portal];
 
+    // További utasok (csak NI): tisztítjuk; hiba esetén a nyers lista megy a validációba, ami hibát ad vissza.
+    const extraPassengers =
+      session.portal === "ni" ? sanitizeAdditionalPassengers(body.additionalPassengers) : { passengers: [], errors: [] };
+
     const bookingData: CreateBookingData = {
       portal: session.portal,
       userEmail: session.email,
@@ -113,6 +118,12 @@ export async function POST(request: Request) {
       travelerPhone: body.travelerPhone,
       secondTravelerEmail: body.secondTravelerEmail,
       secondTravelerPhone: body.secondTravelerPhone,
+      ...(session.portal === "ni" && (extraPassengers.errors.length > 0 || extraPassengers.passengers.length > 0)
+        ? {
+            additionalPassengers:
+              extraPassengers.errors.length > 0 ? body.additionalPassengers : extraPassengers.passengers,
+          }
+        : {}),
       ...(session.portal === "ni" && typeof body.adminEmail === "string" && body.adminEmail.trim()
         ? { adminEmail: body.adminEmail.trim() }
         : {}),
@@ -167,6 +178,7 @@ export async function POST(request: Request) {
       comment: createdBooking.comment,
       price: createdBooking.price,
       trackUrl,
+      additionalPassengers: createdBooking.additionalPassengers,
       language: createdBooking.language === "en" ? ("en" as const) : ("hu" as const),
     };
 
@@ -197,6 +209,7 @@ export async function POST(request: Request) {
         recipients: buildNiConfirmationRecipients({
           travelerEmail: createdBooking.travelerEmail,
           secondTravelerEmail: createdBooking.secondTravelerEmail,
+          additionalPassengers: createdBooking.additionalPassengers,
           adminEmail: createdBooking.adminEmail,
           bookerEmail: session.email,
         }),
@@ -263,6 +276,7 @@ export async function POST(request: Request) {
       travelers: createdBooking.travelers,
       luggage: createdBooking.luggage,
       transferType: createdBooking.transferType,
+      additionalPassengers: createdBooking.additionalPassengers,
     });
 
     for (const targetEmail of uniqueDispatcherTargets) {
